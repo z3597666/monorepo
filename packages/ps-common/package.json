@@ -1,0 +1,15 @@
+{
+  "name": "@sdppp/common",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "@types/node": "^24.0.7",
+    "i18next": "^25.2.1",
+    "react-i18next": "^15.5.2",
+    "zod": "^3.25.45"
+  }
+}

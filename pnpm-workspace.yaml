@@ -1,0 +1,4 @@
+packages:
+  - 'packages/*'
+  - 'internals/*'
+  - 'release-repos/*'

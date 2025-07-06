@@ -1,0 +1,3 @@
+[submodule "release-repos/sd-ppp"]
+	path = release-repos/sd-ppp
+	url = https://github.com/zombieyang/sd-ppp
