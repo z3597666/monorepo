@@ -74,6 +74,7 @@ export interface getSelectionActions {
     params: {
         document_identify: string,
         boundary: SDPPPBounds | null,
+        max_wh?: number,
     },
     result: {
         blob: Uint8Array | Uint16Array | Float32Array | null,

@@ -48,3 +48,6 @@ MainStore.subscribe((state, prevState) => {
 //         source: 'test',
 //     }]
 // })
+if (process.env.NODE_ENV === 'development') {
+    (globalThis as any).MainStore = MainStore
+}

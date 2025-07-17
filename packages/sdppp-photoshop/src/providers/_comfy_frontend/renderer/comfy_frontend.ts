@@ -39,7 +39,7 @@ export function useWorkflowList() {
             setAllWorkflowList({});
             const listResult = await sdpppSDK.plugins.ComfyCaller.list();
             const workflowList: Record<string, Workflow> = listResult.workflows
-                .reduce((acc, workflow) => {
+                .reduce((acc: Record<string, Workflow>, workflow: string) => {
                     acc[workflow] = {
                         path: workflow,
                         isFavorite: false,

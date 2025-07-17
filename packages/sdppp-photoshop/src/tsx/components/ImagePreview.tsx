@@ -66,10 +66,7 @@ export default function ImagePreview() {
             src={images[currentIndex].url}
             alt={`Preview ${currentIndex + 1}`}
             className="image-preview__image"
-            preview={{
-              visible: false,
-              mask: false,
-            }}
+            preview={true}
             width={'100%'}
             height={'100%'}
             style={{

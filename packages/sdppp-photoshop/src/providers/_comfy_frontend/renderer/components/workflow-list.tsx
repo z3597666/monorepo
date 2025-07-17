@@ -1,5 +1,6 @@
-import React from "react";
-import { List, Alert, Divider, Typography } from "antd";
+import React, { useState } from "react";
+import { List, Alert, Divider, Typography, Button, Flex } from "antd";
+import { ReloadOutlined } from "@ant-design/icons";
 import {
   SpecialWorkflowItem,
   DirectoryItem,
@@ -11,10 +12,11 @@ import { t } from "@sdppp/common/i18n_next";
 interface WorkflowListProps {
   setCurrentWorkflow: (workflow: string) => void;
   currentWorkflow: string;
+  hidden: boolean;
 }
 
 const WorkflowList: React.FC<WorkflowListProps> = ({
-  setCurrentWorkflow, currentWorkflow
+  setCurrentWorkflow, currentWorkflow, hidden
 }) => {
   const {
     showingWorkflowList,
@@ -26,7 +28,7 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
     refetch
 
   } = useWorkflowList();
-
+ 
   // Show error if workflows failed to load
   if (workflowsError) {
     return (
@@ -40,12 +42,31 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
       </div>
     );
   }
+  const [openWorkflowError, setOpenWorkflowError] = useState<string | null>(null);
 
   return (
-    <div className="workflow-list">
-      <Typography.Title level={5}>
-        你的工作流
-      </Typography.Title>
+    <div className="workflow-list" style={{ display: hidden ? 'none' : 'block' }}>
+      <Flex align="center" gap={8} style={{ margin: '8px 0' }}>
+        <Typography.Title level={5} style={{ margin: 0 }}>
+          你的工作流
+        </Typography.Title>
+        <Button
+          type="text"
+          icon={<ReloadOutlined />}
+          onClick={refetch}
+          loading={loading}
+          size="small"
+          title="刷新工作流列表"
+        />
+      </Flex>
+      {openWorkflowError && (
+        <Alert
+          message="Error"
+          description={openWorkflowError}
+          type="error"
+          showIcon
+        />
+      )}
 
       <List className="workflow-list__main">
         {/* Directory navigation item */}
@@ -87,6 +108,7 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
               onRun={async (path: string) => {
                 // await runWorkflow(path);
               }}
+              setOpenWorkflowError={setOpenWorkflowError}
             />
           );
         })}
@@ -113,6 +135,7 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
           onRun={async () => {
             // await runPage(workflowAgentSID);
           }}
+          setOpenWorkflowError={setOpenWorkflowError}
         />
       </List>
     </div>
@@ -120,3 +143,31 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
 };
 
 export default WorkflowList;
+
+
+function translateHTTPCode(code: number) {
+  switch (code) {
+    case 200:
+      return '';
+    case 404:
+      return '未找到 (404)';
+    case 401:
+      return '未授权 (401)';
+    case 403:
+      return '禁止访问 (403)';
+    case 408:
+      return '请求超时 (408)';
+    case 500:
+      return '服务器错误 (500)';
+    case 501:
+      return '未实现 (501)';
+    case 502:
+      return '网关错误 (502)';
+    case 503:
+      return '服务不可用 (503)';
+    case 504:
+      return '网关超时 (504)';
+    default:
+      return `未知错误（${code}）`;
+  }
+}

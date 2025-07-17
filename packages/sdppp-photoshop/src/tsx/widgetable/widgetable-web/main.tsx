@@ -93,6 +93,21 @@ export const useWidgetableRenderer = ({
         );
     };
 
+    const renderMaskWidget = (fieldInfo: WidgetableNode, widget: WidgetableImagesWidget, widgetIndex: number): React.ReactElement => {
+        const value = widgetableValues[fieldInfo.id]?.[widgetIndex]
+        return (
+            <ImageSelect
+                value={widgetableValues[fieldInfo.id] ? [value] : []}
+                onValueChange={(v) => {
+                    onWidgetChange(fieldInfo.id, widgetIndex, v[0], fieldInfo);
+                }}
+                maxCount={1}
+                extraOptions={extraOptions}
+                isMask={true}
+            />
+        );
+    };
+
     const renderImageWidget = (fieldInfo: WidgetableNode, widget: WidgetableImagesWidget, widgetIndex: number, tempOldComfyCompat: boolean = false): React.ReactElement => {
         let value = widgetableValues[fieldInfo.id]?.[widgetIndex]
         if (tempOldComfyCompat && value) {
@@ -147,14 +162,15 @@ export const useWidgetableRenderer = ({
             case 'customtext':
             case 'text':
                 return renderStringWidget(fieldInfo, widget as WidgetableStringWidget, widgetIndex);
-            case 'IMAGE_PATH':
-            case 'MASK_PATH':
-                return renderImageWidget(fieldInfo, widget as WidgetableImagesWidget, widgetIndex, true);
             case 'images':
                 return renderImageWidget(fieldInfo, widget as WidgetableImagesWidget, widgetIndex);
+            case 'masks':
+                return renderMaskWidget(fieldInfo, widget as WidgetableImagesWidget, widgetIndex);
             case 'PS_DOCUMENT':
             case 'PS_LAYER':
                 return <span>SDPPP 2.0不需要这个节点了</span>
+            case 'error':
+                return <span>{(widget as any).value}</span>
             default:
                 return null;
         }
@@ -164,7 +180,7 @@ export const useWidgetableRenderer = ({
         // return <EditableTitle title={title} onTitleChange={(newTitle) => {
         //     onTitleChange(fieldInfo.id, newTitle);
         // }} />;
-        return <div>{title} {fieldInfo.widgets[0].options.required ? <span style={{ color: 'lightcoral' }}>*</span> : null}</div>;
+        return <div>{title} {fieldInfo.widgets[0]?.options?.required ? <span style={{ color: 'lightcoral' }}>*</span> : null}</div>;
     };
 
     return {

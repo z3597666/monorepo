@@ -121,6 +121,13 @@
     border-radius: 12px;
     font-size: 12px;
     z-index: 10;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  // hover时显示指示器
+  &:hover &__indicator {
+    opacity: 1;
   }
 
   // 发送到PS按钮样式

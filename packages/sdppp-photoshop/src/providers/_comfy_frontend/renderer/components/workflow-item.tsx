@@ -90,6 +90,7 @@ interface WorkflowItemProps {
   onRun: (path: string) => Promise<void>;
   setCurrentWorkflow: (workflow: string) => void;
   currentWorkflow: string;
+  setOpenWorkflowError: (error: string) => void;
 }
 
 interface ActiveWorkflowItemProps {
@@ -98,6 +99,7 @@ interface ActiveWorkflowItemProps {
   onRun: () => Promise<void>;
   setCurrentWorkflow: (workflow: string) => void;
   currentWorkflow: string;
+  setOpenWorkflowError: (error: string) => void;
 }
 
 const WorkflowActions: React.FC<{
@@ -129,11 +131,17 @@ const WorkflowItem: React.FC<WorkflowItemProps> = ({
   workflow,
   onRun,
   currentWorkflow,
-  setCurrentWorkflow
+  setCurrentWorkflow,
+  setOpenWorkflowError
 }) => {
 
-  const handleEditClick = () => {
-    sdpppSDK.plugins.ComfyCaller.openWorkflow(workflow.path);
+  const handleEditClick = async () => {
+    try {
+      setOpenWorkflowError('');
+      await sdpppSDK.plugins.ComfyCaller.openWorkflow(workflow.path);
+    } catch (error: any) {
+      setOpenWorkflowError(error.message || error.toString());
+    }
     setCurrentWorkflow(workflow.path);
   };
 
@@ -164,11 +172,17 @@ const SpecialWorkflowItem: React.FC<ActiveWorkflowItemProps> = ({
   path,
   title,
   currentWorkflow,
-  setCurrentWorkflow
+  setCurrentWorkflow,
+  setOpenWorkflowError
 }) => {
 
   const handleEditClick = async () => {
-    path && await sdpppSDK.plugins.ComfyCaller.openWorkflow(path)
+    setOpenWorkflowError('');
+    try {
+      path && await sdpppSDK.plugins.ComfyCaller.openWorkflow(path)
+    } catch (error) {
+      setOpenWorkflowError(error as string);
+    }
     setCurrentWorkflow(path || '');
   };
 

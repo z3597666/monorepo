@@ -6,6 +6,7 @@ import { computeUIWeightCSS } from "./utils.js";
 import './index.less'
 import { useWidgetableRenderer } from "./widgetable-web/main.jsx";
 import { useWidgetable } from "./context.jsx";
+import { Alert } from "antd";
 
 interface WorkflowEditApiFormatProps {
     modelName: string;
@@ -96,7 +97,9 @@ export default function WorkflowEdit({
                     <div className="workflow-edit-field-title param-label" title={fieldInfo.title} style={{
                         ...computeUIWeightCSS(useShortTitle ? 4 : 12),
                     }}>
-                        {renderTitle(fieldInfo.title, fieldInfo)}
+                        <WidgetTitleRenderErrorBoundary title={fieldInfo.title}>
+                            {renderTitle(fieldInfo.title, fieldInfo)}
+                        </WidgetTitleRenderErrorBoundary>
                     </div>
                     {
                         fieldInfo.widgets.map((widget, widgetIndex) => {
@@ -148,6 +151,32 @@ export default function WorkflowEdit({
     );
 }
 
+class WidgetTitleRenderErrorBoundary extends React.Component<{
+    children: React.ReactNode;
+    title: string;
+}, {
+    hasError: boolean;
+    error: Error | null;
+}> {
+    constructor(props: {
+        children: React.ReactNode;
+        title: string;
+    }) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+
+    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+        this.setState({ hasError: true, error });
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return <span>{this.props.title}</span>
+        }
+        return this.props.children;
+    }
+}
 class WidgetRenderErrorBoundary extends React.Component<{
     children: React.ReactNode;
 }, {
@@ -167,7 +196,7 @@ class WidgetRenderErrorBoundary extends React.Component<{
 
     render() {
         if (this.state.hasError) {
-            return <span className="list-error-label">{this.state.error?.stack || this.state.error?.message || this.state.error?.toString()}</span>
+            return <Alert message={this.state.error?.stack || this.state.error?.message || this.state.error?.toString()} type="error" />
         }
         return this.props.children;
     }

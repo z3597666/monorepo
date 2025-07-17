@@ -7,24 +7,17 @@ import { BaseWidgetProps } from './_base';
 import { useUIWeightCSS } from '../../utils';
 import { sdpppSDK } from '../../../../sdk/sdppp-ps-sdk';
 import { useWidgetable } from '../../context';
+import { v4 } from 'uuid';
+import { debug } from 'debug';
+
+const log = debug('widgetable:images');
 
 interface ImageSelectProps extends BaseWidgetProps {
-    value?: string[];
-    onValueChange?: (images: string[]) => void;
+    value?: ImageDetail[];
+    onValueChange?: (images: ImageDetail[]) => void;
     extraOptions?: Record<string, any>;
     maxCount?: number;
-}
-
-const localImageDetail = new Map<string, ImageDetail>();
-function fixURL(imageValue: string) {
-    if (typeof imageValue === 'string') {
-        return {
-            url: imageValue,
-            source: localImageDetail.get(imageValue)?.source || 'remote',
-            thumbnail: imageValue
-        };
-    }
-    return imageValue;
+    isMask?: boolean;
 }
 
 interface ImageDetail {
@@ -50,9 +43,9 @@ interface ImageDetail {
  * 2. 
  */
 
-export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight, value = [], onValueChange, extraOptions }) => {
+export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight, value = [], onValueChange, extraOptions, isMask = false }) => {
     const { runUploadPassOnce } = useWidgetable();
-    const [images, setImages] = useState<ImageDetail[]>(value.map(fixURL));
+    const [images, setImages] = useState<ImageDetail[]>(value);
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewCurrent, setPreviewCurrent] = useState(0);
     const [uploadError, setUploadError] = useState('');
@@ -65,13 +58,11 @@ export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight
 
     const handleChange = useCallback((newImages: ImageDetail[]) => {
         setImages(newImages);
-        newImages.forEach(image => {
-            localImageDetail.set(image.url, image);
-        });
     }, [onValueChange]);
 
     useEffect(() => {
-        onValueChange?.(images.map(image => image.url));
+        log('onValueChange', images);
+        onValueChange?.(images.map(image => image));
     }, [images]);
 
     const switchImageSource = useCallback((imageURL: string, newURL: string) => {
@@ -81,9 +72,6 @@ export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight
                     return { ...image, url: newURL };
                 }
                 return image;
-            });
-            newImages.forEach(image => {
-                localImageDetail.set(image.url, image);
             });
             return newImages;
         });
@@ -136,10 +124,12 @@ export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight
             runUploadPassOnce({
                 getUploadFile: async () => {
                     const buffer = await file.originFileObj!.arrayBuffer();
-                    return { fileBuffer: Buffer.from(buffer), fileName: file.name };
+                    return { type: 'buffer', tokenOrBuffer: Buffer.from(buffer), fileName: file.name };
+                },
+                onUploaded: async (url) => {
+                    switchImageSource(thumbnailURL, url);
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 }
-            }).then(url => {
-                switchImageSource(thumbnailURL, url);
             }).catch(error => {
                 // Remove the failed image from the list
                 setImages(prevImages => prevImages.filter(img => img.url !== thumbnailURL));
@@ -208,8 +198,8 @@ export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight
                     <Button
                         style={{ width: '100%' }}
                         icon={<PlusOutlined />}
-                        onClick={async () => {
-                            const { thumbnail_url, file_token, source } = await sdpppSDK.plugins.imaging.requestImageGet();
+                        onClick={async () => { 
+                            const { thumbnail_url, file_token, source } = isMask ? await sdpppSDK.plugins.imaging.requestMaskGet() : await sdpppSDK.plugins.imaging.requestImageGet();
                             
                             // 根据 multi 值决定是添加还是替换图片
                             const newImages = maxCount > 1 
@@ -217,15 +207,16 @@ export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight
                                 : [{ url: thumbnail_url, source, thumbnail: thumbnail_url }];
                                 
                             handleChange(newImages);
-                            const pass = {
-                                getUploadFile: async () => {
-                                    const buffer = await sdpppSDK.plugins.imaging.getBufferByToken(file_token);
-                                    return { fileBuffer: buffer, fileName: `${source}.png` }; 
-                                }
-                            };
                             setUploadError('');
-                            runUploadPassOnce(pass).then(url => {
-                                switchImageSource(thumbnail_url, url);
+                            runUploadPassOnce({
+                                getUploadFile: async () => {
+                                    return { type: 'token', tokenOrBuffer: file_token, fileName: `${v4()}.png` }; 
+                                },
+                                onUploaded: async (url) => {
+                                    switchImageSource(thumbnail_url, url);
+                                    await new Promise(resolve => setTimeout(resolve, 100));
+                                }
+
                             }).catch(error => {
                                 // Remove the failed image from the list
                                 setImages(prevImages => prevImages.filter(img => img.url !== thumbnail_url));

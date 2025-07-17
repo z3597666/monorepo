@@ -1,28 +1,28 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { z } from 'zod';
+import { createStore } from 'zustand';
+import { debug } from 'debug';
+
+const log = debug('widgetable:context');
+
+const uploadImageInputSchama = z.object({
+    type: z.literal('buffer').or(z.literal('token')),
+    tokenOrBuffer: z.any(),
+    fileName: z.string()
+});
+export type UploadPassInput = z.infer<typeof uploadImageInputSchama>
 
 // 定义hook函数的类型
 type uploadPass = {
-    getUploadFile: () => Promise<{
-        fileBuffer: Buffer,
-        fileName: string,
-    }>,
+    getUploadFile: () => Promise<UploadPassInput>,
+    onUploaded?: (fileURL: string) => Promise<void>,
 };
 
 // 定义Context的类型
 interface WidgetableContextType {
-    runUploadPassOnce: ({ getUploadFile }: {
-        getUploadFile: () => Promise<{
-            fileBuffer: Buffer,
-            fileName: string,
-        }>,
-    }) => Promise<string>;
-    addUploadPass: ({ getUploadFile }: {
-        getUploadFile: () => Promise<{
-            fileBuffer: Buffer,
-            fileName: string,
-        }>,
-    }) => string;
+    runUploadPassOnce: (pass: uploadPass) => Promise<string>;
+    addUploadPass: (pass: uploadPass) => string;
     removeUploadPass: (pass: uploadPass) => void;
 
     waitAllUploadPasses: () => Promise<void>;
@@ -34,67 +34,77 @@ const WidgetableContext = createContext<WidgetableContextType | undefined>(undef
 // Provider组件的Props类型
 interface WidgetableProviderProps {
     children: ReactNode;
-    uploader: (fileBuffer: Buffer, fileName: string) => Promise<string>;
+    uploader: (uploadInput: UploadPassInput) => Promise<string>;
 }
+
+const uploadPassesStore = createStore<{
+    uploadPasses: uploadPass[],
+    runningUploadPasses: {
+        [id: string]: Promise<string>
+    }
+}>((set) => ({
+    uploadPasses: [],
+    runningUploadPasses: {},
+}))
 
 // Provider组件
 export function WidgetableProvider({ children, uploader }: WidgetableProviderProps) {
-    const [uploadPasses, setUploadPasses] = useState<uploadPass[]>([]);
-    const [runningUploadPasses, setRunningUploadPasses] = useState<{
-        [id: string]: Promise<string>
-    }>({});
-
     const value: WidgetableContextType = {
         runUploadPassOnce: async (pass: uploadPass) => {
             if (!uploader) {
                 throw new Error('Uploader not set, please call setUploader first');
             }
             const promise = new Promise<string>(async (resolve, reject) => {
-                const { fileBuffer, fileName } = await pass.getUploadFile();
-                const fileURL = uploader(fileBuffer, fileName)
-                .then(url => {
-                    resolve(url);
-                })
-                .catch(error => {
+                const uploadInput = await pass.getUploadFile();
+                try {
+                    log('run uploader', pass);
+                    const fileURL = await uploader(uploadInput);
+                    if (pass.onUploaded) {
+                        log('run onUploaded', fileURL);
+                        await pass.onUploaded(fileURL);
+                    }
+                    resolve(fileURL);
+                } catch (error) {
                     reject(error);
-                });
-                setRunningUploadPasses((runningUploadPasses) => {
-                    delete runningUploadPasses[runID];
-                    return runningUploadPasses;
-                });
+                } finally {
+                    uploadPassesStore.setState((state) => {
+                        delete state.runningUploadPasses[runID];
+                        return state;
+                    });
+                }
             })
             const runID = uuidv4();
-            setRunningUploadPasses({
-                ...runningUploadPasses,
-                [runID]: promise
+            uploadPassesStore.setState((state) => {
+                state.runningUploadPasses[runID] = promise;
+                return state;
             });
 
             return await promise;
         },
         addUploadPass: (pass: uploadPass) => {
             const passId = uuidv4();
-            setUploadPasses([...uploadPasses, pass]);
+            uploadPassesStore.setState((state) => {
+                state.uploadPasses.push(pass);
+                return state;
+            });
             return passId;
         },
         removeUploadPass: (pass: uploadPass) => {
-            setUploadPasses(uploadPasses.filter(p => p !== pass));
+            uploadPassesStore.setState((state) => {
+                state.uploadPasses = state.uploadPasses.filter(p => p !== pass);
+                return state;
+            });
         },
         waitAllUploadPasses: async () => {
             if (!uploader) {
                 throw new Error('Uploader not set, please call setUploader first');
             }
-            const promisesFromUploadPasses = uploadPasses.map(async pass => {
-                const { fileBuffer, fileName } = await pass.getUploadFile();
-                const fileURL = await uploader(fileBuffer, fileName);
+            const promisesFromUploadPasses = uploadPassesStore.getState().uploadPasses.map(async pass => {
+                const uploadInput = await pass.getUploadFile();
+                const fileURL = await uploader(uploadInput);
                 return fileURL;
             });
-            const promisesFromRunningUploadPasses = Object.values(runningUploadPasses);
-            console.log(
-                'promisesFromUploadPasses length: ',
-                promisesFromUploadPasses.length,
-                'promisesFromRunningUploadPasses length:',
-                promisesFromRunningUploadPasses.length
-            )
+            const promisesFromRunningUploadPasses = Object.values(uploadPassesStore.getState().runningUploadPasses);
             await Promise.all([...promisesFromUploadPasses, ...promisesFromRunningUploadPasses]);
         },
     };

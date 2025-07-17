@@ -15,7 +15,9 @@ import { useWidgetable } from '../../../../tsx/widgetable/context';
 import './workflow-detail.less';
 import { MainStore } from '../../../../tsx/App.store';
 import { comfyWorkflowStore } from '../comfy_frontend';
+import { debug } from 'debug';
 
+const log = debug('comfy-frontend:workflow-detail')
 const { Text } = Typography;
 
 const WorkflowStatus: React.FC<{ currentWorkflow: string }> = ({ currentWorkflow }) => {
@@ -118,7 +120,9 @@ const RunButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
   const { waitAllUploadPasses } = useWidgetable();
 
   const doRun = useCallback(async () => {
+    log('waiting for upload passes')
     await waitAllUploadPasses();
+    log('upload passes done')
     runAndWaitResult(1, currentWorkflow)
   }, [waitAllUploadPasses])
   return (
