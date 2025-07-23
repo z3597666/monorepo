@@ -37,6 +37,7 @@ export declare const sdpppSDK: {
 			comfyWebviewLoadError: string;
 			comfyWebviewLoading: boolean;
 			comfyWebviewURL: string;
+			comfyWebviewVersion: string;
 			comfyAutoRunning: boolean;
 			loaded: boolean;
 			sdpppX?: any;
@@ -53,6 +54,7 @@ export declare const sdpppSDK: {
 					comfyWebviewLoadError: string;
 					comfyWebviewLoading: boolean;
 					comfyWebviewURL: string;
+					comfyWebviewVersion: string;
 					comfyAutoRunning: boolean;
 					loaded: boolean;
 					sdpppX?: any;
@@ -71,6 +73,7 @@ export declare const sdpppSDK: {
 					comfyWebviewLoadError: string;
 					comfyWebviewLoading: boolean;
 					comfyWebviewURL: string;
+					comfyWebviewVersion: string;
 					comfyAutoRunning: boolean;
 					loaded: boolean;
 					sdpppX?: any;
@@ -86,6 +89,7 @@ export declare const sdpppSDK: {
 					comfyWebviewLoadError: string;
 					comfyWebviewLoading: boolean;
 					comfyWebviewURL: string;
+					comfyWebviewVersion: string;
 					comfyAutoRunning: boolean;
 					loaded: boolean;
 					sdpppX?: any;
@@ -101,6 +105,7 @@ export declare const sdpppSDK: {
 					comfyWebviewLoadError: string;
 					comfyWebviewLoading: boolean;
 					comfyWebviewURL: string;
+					comfyWebviewVersion: string;
 					comfyAutoRunning: boolean;
 					loaded: boolean;
 					sdpppX?: any;
@@ -180,6 +185,7 @@ export declare const sdpppSDK: {
 			queueSize: number;
 			lastError: string;
 			executingNodeTitle: string;
+			graphProgress: number;
 			comfyUserToken: string;
 			comfyOrgLoggedIn: boolean;
 			comfyOrgAPIKey: string;
@@ -189,12 +195,14 @@ export declare const sdpppSDK: {
 			isLogin: boolean;
 			loginMessage: string;
 			token: string;
+			userInfo: Record<string, any>;
 		}>, "persist"> & {
 			persist: {
 				setOptions: (options: Partial<import("zustand/middleware").PersistOptions<{
 					isLogin: boolean;
 					loginMessage: string;
 					token: string;
+					userInfo: Record<string, any>;
 				}, unknown>>) => void;
 				clearStorage: () => void;
 				rehydrate: () => Promise<void> | void;
@@ -203,21 +211,26 @@ export declare const sdpppSDK: {
 					isLogin: boolean;
 					loginMessage: string;
 					token: string;
+					userInfo: Record<string, any>;
 				}) => void) => () => void;
 				onFinishHydration: (fn: (state: {
 					isLogin: boolean;
 					loginMessage: string;
 					token: string;
+					userInfo: Record<string, any>;
 				}) => void) => () => void;
 				getOptions: () => Partial<import("zustand/middleware").PersistOptions<{
 					isLogin: boolean;
 					loginMessage: string;
 					token: string;
+					userInfo: Record<string, any>;
 				}, unknown>>;
 			};
 		};
 		SDPPPPActionStore: import("zustand").StoreApi<{
+			register: (args_0: string, args_1: string, args_2: Record<string, any>, ...args: unknown[]) => void;
 			loginByPassword: (args_0: string, args_1: string, ...args: unknown[]) => void;
+			logout: (...args: unknown[]) => void;
 		}>;
 	};
 	plugins: {

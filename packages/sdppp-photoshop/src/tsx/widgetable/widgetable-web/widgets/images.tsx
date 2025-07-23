@@ -26,6 +26,21 @@ interface ImageDetail {
     thumbnail?: string,
 }
 
+function fixValue(value: ImageDetail[]) {
+    if (!value.map) return []
+    return value.map(image => {
+        if (typeof image === 'string') {
+            return {
+                url: image,
+                thumbnail: image,
+                source: 'remote',
+            };
+        } else {
+            return image
+        }
+    });
+}
+
 /**
  * 实现一个图片选择器，包括一个图片预览区域。和下方的"+ 从PS"，"+ 从磁盘"按钮，以及hover时才会显示的"清空"，"自动刷新"按钮。按钮可以用图标代替
  * 添加图片后，会往选择器里添加一个图片。若有多个图片，图片预览区域会排列这些图片的缩略图，最多3个。5个或以上图片会在第四格产生省略号标志。
@@ -44,6 +59,7 @@ interface ImageDetail {
  */
 
 export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight, value = [], onValueChange, extraOptions, isMask = false }) => {
+    value = fixValue(value);
     const { runUploadPassOnce } = useWidgetable();
     const [images, setImages] = useState<ImageDetail[]>(value);
     const [previewVisible, setPreviewVisible] = useState(false);

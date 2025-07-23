@@ -87,8 +87,8 @@ function LiblibRendererModels() {
 
     return (
         <WidgetableProvider
-            uploader={async (fileBuffer, fileName) => {
-                const fileToken = await client.uploadImage(fileBuffer, 'jpg');
+            uploader={async (uploadInput) => {
+                const fileToken = await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg');
                 return fileToken;
             }}
         >
@@ -99,7 +99,6 @@ function LiblibRendererModels() {
                 }}
                 onBlur={(e) => handleModelChange((e.target as any).value)}
                 onSelect={(value) => {
-                    console.log('onSelect', value);
                     if (value) {
                         handleModelChange(value);
                     }
@@ -140,7 +139,15 @@ function LiblibRendererForm() {
                 values={currentValues}
                 errors={{}}
                 onWidgetChange={(widgetIndex: number, value: any, fieldInfo: WidgetableNode) => {
+                    if (value && (fieldInfo.widgets[widgetIndex].outputType === 'images' || fieldInfo.widgets[widgetIndex].outputType === 'masks')) {
+                        if (value instanceof Array) {
+                            value = value.map((item: any) => item.url);
+                        } else {
+                            value = value.url;
+                        }
+                    }
                     currentValues[fieldInfo.id] = value;
+                    console.log('onWidgetChanged', currentValues);
                     setCurrentValues(currentValues);
                 }}
             />

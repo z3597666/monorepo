@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
 import { readFileSync, writeFileSync } from 'fs';
+import { resolve } from 'path';
+import { defineConfig } from 'vite';
 
 // 自定义插件来处理 sdpppX.js 文件
 function sdpppXPlugin() {
@@ -45,6 +45,9 @@ function sdpppXPlugin() {
 export default defineConfig({
   plugins: [react(), sdpppXPlugin()],
   resolve: {
+  },
+  define: {
+    SDPPP_VERSION: readFileSync(resolve(import.meta.dirname, '../../release-repos/sd-ppp/sdppp_python/version2.txt'), 'utf-8').trim(),
   },
   base: './',
   build: {

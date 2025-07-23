@@ -1,12 +1,12 @@
-import React from 'react';
-import './comfy_frontend.less';
-import { Input, Flex, Button, Alert } from 'antd';
+import { Alert, Button, Flex, Input } from 'antd';
 import { useEffect, useState } from 'react';
-import { WidgetableProvider } from '../../../tsx/widgetable/context';
-import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
-import { ComfyFrontendRendererContent } from './components';
 import { useStore } from 'zustand';
-import { v4 } from 'uuid';
+import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
+import { WidgetableProvider } from '../../../tsx/widgetable/context';
+import './comfy_frontend.less';
+import { ComfyFrontendRendererContent } from './components';
+
+declare const SDPPP_VERSION: string;
 
 export function ComfyFrontendRenderer() {
     const comfyWebviewURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewURL);
@@ -14,6 +14,7 @@ export function ComfyFrontendRenderer() {
     const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
     const comfyWebviewConnectStatus = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewConnectStatus);
     const comfyWebviewHTTPCode = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewHTTPCode);
+    const comfyWebviewVersion = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewVersion);
     const [currentInputURL, setCurrentInputURL] = useState<string>('');
     useEffect(() => {
         if (comfyWebviewURL) {
@@ -35,7 +36,7 @@ export function ComfyFrontendRenderer() {
                     value={currentInputURL}
                     onChange={(e) => setCurrentInputURL(e.target.value)}
                 />
-                {!comfyWebviewURL || comfyWebviewLoading || comfyWebviewLoadError || currentInputURL !== comfyWebviewURL ?
+                {!comfyWebviewURL || comfyWebviewLoading || comfyWebviewLoadError || currentInputURL !== comfyWebviewURL || comfyWebviewConnectStatus === 'timedout'?
                     <Button type="primary" onClick={() => {
                         sdpppSDK.stores.PhotoshopActionStore.getState().setComfyWebviewURL(currentInputURL);
                     }}>
@@ -55,7 +56,10 @@ export function ComfyFrontendRenderer() {
             ) : comfyWebviewConnectStatus === 'connecting' ? (
                 <Alert message="连接中..." type="info" />
             ) :
-                (comfyWebviewURL && <ComfyFrontendRendererContent />)
+                <>
+                {comfyWebviewVersion && comfyWebviewVersion !== SDPPP_VERSION && <Alert message={`Comfy侧SDPPP版本与插件不匹配，运行可能有问题`} type="warning" />}
+                {(comfyWebviewURL && <ComfyFrontendRendererContent />)}
+                </>
             }
         </WidgetableProvider>
     )
@@ -67,7 +71,7 @@ function translateHTTPCode(code: number) {
         case 200:
             return '';
         case 404:
-            return '未找到 (404)';
+            return 'SDPPP可能未安装或和插件版本不匹配 (404)';
         case 401:
             return '未授权 (401)';
         case 403:

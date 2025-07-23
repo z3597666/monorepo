@@ -97,8 +97,14 @@ export class SDPPPReplicate extends Client<{
             }
         })
     }
-    async uploadImage(image: ArrayBuffer, format: 'png' | 'jpg' | 'jpeg' | 'webp'): Promise<string> {
-        const base64 = Buffer.from(image).toString('base64');
+    async uploadImage(type: 'token' | 'buffer', image: ArrayBuffer | string, format: 'png' | 'jpg' | 'jpeg' | 'webp'): Promise<string> {
+        if (type === 'token') {
+            const file = await this.replicate.files.create(new Blob([image as string], {
+                type: `image/uxp`
+            }));
+            return file.urls.get;
+        }
+        const base64 = Buffer.from(image as ArrayBuffer).toString('base64');
         const dataUrl = `data:image/${format};base64,${base64}`;
         return dataUrl;
     }

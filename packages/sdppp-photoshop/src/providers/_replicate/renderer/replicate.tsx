@@ -84,8 +84,8 @@ function ReplicateRendererModels() {
         // This Provider is used to provide the context for the WorkflowEditApiFormat
         // 这个Provider是必须的，因为WorkflowEditApiFormat需要使用WidgetableProvider
         <WidgetableProvider
-            uploader={async (fileBuffer, fileName) => {
-                return await client.uploadImage(fileBuffer, 'jpg');
+            uploader={async (uploadInput) => {
+                return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg');
             }}
         >
             <AutoComplete
@@ -136,6 +136,9 @@ function ReplicateRendererForm() {
                 values={currentValues}
                 errors={{}}
                 onWidgetChange={(widgetIndex: number, value: any, fieldInfo: WidgetableNode) => {
+                    if (value && (fieldInfo.widgets[widgetIndex].outputType === 'images' || fieldInfo.widgets[widgetIndex].outputType === 'masks')) {
+                        value = value.url
+                    }
                     currentValues[fieldInfo.id] = value;
                     setCurrentValues(currentValues);
                 }}

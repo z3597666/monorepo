@@ -131,11 +131,11 @@ export class SDPPPLiblib extends Client<{
     }
   }
 
-  async uploadImage(image: ArrayBuffer, format: 'png' | 'jpg' | 'jpeg' | 'webp'): Promise<string> {
+  async uploadImage(type: 'token' | 'buffer', image: ArrayBuffer | string, format: 'png' | 'jpg' | 'jpeg' | 'webp'): Promise<string> {
     try {
       const filename = `sdppp_${Math.random().toString(36).substring(2, 8)}_${Date.now()}.${format}`;
       const response = await this.client.uploadFile(new Blob([image], {
-        type: `image/${format}`,
+        type: `image/${type === 'token' ? 'uxp' : format}`,
       }), filename)
       return response;
     } catch (e) {

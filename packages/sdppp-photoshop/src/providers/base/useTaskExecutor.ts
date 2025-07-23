@@ -47,6 +47,7 @@ export function useTaskExecutor({
         await waitAllUploadPasses();
 
         setProgressMessage('正在创建任务...');
+        console.log('handleRun', selectedModel, currentValues);
         try {
             const task = await createTask(selectedModel, currentValues);
             setLastStartTime(Date.now());
