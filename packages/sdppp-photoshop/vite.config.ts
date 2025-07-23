@@ -1,7 +1,8 @@
 import react from '@vitejs/plugin-react';
-import { readFileSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
+import { viteSingleFile } from 'vite-plugin-singlefile';
 
 // 自定义插件来处理 sdpppX.js 文件
 function sdpppXPlugin() {
@@ -42,8 +43,43 @@ function sdpppXPlugin() {
   };
 }
 
+function sdkPlugin() {
+  return {
+    name: 'sdk-plugin',
+    writeBundle(options) {
+      const outDir = options.dir || './plugin/webview';
+      const sdkChunkPath = resolve(import.meta.dirname, './src/sdk/sdppp-ps-sdk-chunk.js');
+      const targetPath = resolve(import.meta.dirname, outDir, 'sdppp-ps-sdk-chunk.js');
+      
+      // 复制 SDK chunk 文件到输出目录
+      if (existsSync(sdkChunkPath)) {
+        try {
+          copyFileSync(sdkChunkPath, targetPath);
+          console.log('✅ Copied sdppp-ps-sdk-chunk.js to output directory');
+          
+          // 更新 HTML 文件中的引用路径
+          const htmlPath = resolve(import.meta.dirname, outDir, 'content.html');
+          if (existsSync(htmlPath)) {
+            let htmlContent = readFileSync(htmlPath, 'utf-8');
+            htmlContent = htmlContent.replace(
+              './src/sdk/sdppp-ps-sdk-chunk.js',
+              './sdppp-ps-sdk-chunk.js'
+            );
+            writeFileSync(htmlPath, htmlContent, 'utf-8');
+            console.log('✅ Updated HTML reference to sdppp-ps-sdk-chunk.js');
+          }
+        } catch (error) {
+          console.error('❌ Error processing SDK chunk:', error);
+        }
+      } else {
+        console.warn('⚠️  SDK chunk file not found:', sdkChunkPath);
+      }
+    }
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), sdpppXPlugin()],
+  plugins: [react(), sdpppXPlugin(), sdkPlugin(), viteSingleFile()],
   resolve: {
   },
   define: {
