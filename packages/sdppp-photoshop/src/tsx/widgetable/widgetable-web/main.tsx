@@ -3,9 +3,10 @@ import { NumberWidget } from "./widgets/number";
 import { ComboWidget } from "./widgets/combo";
 import { ToggleWidget } from "./widgets/toggle";
 import { StringWidget } from "./widgets/string";
-import { WidgetableComboWidget, WidgetableImagesWidget, WidgetableNode, WidgetableNumberWidget, WidgetableStringWidget, WidgetableToggleWidget, WidgetableValues, WidgetableWidget } from "@sdppp/common/schemas/schemas";
+import { WidgetableComboWidget, WidgetableImagesWidget, WidgetableNode, WidgetableNumberWidget, WidgetableSegmentWidget, WidgetableStringWidget, WidgetableToggleWidget, WidgetableValues, WidgetableWidget } from "@sdppp/common/schemas/schemas";
 import ImageSelect from "./widgets/images";
 import { sdpppSDK } from "../../../sdk/sdppp-ps-sdk";
+import { SegmentWidget } from "./widgets/segment";
 
 interface UseWidgetableRendererProps {
     widgetableValues: WidgetableValues;
@@ -78,6 +79,21 @@ export const useWidgetableRenderer = ({
         );
     };
 
+    const renderSegmentWidget = (fieldInfo: WidgetableNode, widget: WidgetableSegmentWidget, widgetIndex: number): React.ReactElement => {
+        return (
+            <SegmentWidget
+                uiWeight={widget.uiWeight || 12}
+                key={widgetIndex}
+                options={widget?.options?.values || []}
+                name={widget.name}
+                onSelectUpdate={(v) => {
+                    onWidgetChange(fieldInfo.id, widgetIndex, v, fieldInfo);
+                }}
+                value={widgetableValues[fieldInfo.id]?.[widgetIndex] || ''}
+                extraOptions={extraOptions}
+            />
+        );
+    };
 
     const renderStringWidget = (fieldInfo: WidgetableNode, widget: WidgetableStringWidget, widgetIndex: number): React.ReactElement => {
         return (
@@ -155,6 +171,8 @@ export const useWidgetableRenderer = ({
                 return renderNumberWidget(fieldInfo, widget as WidgetableNumberWidget, widgetIndex);
             case 'combo':
                 return renderComboWidget(fieldInfo, widget as WidgetableComboWidget, widgetIndex);
+            case 'segment':
+                return renderSegmentWidget(fieldInfo, widget as WidgetableSegmentWidget, widgetIndex);
             case 'boolean':
             case 'toggle':
                 return renderToggleWidget(fieldInfo, widget as WidgetableToggleWidget, widgetIndex);

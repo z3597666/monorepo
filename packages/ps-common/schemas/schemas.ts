@@ -53,13 +53,22 @@ export const WidgetableComboWidgetSchema = z.object({
             values: z.array(z.string())
         })
 })
+export const WidgetableSegmentWidgetSchema = z.object({
+    ...WidgetableBaseWidgetSchemaPart,
+        outputType: z.literal('segment'),
+        options: z.object({
+            required: z.boolean(),
+            values: z.array(z.string())
+        })
+})
 export const WidgetableWidgetSchema = z.discriminatedUnion("outputType", [
     WidgetableImagesWidgetSchema,
     WidgetableMasksWidgetSchema,
     WidgetableStringWidgetSchema,
     WidgetableToggleWidgetSchema,
     WidgetableNumberWidgetSchema,
-    WidgetableComboWidgetSchema
+    WidgetableComboWidgetSchema,
+    WidgetableSegmentWidgetSchema
 ])
 export const WidgetableNodeSchema = z.object({
     id: z.string(),
@@ -81,6 +90,7 @@ export type WidgetableStringWidget = z.infer<typeof WidgetableStringWidgetSchema
 export type WidgetableToggleWidget = z.infer<typeof WidgetableToggleWidgetSchema>;
 export type WidgetableNumberWidget = z.infer<typeof WidgetableNumberWidgetSchema>;
 export type WidgetableComboWidget = z.infer<typeof WidgetableComboWidgetSchema>;
+export type WidgetableSegmentWidget = z.infer<typeof WidgetableSegmentWidgetSchema>;
 export type WidgetableWidget = z.infer<typeof WidgetableWidgetSchema>;
 export type WidgetableNode = z.infer<typeof WidgetableNodeSchema>;
 export type WidgetableStructure = z.infer<typeof WidgetableStructureSchema>;

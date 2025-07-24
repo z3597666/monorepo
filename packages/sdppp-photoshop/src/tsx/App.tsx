@@ -28,6 +28,7 @@ export default function App() {
                     colorLink: 'var(--sdppp-host-text-color)',
                     colorLinkHover: 'var(--sdppp-widget-hover-text-color)',
                     colorLinkActive: 'var(--sdppp-host-text-color)',
+
                 },
                 algorithm: [psTheme === 'kPanelBrightnessDarkGray' || psTheme === 'kPanelBrightnessMediumGray' || psTheme === 'kPanelBrightnessLightGray' ? theme.darkAlgorithm : theme.defaultAlgorithm, theme.compactAlgorithm],
                 components: {
@@ -67,6 +68,7 @@ export default function App() {
                     },
                     Slider: {
                         fontSize: fontSize,
+                        colorBgElevated: 'var(--sdppp-host-text-color)',
                     },
                     Switch: {
                         fontSize: fontSize,

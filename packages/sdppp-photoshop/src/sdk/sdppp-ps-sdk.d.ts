@@ -175,6 +175,14 @@ export declare const sdpppSDK: {
 						name: string;
 						outputType: "combo";
 						uiWeight: number;
+					} | {
+						options: {
+							values: string[];
+							required: boolean;
+						};
+						name: string;
+						outputType: "segment";
+						uiWeight: number;
 					})[];
 					uiWeightSum: number;
 				}>;
