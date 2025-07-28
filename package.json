@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "build": "pnpm --filter !./packages/sdppp-photoshop... build && pnpm --filter ./packages/sdppp-photoshop... build",
+    "build": "pnpm --filter !./packages/sdppp-photoshop... --filter !./release-repos/sd-ppp... build && pnpm --filter ./packages/sdppp-photoshop... build && pnpm --filter ./release-repos/sd-ppp... build",
     "dev": "cross-env NODE_ENV=development pnpm --filter '*' --parallel dev"
   },
   "author": "",
