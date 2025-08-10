@@ -14,16 +14,17 @@ const uploadImageInputSchama = z.object({
 export type UploadPassInput = z.infer<typeof uploadImageInputSchama>
 
 // 定义hook函数的类型
-type uploadPass = {
+export type UploadPass = {
     getUploadFile: () => Promise<UploadPassInput>,
     onUploaded?: (fileURL: string) => Promise<void>,
+    onUploadError?: (error: any) => void,
 };
 
 // 定义Context的类型
 interface WidgetableContextType {
-    runUploadPassOnce: (pass: uploadPass) => Promise<string>;
-    addUploadPass: (pass: uploadPass) => string;
-    removeUploadPass: (pass: uploadPass) => void;
+    runUploadPassOnce: (pass: UploadPass) => Promise<string>;
+    addUploadPass: (pass: UploadPass) => string;
+    removeUploadPass: (pass: UploadPass) => void;
 
     waitAllUploadPasses: () => Promise<void>;
 }
@@ -38,7 +39,7 @@ interface WidgetableProviderProps {
 }
 
 const uploadPassesStore = createStore<{
-    uploadPasses: uploadPass[],
+    uploadPasses: UploadPass[],
     runningUploadPasses: {
         [id: string]: Promise<string>
     }
@@ -50,22 +51,21 @@ const uploadPassesStore = createStore<{
 // Provider组件
 export function WidgetableProvider({ children, uploader }: WidgetableProviderProps) {
     const value: WidgetableContextType = {
-        runUploadPassOnce: async (pass: uploadPass) => {
+        runUploadPassOnce: async (pass: UploadPass) => {
             if (!uploader) {
                 throw new Error('Uploader not set, please call setUploader first');
             }
             const promise = new Promise<string>(async (resolve, reject) => {
                 const uploadInput = await pass.getUploadFile();
                 try {
-                    log('run uploader', pass);
                     const fileURL = await uploader(uploadInput);
                     if (pass.onUploaded) {
-                        log('run onUploaded', fileURL);
                         await pass.onUploaded(fileURL);
                     }
                     resolve(fileURL);
                 } catch (error) {
-                    reject(error);
+                    pass.onUploadError?.(error);
+                    return '';
                 } finally {
                     uploadPassesStore.setState((state) => {
                         delete state.runningUploadPasses[runID];
@@ -81,7 +81,7 @@ export function WidgetableProvider({ children, uploader }: WidgetableProviderPro
 
             return await promise;
         },
-        addUploadPass: (pass: uploadPass) => {
+        addUploadPass: (pass: UploadPass) => {
             const passId = uuidv4();
             uploadPassesStore.setState((state) => {
                 state.uploadPasses.push(pass);
@@ -89,7 +89,7 @@ export function WidgetableProvider({ children, uploader }: WidgetableProviderPro
             });
             return passId;
         },
-        removeUploadPass: (pass: uploadPass) => {
+        removeUploadPass: (pass: UploadPass) => {
             uploadPassesStore.setState((state) => {
                 state.uploadPasses = state.uploadPasses.filter(p => p !== pass);
                 return state;
@@ -100,9 +100,17 @@ export function WidgetableProvider({ children, uploader }: WidgetableProviderPro
                 throw new Error('Uploader not set, please call setUploader first');
             }
             const promisesFromUploadPasses = uploadPassesStore.getState().uploadPasses.map(async pass => {
-                const uploadInput = await pass.getUploadFile();
-                const fileURL = await uploader(uploadInput);
-                return fileURL;
+                try {
+                    const uploadInput = await pass.getUploadFile();
+                    const fileURL = await uploader(uploadInput);
+                    if (pass.onUploaded) {
+                        await pass.onUploaded(fileURL);
+                    }
+                    return fileURL;
+                } catch (error) {
+                    pass.onUploadError?.(error);
+                    throw error
+                }
             });
             const promisesFromRunningUploadPasses = Object.values(uploadPassesStore.getState().runningUploadPasses);
             await Promise.all([...promisesFromUploadPasses, ...promisesFromRunningUploadPasses]);

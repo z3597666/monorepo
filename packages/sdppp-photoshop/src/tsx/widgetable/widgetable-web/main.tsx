@@ -128,9 +128,9 @@ export const useWidgetableRenderer = ({
         let value = widgetableValues[fieldInfo.id]?.[widgetIndex]
         if (tempOldComfyCompat && value) {
             const [subfolder, ...rest] = value.split('/')
-            const url = sdpppSDK.stores.PhotoshopStore.getState().comfyWebviewURL.endsWith('/') ?
-                sdpppSDK.stores.PhotoshopStore.getState().comfyWebviewURL + 'api/view?type=input&filename=' + rest.join('/') + '&subfolder=' + subfolder :
-                sdpppSDK.stores.PhotoshopStore.getState().comfyWebviewURL + '/api/view?type=input&filename=' + rest.join('/') + '&subfolder=' + subfolder;
+            const url = sdpppSDK.stores.PhotoshopStore.getState().comfyURL.endsWith('/') ?
+                sdpppSDK.stores.PhotoshopStore.getState().comfyURL + 'api/view?type=input&filename=' + rest.join('/') + '&subfolder=' + subfolder :
+                sdpppSDK.stores.PhotoshopStore.getState().comfyURL + '/api/view?type=input&filename=' + rest.join('/') + '&subfolder=' + subfolder;
             value = {
                 url: value,
                 thumbnail: url,

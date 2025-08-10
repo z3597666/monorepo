@@ -76,7 +76,7 @@ export class SDPPPReplicate extends Client<{
             statusGetter: async (id) => {
                 const r = await this.replicate.predictions.get(id)
                 if (r.status === 'failed') {
-                    throw new Error(r.error)
+                    throw new Error(String(r.error))
                 }
                 return {
                     isCompleted: r.status === 'succeeded',

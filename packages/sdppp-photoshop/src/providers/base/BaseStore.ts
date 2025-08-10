@@ -51,7 +51,18 @@ export function createBaseStore<TClient extends Client<any>, TState extends Base
         ...additionalState,
     } as unknown as TState), {
         name: storeName,
-        storage: createJSONStorage(() => sdpppSDK.plugins.uxp),
+        storage: createJSONStorage(() => ({
+            getItem: async (key) => {
+                const result = await sdpppSDK.plugins.photoshop.getStorage({ key });
+                return result.error ? null : result.value;
+            },
+            setItem: async (key, value) => {
+                await sdpppSDK.plugins.photoshop.setStorage({ key, value });
+            },
+            removeItem: async (key) => {
+                await sdpppSDK.plugins.photoshop.removeStorage({ key });
+            }
+        })),
         partialize,
     }));
 

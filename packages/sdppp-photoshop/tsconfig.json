@@ -1,8 +1,26 @@
 {
-    "files": ["./vite.config.ts"],
+    "extends": "../../tsconfig.base.json",
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+    ],
     "compilerOptions": {
-        "noEmit": true,
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext"
+      "noEmit": true,
+      "typeRoots": [
+        "./node_modules/@types"
+      ],
+      "module": "ESNext",
+      "moduleResolution": "bundler",
+      "target": "ESNext",
+      "lib": [
+        "ESNext",
+        "DOM"
+      ],
+      "allowJs": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "strict": true,
+      "noImplicitAny": false
     }
-}
+  }

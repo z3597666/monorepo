@@ -9,25 +9,23 @@ import { ComfyFrontendRendererContent } from './components';
 declare const SDPPP_VERSION: string;
 
 export function ComfyFrontendRenderer() {
-    const comfyWebviewURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewURL);
+    const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
     const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
     const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
     const comfyWebviewConnectStatus = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewConnectStatus);
-    const comfyWebviewHTTPCode = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewHTTPCode);
-    const comfyWebviewVersion = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewVersion);
     const [currentInputURL, setCurrentInputURL] = useState<string>('');
     useEffect(() => {
-        if (comfyWebviewURL) {
-            setCurrentInputURL(comfyWebviewURL);
+        if (comfyURL) {
+            setCurrentInputURL(comfyURL);
         }
-    }, [comfyWebviewURL]);
+    }, [comfyURL]);
 
     return (
         // This Provider is used to provide the context for the WorkflowEditApiFormat
         // 这个Provider是必须的，因为WorkflowEditApiFormat需要使用WidgetableProvider
         <WidgetableProvider
             uploader={async (uploadInput) => {
-                const { name } = await sdpppSDK.plugins.ComfyCaller.uploadImage(uploadInput);
+                const { name } = await sdpppSDK.plugins.photoshop.uploadComfyImage({ uploadInput, overwrite: true });
                 return name;
             }}
         >
@@ -36,32 +34,47 @@ export function ComfyFrontendRenderer() {
                     value={currentInputURL}
                     onChange={(e) => setCurrentInputURL(e.target.value)}
                 />
-                {!comfyWebviewURL || comfyWebviewLoading || comfyWebviewLoadError || currentInputURL !== comfyWebviewURL || comfyWebviewConnectStatus === 'timedout'?
+                {!comfyURL || comfyWebviewLoading || comfyWebviewLoadError || currentInputURL !== comfyURL || comfyWebviewConnectStatus === 'timedout' ?
                     <Button type="primary" onClick={() => {
-                        sdpppSDK.stores.PhotoshopActionStore.getState().setComfyWebviewURL(currentInputURL);
+                        sdpppSDK.plugins.photoshop.setComfyWebviewURL({ url: currentInputURL });
                     }}>
                         连接
                     </Button> : null
                 }
             </Flex>
 
-            {comfyWebviewLoadError ? (
-                <Alert message={comfyWebviewLoadError} type="error" />
-            ) : comfyWebviewLoading ? (
-                <Alert message="ComfyUI加载中..." type="info" />
-            ) : comfyWebviewConnectStatus === 'timedout' ? (
-                comfyWebviewHTTPCode !== 200 ? (
-                    <Alert message={`ComfyUI连接失败，HTTP状态码：${translateHTTPCode(comfyWebviewHTTPCode)}`} type="error" />
-                ) : <Alert message="连接超时或失败" type="error" />
-            ) : comfyWebviewConnectStatus === 'connecting' ? (
-                <Alert message="连接中..." type="info" />
-            ) :
-                <>
-                {comfyWebviewVersion && comfyWebviewVersion !== SDPPP_VERSION && <Alert message={`Comfy侧SDPPP版本与插件不匹配，运行可能有问题`} type="warning" />}
-                {(comfyWebviewURL && <ComfyFrontendRendererContent />)}
-                </>
-            }
+            {ComfyFrontendContent()}
         </WidgetableProvider>
+    )
+}
+
+function ComfyFrontendContent() {
+    const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
+    const comfyHTTPCode = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyHTTPCode);
+    const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
+    const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
+    const comfyWebviewConnectStatus = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewConnectStatus);
+    const comfyWebviewVersion = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewVersion);
+
+    if (!comfyURL) return null;
+
+    return (
+
+        comfyWebviewLoadError ? (
+            <Alert message={comfyWebviewLoadError} type="error" />
+        ) : comfyWebviewLoading ? (
+            <Alert message="ComfyUI加载中..." type="info" />
+        ) : comfyWebviewConnectStatus === 'timedout' ? (
+            comfyHTTPCode !== 200 ? (
+                <Alert message={`ComfyUI连接失败，HTTP状态码：${translateHTTPCode(comfyHTTPCode)}`} type="error" />
+            ) : <Alert message="连接超时或失败" type="error" />
+        ) : comfyWebviewConnectStatus === 'connecting' ? (
+            <Alert message="连接中..." type="info" />
+        ) :
+            <>
+                {comfyWebviewVersion && comfyWebviewVersion !== SDPPP_VERSION && <Alert message={`Comfy侧SDPPP版本与插件不匹配，运行可能有问题`} type="warning" />}
+                {(comfyURL && <ComfyFrontendRendererContent />)}
+            </>
     )
 }
 

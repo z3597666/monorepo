@@ -44,6 +44,15 @@ importers:
       '@sdppp/mcp':
         specifier: workspace:*
         version: link:../sdppp-mcp
+      '@sdppp/mcp-mesh':
+        specifier: workspace:*
+        version: link:../mcp-mesh
+      '@sdppp/mcp-mesh-photoshop':
+        specifier: workspace:*
+        version: link:../mcp-mesh-photoshop
+      '@sdppp/mcp-postmessage-transport':
+        specifier: workspace:*
+        version: link:../mcp-postmessage-transport
       '@sdppp/ps-uxp':
         specifier: workspace:*
         version: link:../ps-uxp
@@ -75,17 +84,73 @@ importers:
         specifier: ^1.6.0
         version: 1.6.0
       zod:
-        specifier: ^3.25.45
-        version: 3.25.45
+        specifier: ^3.25.76
+        version: 3.25.76
       zustand:
         specifier: ^5.0.5
         version: 5.0.5(@types/react@18.3.1)(react@18.3.1)
+
+  internals/gitfile-fetcher: {}
+
+  internals/mcp-mesh:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.16.0
+        version: 1.16.0
+      debug:
+        specifier: ^4.4.1
+        version: 4.4.1(supports-color@8.1.1)
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+      zustand:
+        specifier: ^5.0.6
+        version: 5.0.7(@types/react@19.1.6)(react@19.1.0)
+    devDependencies:
+      typescript:
+        specifier: ^5.0.0
+        version: 5.8.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.0.7)(jiti@2.4.2)(jsdom@24.1.3)(less@4.3.0)(lightningcss@1.30.1)(yaml@2.8.0)
+
+  internals/mcp-mesh-photoshop:
+    dependencies:
+      '@sdppp/mcp-mesh':
+        specifier: workspace:*
+        version: link:../mcp-mesh
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.16.0
+        version: 1.16.0
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.0.7)(jiti@2.4.2)(jsdom@24.1.3)(less@4.3.0)(lightningcss@1.30.1)(yaml@2.8.0)
 
   internals/mcp-postmessage-transport:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.16.0
         version: 1.16.0
+
+  internals/plugin-system:
+    dependencies:
+      glob:
+        specifier: ^10.3.10
+        version: 10.4.5
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+      vite:
+        specifier: ^6.3.5
+        version: 6.3.5(@types/node@24.0.7)(jiti@2.4.2)(less@4.3.0)(lightningcss@1.30.1)(yaml@2.8.0)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@24.0.7)(rollup@4.41.1)(typescript@5.8.3)(vite@6.3.5(@types/node@24.0.7)(jiti@2.4.2)(less@4.3.0)(lightningcss@1.30.1)(yaml@2.8.0))
 
   internals/ps-uxp:
     dependencies:
@@ -95,9 +160,18 @@ importers:
       '@sdppp/common':
         specifier: workspace:*
         version: link:../../packages/ps-common
+      '@sdppp/gitfile-fetcher':
+        specifier: workspace:*
+        version: link:../gitfile-fetcher
       '@sdppp/mcp':
         specifier: workspace:*
         version: link:../sdppp-mcp
+      '@sdppp/mcp-mesh':
+        specifier: workspace:*
+        version: link:../mcp-mesh
+      '@sdppp/mcp-mesh-photoshop':
+        specifier: workspace:*
+        version: link:../mcp-mesh-photoshop
       '@sdppp/mcp-postmessage-transport':
         specifier: workspace:*
         version: link:../mcp-postmessage-transport
@@ -128,6 +202,9 @@ importers:
       install:
         specifier: ^0.13.0
         version: 0.13.0
+      javascript-obfuscator:
+        specifier: ^4.1.1
+        version: 4.1.1
       jimp:
         specifier: ^1.6.0
         version: 1.6.0
@@ -140,6 +217,9 @@ importers:
       replicate:
         specifier: ^1.0.1
         version: 1.0.1
+      sdppp:
+        specifier: workspace:*
+        version: link:../../release-repos/sd-ppp
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -147,8 +227,8 @@ importers:
         specifier: ^6.3.5
         version: 6.3.5(@types/node@24.0.7)(jiti@2.4.2)(less@4.3.0)(lightningcss@1.30.1)(yaml@2.8.0)
       zod:
-        specifier: ^3.25.45
-        version: 3.25.45
+        specifier: ^3.25.76
+        version: 3.25.76
       zustand:
         specifier: ^5.0.5
         version: 5.0.5(@types/react@19.1.6)(react@19.1.0)
@@ -183,6 +263,12 @@ importers:
       '@sdppp/mcp':
         specifier: workspace:*
         version: link:../sdppp-mcp
+      '@sdppp/mcp-mesh':
+        specifier: workspace:*
+        version: link:../mcp-mesh
+      '@sdppp/mcp-mesh-photoshop':
+        specifier: workspace:*
+        version: link:../mcp-mesh-photoshop
       '@sdppp/mcp-postmessage-transport':
         specifier: workspace:*
         version: link:../mcp-postmessage-transport
@@ -205,13 +291,11 @@ importers:
         specifier: ^4.1.1
         version: 4.1.1
       zod:
-        specifier: ^3.25.45
-        version: 3.25.45
+        specifier: ^3.25.76
+        version: 3.25.76
       zustand:
         specifier: ^5.0.5
         version: 5.0.5(@types/react@19.1.6)(react@19.1.0)
-
-  internals/sd-ppp2: {}
 
   internals/sdppp-mcp:
     dependencies:
@@ -225,8 +309,8 @@ importers:
         specifier: ^1.5.10
         version: 1.5.10
       zod:
-        specifier: ^3.25.45
-        version: 3.25.45
+        specifier: ^3.25.76
+        version: 3.25.76
 
   internals/sdppp-mcp-server:
     dependencies:
@@ -265,8 +349,8 @@ importers:
         specifier: ^15.5.2
         version: 15.5.2(i18next@25.2.1(typescript@5.8.3))(react@19.1.0)(typescript@5.8.3)
       zod:
-        specifier: ^3.25.45
-        version: 3.25.45
+        specifier: ^3.25.76
+        version: 3.25.76
 
   packages/sdppp-photoshop:
     dependencies:
@@ -297,6 +381,9 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+      replicate:
+        specifier: ^1.0.1
+        version: 1.0.1
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -304,8 +391,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0(rollup@4.41.1)(vite@6.3.5(@types/node@20.17.57)(jiti@2.4.2)(less@4.3.0)(lightningcss@1.30.1)(yaml@2.8.0))
       zod:
-        specifier: ^3.25.45
-        version: 3.25.45
+        specifier: ^3.25.76
+        version: 3.25.76
       zustand:
         specifier: ^5.0.5
         version: 5.0.5(@types/react@18.3.23)(react@18.3.1)
@@ -4017,11 +4104,29 @@ packages:
     peerDependencies:
       zod: ^3.24.1
 
-  zod@3.25.45:
-    resolution: {integrity: sha512-kv1swJBZqv98NQibL0oVvkQE8rXT+6qGNM1FpZkFcJG2jnz4vbtu48bgaitp85CaBPLSKXibrEsU7MzJoVoZAA==}
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zustand@5.0.5:
     resolution: {integrity: sha512-mILtRfKW9xM47hqxGIxCv12gXusoY/xTSHBYApXozR0HmQv299whhBeeAcRy+KrPPybzosvJBCOmVjq6x12fCg==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      immer: '>=9.0.6'
+      react: '>=18.0.0'
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
+
+  zustand@5.0.7:
+    resolution: {integrity: sha512-Ot6uqHDW/O2VdYsKLLU8GQu8sCOM1LcoE8RwvLv9uuRT9s6SOHCKs0ZEOhxg+I1Ld+A1Q5lwx+UlKXXUoCZITg==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@types/react': '>=18.0.0'
@@ -4459,7 +4564,7 @@ snapshots:
     dependencies:
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-blur@1.6.0':
     dependencies:
@@ -4469,7 +4574,7 @@ snapshots:
   '@jimp/plugin-circle@1.6.0':
     dependencies:
       '@jimp/types': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-color@1.6.0':
     dependencies:
@@ -4477,7 +4582,7 @@ snapshots:
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
       tinycolor2: 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-contain@1.6.0':
     dependencies:
@@ -4486,7 +4591,7 @@ snapshots:
       '@jimp/plugin-resize': 1.6.0
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-cover@1.6.0':
     dependencies:
@@ -4494,20 +4599,20 @@ snapshots:
       '@jimp/plugin-crop': 1.6.0
       '@jimp/plugin-resize': 1.6.0
       '@jimp/types': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-crop@1.6.0':
     dependencies:
       '@jimp/core': 1.6.0
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-displace@1.6.0':
     dependencies:
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-dither@1.6.0':
     dependencies:
@@ -4517,12 +4622,12 @@ snapshots:
     dependencies:
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-flip@1.6.0':
     dependencies:
       '@jimp/types': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-hash@1.6.0':
     dependencies:
@@ -4540,7 +4645,7 @@ snapshots:
   '@jimp/plugin-mask@1.6.0':
     dependencies:
       '@jimp/types': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-print@1.6.0':
     dependencies:
@@ -4553,18 +4658,18 @@ snapshots:
       parse-bmfont-binary: 1.0.6
       parse-bmfont-xml: 1.1.6
       simple-xml-to-json: 1.2.3
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-quantize@1.6.0':
     dependencies:
       image-q: 4.0.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-resize@1.6.0':
     dependencies:
       '@jimp/core': 1.6.0
       '@jimp/types': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-rotate@1.6.0':
     dependencies:
@@ -4573,7 +4678,7 @@ snapshots:
       '@jimp/plugin-resize': 1.6.0
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/plugin-threshold@1.6.0':
     dependencies:
@@ -4582,11 +4687,11 @@ snapshots:
       '@jimp/plugin-hash': 1.6.0
       '@jimp/types': 1.6.0
       '@jimp/utils': 1.6.0
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/types@1.6.0':
     dependencies:
-      zod: 3.25.45
+      zod: 3.25.76
 
   '@jimp/utils@1.6.0':
     dependencies:
@@ -4685,8 +4790,8 @@ snapshots:
       express-rate-limit: 7.5.0(express@5.1.0)
       pkce-challenge: 5.0.0
       raw-body: 3.0.0
-      zod: 3.25.45
-      zod-to-json-schema: 3.24.5(zod@3.25.45)
+      zod: 3.25.76
+      zod-to-json-schema: 3.24.5(zod@3.25.76)
     transitivePeerDependencies:
       - supports-color
 
@@ -8202,11 +8307,11 @@ snapshots:
       compress-commons: 6.0.2
       readable-stream: 4.7.0
 
-  zod-to-json-schema@3.24.5(zod@3.25.45):
+  zod-to-json-schema@3.24.5(zod@3.25.76):
     dependencies:
-      zod: 3.25.45
+      zod: 3.25.76
 
-  zod@3.25.45: {}
+  zod@3.25.76: {}
 
   zustand@5.0.5(@types/react@18.3.1)(react@18.3.1):
     optionalDependencies:
@@ -8219,6 +8324,11 @@ snapshots:
       react: 18.3.1
 
   zustand@5.0.5(@types/react@19.1.6)(react@19.1.0):
+    optionalDependencies:
+      '@types/react': 19.1.6
+      react: 19.1.0
+
+  zustand@5.0.7(@types/react@19.1.6)(react@19.1.0):
     optionalDependencies:
       '@types/react': 19.1.6
       react: 19.1.0

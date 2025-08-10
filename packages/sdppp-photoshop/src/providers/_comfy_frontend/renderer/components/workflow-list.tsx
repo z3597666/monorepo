@@ -28,6 +28,7 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
     refetch
 
   } = useWorkflowList();
+  const [openWorkflowError, setOpenWorkflowError] = useState<string | null>(null);
  
   // Show error if workflows failed to load
   if (workflowsError) {
@@ -42,7 +43,6 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
       </div>
     );
   }
-  const [openWorkflowError, setOpenWorkflowError] = useState<string | null>(null);
 
   return (
     <div className="workflow-list" style={{ display: hidden ? 'none' : 'block' }}>

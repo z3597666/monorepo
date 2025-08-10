@@ -26,7 +26,7 @@ export default function ReplicateRenderer({ showingPreview }: { showingPreview: 
                 />
             </Flex> : null}
             {
-                !apiKey && <Link onClick={() => sdpppSDK.plugins.uxp.openExternalLink("https://replicate.com/account/api-tokens")}>如何获取APIKey</Link>
+                !apiKey && <Link onClick={() => sdpppSDK.plugins.photoshop.openExternalLink({ url: "https://replicate.com/account/api-tokens" })}>如何获取APIKey</Link>
             }
 
             {error && (
@@ -61,6 +61,9 @@ function ReplicateRendererModels() {
     }, [selectedModel]);
 
     const handleModelChange = async (value: string) => {
+        if (value === selectedModel) {
+            return;
+        }
         if (client) {
             setLoadError('');
             setLoading(true);
@@ -95,7 +98,6 @@ function ReplicateRendererModels() {
                 }}
                 onBlur={(e) => handleModelChange((e.target as any).value)}
                 onSelect={(value) => {
-                    console.log('onSelect', value);
                     if (value) {
                         handleModelChange(value);
                     }
@@ -122,9 +124,30 @@ function ReplicateRendererForm() {
         selectedModel,
         currentValues,
         createTask,
-        runningTasks
+        runningTasks,
+        beforeCreateTaskHook: (values) => {
+            // 根据注释中提供的数据结构，对image组件控制的字段进行修正
+            // 如果一个字段是image组件控制的，那么需要从value中取出url字段作为最终value
+            const processedValues = { ...values };
+            
+            currentWidgets.forEach((widget) => {
+                if (widget.outputType === 'images' || widget.outputType === 'masks') {
+                    const fieldValue = processedValues[widget.name];
+                    if (fieldValue) {
+                        if (Array.isArray(fieldValue)) {
+                            processedValues[widget.name] = fieldValue.map((item: any) => 
+                                (typeof item === 'object' && item.url) ? item.url : item
+                            );
+                        } else if (typeof fieldValue === 'object' && fieldValue.url) {
+                            processedValues[widget.name] = fieldValue.url;
+                        }
+                    }
+                }
+            });
+            
+            return processedValues;
+        }
     });
-
     return (
         <>
             <Button type="primary" onClick={handleRun}>执行</Button>
@@ -136,9 +159,6 @@ function ReplicateRendererForm() {
                 values={currentValues}
                 errors={{}}
                 onWidgetChange={(widgetIndex: number, value: any, fieldInfo: WidgetableNode) => {
-                    if (value && (fieldInfo.widgets[widgetIndex].outputType === 'images' || fieldInfo.widgets[widgetIndex].outputType === 'masks')) {
-                        value = value.url
-                    }
                     currentValues[fieldInfo.id] = value;
                     setCurrentValues(currentValues);
                 }}

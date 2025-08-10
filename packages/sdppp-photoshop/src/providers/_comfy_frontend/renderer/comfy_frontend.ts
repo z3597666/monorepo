@@ -12,7 +12,20 @@ export const comfyWorkflowStore = createStore<{
     setHistoryValues: (values) => set({ historyValues: values })
 }), {
     name: 'comfy-workflow-values',
-    storage: createJSONStorage(() => sdpppSDK.plugins.uxp),
+    storage: createJSONStorage(() => {
+        return {
+            getItem: async (key) => {
+                const result = await sdpppSDK.plugins.photoshop.getStorage({ key: key });
+                return result.error ? null : result.value;
+            },
+            setItem: (key, value) => {
+                sdpppSDK.plugins.photoshop.setStorage({ key: key, value: value });
+            },
+            removeItem: (key) => {
+                sdpppSDK.plugins.photoshop.removeStorage({ key: key });
+            }
+        }
+    }),
     partialize: (state) => ({
         historyValues: state.historyValues
     })
@@ -37,7 +50,7 @@ export function useWorkflowList() {
             setLoading(true);
             setCurrentViewingDirectory('');
             setAllWorkflowList({});
-            const listResult = await sdpppSDK.plugins.ComfyCaller.list();
+            const listResult = await sdpppSDK.plugins.ComfyCaller.listWorkflows({});
             const workflowList: Record<string, Workflow> = listResult.workflows
                 .reduce((acc: Record<string, Workflow>, workflow: string) => {
                     acc[workflow] = {

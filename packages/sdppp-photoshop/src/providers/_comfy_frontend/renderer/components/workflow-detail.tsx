@@ -49,7 +49,9 @@ const SaveButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
   return (
     <Tooltip title="保存">
       <Button icon={<SaveOutlined />} onClick={() => {
-        sdpppSDK.plugins.ComfyCaller.save(currentWorkflow)
+        sdpppSDK.plugins.ComfyCaller.saveWorkflow({
+          workflow_path: currentWorkflow,
+        })
       }} />
     </Tooltip>
   );
@@ -59,7 +61,10 @@ const RefreshButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
   return (
     <Tooltip title="刷新">
       <Button icon={<ReloadOutlined />} onClick={() =>
-        sdpppSDK.plugins.ComfyCaller.openWorkflow(currentWorkflow, true)
+        sdpppSDK.plugins.ComfyCaller.openWorkflow({
+          workflow_path: currentWorkflow,
+          reset: true
+        })
       } />
     </Tooltip>
   );
@@ -67,8 +72,7 @@ const RefreshButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
 
 const StopAndCancelButton = () => {
   const onClearAndInterrupt = useCallback(async () => {
-    sdpppSDK.plugins.ComfyCaller.clearQueue();
-    sdpppSDK.plugins.ComfyCaller.interrupt();
+    sdpppSDK.plugins.ComfyCaller.stopAll({});
   }, []);
   return (
     <Tooltip title="停止并取消全部">
@@ -85,11 +89,11 @@ const AutoRunButton = () => {
         icon={<ForwardOutlined />}
         type={autoRunning ? 'primary' : 'default'}
         onClick={() => {
-          if (autoRunning) {
-            sdpppSDK.stores.PhotoshopActionStore.getState().setComfyAutoRunning(false)
-          } else {
-            sdpppSDK.stores.PhotoshopActionStore.getState().setComfyAutoRunning(true)
-          }
+          // if (autoRunning) {
+          //   sdpppSDK.plugins.photoshop.setComfyAutoRunning({ autoRunning: false })
+          // } else {
+          //   sdpppSDK.plugins.photoshop.setComfyAutoRunning({ autoRunning: true })
+          // }
         }}
       />
     </Tooltip>
@@ -105,14 +109,16 @@ const AutoRunButton = () => {
 //   );
 // };
 async function runAndWaitResult(multi: number, currentWorkflow: string) {
-  const { stream } = await sdpppSDK.plugins.ComfyCaller.run(multi)
-  for await (const result of stream) {
-    result.images.forEach(image => {
-      MainStore.getState().setPreviewImageList([...MainStore.getState().previewImageList, {
-        url: image.url,
-        source: currentWorkflow
-      }])
-    })
+  const result = await sdpppSDK.plugins.ComfyCaller.run({ size: multi })
+  for await (const item of result) {
+    if (item.images) {
+      item.images.forEach(image => {
+        MainStore.getState().setPreviewImageList([...MainStore.getState().previewImageList, {
+          url: image.url,
+          source: currentWorkflow
+        }])
+      })
+    }
   }
 }
 
@@ -158,22 +164,21 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
   const widgetableValues = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableValues)
   const widgetableStructure = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableStructure)
   const widgetableErrors = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableErrors)
-  const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewURL)
+  const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL)
   const [hasRecoverHistory, setHasRecoverHistory] = useState<boolean>(false);
   useEffect(() => {
     if (currentWorkflow === widgetableStructure.widgetablePath.replace(/^workflows\//, '') && !hasRecoverHistory) {
       const historyValues = comfyWorkflowStore.getState().historyValues[currentWorkflow]
       if (historyValues) {
         const values = Object.entries(historyValues)
-        .reduce((acc, [nodeID, values]) => {
-          return acc.concat(values.map((value: any, widgetIndex: number) => ({
-            nodeID,
-            widgetIndex,
-            value
-          })))
-        }, [])
-        console.log('recover history values', values)
-        sdpppSDK.plugins.ComfyCaller.setWidgetValue(values)
+          .reduce((acc, [nodeID, values]) => {
+            return acc.concat(values.map((value: any, widgetIndex: number) => ({
+              nodeID,
+              widgetIndex,
+              value
+            })))
+          }, [])
+        sdpppSDK.plugins.ComfyCaller.setWidgetValue({ values })
       }
       setHasRecoverHistory(true)
     } else {
@@ -184,7 +189,6 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
   const [prevWidgetableValues, setPrevWidgetableValues] = useState<Record<string, any>>(widgetableValues)
   useEffect(() => {
     if (JSON.stringify(prevWidgetableValues) !== JSON.stringify(widgetableValues)) {
-      console.log('update history values', currentWorkflow, widgetableValues)
       comfyWorkflowStore.getState().setHistoryValues({
         ...comfyWorkflowStore.getState().historyValues,
         [currentWorkflow]: widgetableValues
@@ -226,14 +230,19 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
         widgetableValues={widgetableValues}
         widgetableErrors={widgetableErrors}
         onWidgetChange={(nodeID, widgetIndex, value, fieldInfo) => {
-          sdpppSDK.plugins.ComfyCaller.setWidgetValue([{
-            nodeID,
-            widgetIndex,
-            value
-          }])
+          sdpppSDK.plugins.ComfyCaller.setWidgetValue({
+            values: [{
+              nodeID,
+              widgetIndex,
+              value
+            }]
+          })
         }}
         onTitleChange={(nodeID, title) => {
-          sdpppSDK.plugins.ComfyCaller.setNodeTitle(nodeID, title)
+          sdpppSDK.plugins.ComfyCaller.setNodeTitle({
+            title,
+            node_id: nodeID
+          })
         }}
       />
     </div>

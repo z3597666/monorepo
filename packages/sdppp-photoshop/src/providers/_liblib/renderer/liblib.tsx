@@ -31,7 +31,7 @@ export default function LiblibRenderer({ showingPreview }: { showingPreview: boo
                 />
             </Flex> : null}
             {
-                !apiKey && <Link onClick={() => sdpppSDK.plugins.uxp.openExternalLink("https://www.liblib.art/apis")}>如何获取APIKey和API Secret</Link>
+                !apiKey && <Link onClick={() => sdpppSDK.plugins.photoshop.openExternalLink({ url: "https://www.liblib.art/apis" })}>如何获取APIKey和API Secret</Link>
             }
 
             {error && (

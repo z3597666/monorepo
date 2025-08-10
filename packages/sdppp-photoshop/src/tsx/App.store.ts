@@ -21,7 +21,18 @@ export const MainStore = create<{
     setShowingPreview: (showing: boolean) => set({ showingPreview: showing })
 }), {
     name: 'main-store',
-    storage: createJSONStorage(() => sdpppSDK.plugins.uxp),
+    storage: createJSONStorage(() => ({
+        getItem: async (key) => {
+            const result = await sdpppSDK.plugins.photoshop.getStorage({ key });
+            return result.error ? null : result.value;
+        },
+        setItem: async (key, value) => {
+            await sdpppSDK.plugins.photoshop.setStorage({ key, value });
+        },
+        removeItem: async (key) => {
+            await sdpppSDK.plugins.photoshop.removeStorage({ key });
+        }
+    })),
     partialize: (state) => ({
         provider: state.provider,
     }),

@@ -7,13 +7,15 @@ export interface UseTaskExecutorOptions {
     currentValues: any;
     createTask: (model: string, values: any) => Promise<any>;
     runningTasks: any[];
+    beforeCreateTaskHook: (values: any) => any;
 }
 
 export function useTaskExecutor({
     selectedModel,
     currentValues,
     createTask,
-    runningTasks
+    runningTasks,
+    beforeCreateTaskHook
 }: UseTaskExecutorOptions) {
     const [runError, setRunError] = useState<string>('');
     const [lastStartTime, setLastStartTime] = useState<number>(0);
@@ -47,9 +49,13 @@ export function useTaskExecutor({
         await waitAllUploadPasses();
 
         setProgressMessage('正在创建任务...');
-        console.log('handleRun', selectedModel, currentValues);
+        
+        // 在创建任务前调用 hook 来修改 currentValues
+        const finalValues = beforeCreateTaskHook ? beforeCreateTaskHook(currentValues) : currentValues;
+        
+        console.log('handleRun', selectedModel, finalValues);
         try {
-            const task = await createTask(selectedModel, currentValues);
+            const task = await createTask(selectedModel, finalValues);
             setLastStartTime(Date.now());
             if (task) {
                 try {

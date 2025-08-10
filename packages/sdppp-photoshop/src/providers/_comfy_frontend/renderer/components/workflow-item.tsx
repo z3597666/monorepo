@@ -138,7 +138,10 @@ const WorkflowItem: React.FC<WorkflowItemProps> = ({
   const handleEditClick = async () => {
     try {
       setOpenWorkflowError('');
-      await sdpppSDK.plugins.ComfyCaller.openWorkflow(workflow.path);
+      await sdpppSDK.plugins.ComfyCaller.openWorkflow({
+        workflow_path: workflow.path,
+        reset: false
+      });
     } catch (error: any) {
       setOpenWorkflowError(error.message || error.toString());
     }
@@ -179,7 +182,10 @@ const SpecialWorkflowItem: React.FC<ActiveWorkflowItemProps> = ({
   const handleEditClick = async () => {
     setOpenWorkflowError('');
     try {
-      path && await sdpppSDK.plugins.ComfyCaller.openWorkflow(path)
+      path && await sdpppSDK.plugins.ComfyCaller.openWorkflow({
+        workflow_path: path,
+        reset: false
+      })
     } catch (error) {
       setOpenWorkflowError(error as string);
     }

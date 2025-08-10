@@ -1,2 +1,2 @@
-export { createPluginDiscovery } from './vite.js';
-export type { PluginDiscoveryOptions } from './vite.js';
+export { createPluginDiscovery } from './vite.ts';
+export type { PluginDiscoveryOptions } from './vite.ts';
