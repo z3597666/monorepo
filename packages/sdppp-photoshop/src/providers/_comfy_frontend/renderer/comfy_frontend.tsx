@@ -34,7 +34,7 @@ export function ComfyFrontendRenderer() {
                     value={currentInputURL}
                     onChange={(e) => setCurrentInputURL(e.target.value)}
                 />
-                {!comfyURL || comfyWebviewLoading || comfyWebviewLoadError || currentInputURL !== comfyURL || comfyWebviewConnectStatus === 'timedout' ?
+                {!comfyURL || comfyWebviewLoading || comfyWebviewLoadError || currentInputURL !== comfyURL ?
                     <Button type="primary" onClick={() => {
                         sdpppSDK.plugins.photoshop.setComfyWebviewURL({ url: currentInputURL });
                     }}>
@@ -64,10 +64,8 @@ function ComfyFrontendContent() {
             <Alert message={comfyWebviewLoadError} type="error" />
         ) : comfyWebviewLoading ? (
             <Alert message="ComfyUI加载中..." type="info" />
-        ) : comfyWebviewConnectStatus === 'timedout' ? (
-            comfyHTTPCode !== 200 ? (
-                <Alert message={`ComfyUI连接失败，HTTP状态码：${translateHTTPCode(comfyHTTPCode)}`} type="error" />
-            ) : <Alert message="连接超时或失败" type="error" />
+        ) : comfyHTTPCode !== 200 ? (
+            <Alert message={`ComfyUI连接失败，HTTP状态码：${translateHTTPCode(comfyHTTPCode)}`} type="error" />
         ) : comfyWebviewConnectStatus === 'connecting' ? (
             <Alert message="连接中..." type="info" />
         ) :

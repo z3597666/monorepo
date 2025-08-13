@@ -96,18 +96,6 @@ export default function App() {
                     显示预览框 ({previewImageList.length}张图片)
                 </Button>
             </Flex> : null}
-            {!showingPreview ? <Select
-                className='app-select'
-                showSearch={true}
-                value={provider}
-                onChange={value => MainStore.setState({ provider: value as (keyof typeof Providers) | '' })}
-            >
-                <Select.Option value="">请选择AI服务</Select.Option>
-                {
-                    Object.keys(Providers)
-                        .map(key => <Select.Option key={key} value={key}>{key}</Select.Option>)
-                }
-            </Select> : null}
             {
                 showingPreview ? <ImagePreview /> : null
             }

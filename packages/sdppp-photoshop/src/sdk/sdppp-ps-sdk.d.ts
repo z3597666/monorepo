@@ -13,6 +13,7 @@ export interface StreamActionIterator<T> {
 declare function registerProxyDomains(domains: string): void;
 export declare const sdpppSDK: {
 	init(): Promise<void>;
+	logger: import("debug").Debugger;
 	stores: {
 		PhotoshopStore: NodeStore<{
 			actions: string[];
@@ -25,7 +26,7 @@ export declare const sdpppSDK: {
 			}[];
 			theme: string;
 			sdpppX: Record<string, any>;
-			comfyWebviewConnectStatus: "connecting" | "connected" | "disconnected" | "timedout";
+			comfyWebviewConnectStatus: "connecting" | "connected" | "disconnected";
 			comfyWebviewLoadError: string;
 			comfyWebviewLoading: boolean;
 			comfyWebviewVersion: string;
@@ -33,7 +34,7 @@ export declare const sdpppSDK: {
 			comfyHTTPCode: number;
 			comfyURL: string;
 			sdkWebviewFocusing: boolean;
-			sdkWebviewConnectStatus: "connecting" | "connected" | "disconnected" | "timedout";
+			sdkWebviewConnectStatus: "connecting" | "connected" | "disconnected";
 			isLogin: boolean;
 			requestingLogin: boolean;
 			loginMessage: string;
@@ -149,6 +150,10 @@ export declare const sdpppSDK: {
 				phone: string;
 			}, signal?: AbortSignal) => Promise<{}>;
 			logout: (data: {}, signal?: AbortSignal) => Promise<{}>;
+			log: (data: {
+				messages: string[];
+				level: "error" | "info" | "log" | "warn";
+			}, signal?: AbortSignal) => Promise<{}>;
 			openExternalLink: (data: {
 				url: string;
 			}, signal?: AbortSignal) => Promise<{
@@ -226,7 +231,7 @@ export declare const sdpppSDK: {
 			doSendImage: (data: {
 				url: string;
 				source: string;
-				selection: "newlayer_canvas" | "newlayer_curlayer" | "newlayer_selection" | "curlayer_canvas" | "curlayer_curlayer" | "curlayer_selection" | "newdoc_canvas";
+				selection: "newdoc_canvas" | "newlayer_canvas" | "newlayer_curlayer" | "newlayer_selection" | "curlayer_canvas" | "curlayer_curlayer" | "curlayer_selection";
 				cropBySelection: "no" | "positive" | "negative";
 			}, signal?: AbortSignal) => Promise<{
 				error?: string | undefined;
@@ -255,6 +260,7 @@ export declare const sdpppSDK: {
 		fetchProxy: {
 			registerProxyDomains: typeof registerProxyDomains;
 		};
+		sdpppX: any;
 	};
 };
 

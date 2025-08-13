@@ -1,5 +1,5 @@
 
-const { entrypoints } = require("uxp");
+const { entrypoints, storage } = require("uxp");
 
 const _id = Symbol("_id");
 const _root = Symbol("_root");
@@ -78,9 +78,30 @@ entrypoints.setup({
                     label: "查看日志",
                     enabled: true,
                     checked: false,
-                    oninvoke: () => {
-                        const logs = globalThis.sdpppX.__getLogs__();
-                        alert(JSON.stringify(logs));
+                    oninvoke: async () => {
+                        const logContent = globalThis.sdpppX.__getLogs__().join('\n');
+                        
+                        // 同时将日志写入文件
+                        try {
+                            const localFileSystem = storage.localFileSystem;
+                            
+                            // 获取插件数据文件夹
+                            const pluginDataFolder = await localFileSystem.getTemporaryFolder();
+                            
+                            // 创建日志文件名（带时间戳）
+                            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                            const logFileName = `sdppp-log-${timestamp}.txt`;
+                            
+                            // 创建或获取日志文件
+                            const logFile = await pluginDataFolder.createFile(`${logFileName}`, { type: "file", overwrite: true});
+                            
+                            alert(`日志已保存到文件: ${logFile.nativePath}\n\n\n` + logContent);
+
+                            // 写入日志内容
+                            await logFile.write(logContent, {append: false});
+                        } catch (error) {
+                            console.error('写入日志文件失败:', error);
+                        }
                     }
                 }
             ]

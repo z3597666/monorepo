@@ -1,6 +1,5 @@
 import { Providers } from "../../providers";
 import { MainStore } from "../App.store";
-import ImagePreview from "../components/ImagePreview";
 import { Select } from "antd";
 import { useMemo } from "react";
 
@@ -26,9 +25,6 @@ export function SDPPPGateway() {
                         .map(key => <Select.Option key={key} value={key}>{key}</Select.Option>)
                 }
             </Select> : null
-        }
-        {
-            showingPreview ? <ImagePreview /> : null
         }
         {Renderer && <Renderer showingPreview={showingPreview} />}
     </>
