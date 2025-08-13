@@ -3,19 +3,15 @@ import './App.less'
 import { sdpppSDK } from '../sdk/sdppp-ps-sdk'
 import { Button, ConfigProvider, Flex, Select, theme } from 'antd'
 import { Providers } from '../providers'
-import { useMemo, useState } from 'react'
 import { MainStore } from './App.store'
 import ImagePreview from './components/ImagePreview'
+import { SDPPPGateway } from './gateway/sdppp'
 
 export default function App() {
     const psTheme = useStore(sdpppSDK.stores.PhotoshopStore, state => state.theme)
     const provider = MainStore(state => state.provider)
     const showingPreview = MainStore(state => state.showingPreview)
     const previewImageList = MainStore(state => state.previewImageList)
-
-    const Renderer = useMemo(() => {
-        return provider ? Providers[provider].Renderer : null
-    }, [provider])
 
     const fontSize = 12
 
@@ -115,7 +111,7 @@ export default function App() {
             {
                 showingPreview ? <ImagePreview /> : null
             }
-            {Renderer && <Renderer showingPreview={showingPreview} />}
+            <SDPPPGateway />
         </ConfigProvider>
     </div>
 }
