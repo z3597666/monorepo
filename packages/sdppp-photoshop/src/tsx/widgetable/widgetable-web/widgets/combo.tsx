@@ -5,6 +5,7 @@ import { BaseWidgetProps } from './_base';
 export interface DropdownWidgetProps extends BaseWidgetProps {
     onSelectUpdate: (identify: string, index: number) => void;
     options: string[];
+    labels: string[];
     value: string;
     name?: string;
     extraOptions?: Record<string, any>;
@@ -13,6 +14,7 @@ export interface DropdownWidgetProps extends BaseWidgetProps {
 export const ComboWidget: React.FC<DropdownWidgetProps> = ({
     onSelectUpdate,
     options,
+    labels,
     value,
     name,
     uiWeight
@@ -23,6 +25,7 @@ export const ComboWidget: React.FC<DropdownWidgetProps> = ({
         onSelectUpdate(selectedValue, selectedIndex);
     };
     const uiWeightCSS = useUIWeightCSS(uiWeight || 12);
+    const useLabel = labels.length == options.length;
 
     return (
         <Flex
@@ -32,7 +35,7 @@ export const ComboWidget: React.FC<DropdownWidgetProps> = ({
             {name && <span style={{ flex: 1, fontSize: 12 }}>{name}</span>}
             <Select
                 value={value}
-                options={options.map(option => ({ value: option, label: option }))}
+                options={options.map((option, index) => ({ value: option, label: useLabel ? labels[index] : option }))}
                 style={{ flex: 2 }}
                 onSelect={handleSelect}
                 showSearch

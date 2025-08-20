@@ -5,6 +5,10 @@ import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
 import { WidgetableProvider } from '../../../tsx/widgetable/context';
 import './comfy_frontend.less';
 import { ComfyFrontendRendererContent } from './components';
+import { WorkflowListProvider } from './comfy_frontend';
+import { ComfyCloudRecommendBanner } from './cloud_recommend';
+
+const log = sdpppSDK.logger.extend("comfy-frontend")
 
 declare const SDPPP_VERSION: string;
 
@@ -12,7 +16,6 @@ export function ComfyFrontendRenderer() {
     const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
     const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
     const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
-    const comfyWebviewConnectStatus = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewConnectStatus);
     const [currentInputURL, setCurrentInputURL] = useState<string>('');
     useEffect(() => {
         if (comfyURL) {
@@ -21,14 +24,7 @@ export function ComfyFrontendRenderer() {
     }, [comfyURL]);
 
     return (
-        // This Provider is used to provide the context for the WorkflowEditApiFormat
-        // 这个Provider是必须的，因为WorkflowEditApiFormat需要使用WidgetableProvider
-        <WidgetableProvider
-            uploader={async (uploadInput) => {
-                const { name } = await sdpppSDK.plugins.photoshop.uploadComfyImage({ uploadInput, overwrite: true });
-                return name;
-            }}
-        >
+        <>
             <Flex gap={8}>
                 <Input
                     value={currentInputURL}
@@ -42,37 +38,75 @@ export function ComfyFrontendRenderer() {
                     </Button> : null
                 }
             </Flex>
-
-            {ComfyFrontendContent()}
-        </WidgetableProvider>
+            {(!comfyURL || comfyWebviewLoading || comfyWebviewLoadError || currentInputURL !== comfyURL) && <ComfyCloudRecommendBanner />}
+            <WorkflowListProvider>
+                <ComfyFrontendContent />
+            </WorkflowListProvider>
+        </>
     )
 }
 
-function ComfyFrontendContent() {
-    const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
-    const comfyHTTPCode = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyHTTPCode);
-    const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
-    const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
+export function ComfyConnectStatusText() {
     const comfyWebviewConnectStatus = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewConnectStatus);
+    const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
+    const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
+    const comfyHTTPCode = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyHTTPCode);
     const comfyWebviewVersion = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewVersion);
+    const comfyWSState = useStore(sdpppSDK.stores.ComfyStore, (state) => state.comfyWSState);
+
+    let statusText = ''
+    let statusTextType: 'warning' | 'error' | 'info' | 'empty' = 'empty'
+    let showRenderer = false
+
+    if (comfyHTTPCode !== 200) {
+        statusText = `ComfyUI加载失败，HTTP状态码：${translateHTTPCode(comfyHTTPCode)}`
+        statusTextType = 'error'
+    } else if (comfyWebviewLoadError) {
+        statusText = comfyWebviewLoadError
+        statusTextType = 'error'
+    } else if (comfyWebviewLoading) {
+        statusText = 'ComfyUI加载中...'
+        statusTextType = 'info'
+    } else if (comfyWebviewConnectStatus === 'connecting') {
+        statusText = '通道连接中...'
+        statusTextType = 'info'
+    } else if (comfyWSState === 'reconnecting') {
+        statusText = 'ComfyUI服务器重连中'
+        statusTextType = 'warning'
+    } else if (!comfyWebviewVersion || comfyWebviewVersion !== SDPPP_VERSION) {
+        statusText = `Comfy侧SDPPP版本(${comfyWebviewVersion})与插件(${SDPPP_VERSION})不匹配，运行可能有问题`
+        statusTextType = 'warning'
+        showRenderer = true
+    } else {
+        showRenderer = true
+    }
+
+    return {
+        statusText,
+        statusTextType,
+        showRenderer
+    }
+}
+
+export function ComfyFrontendContent() {
+    const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
+    const { statusText, statusTextType, showRenderer } = ComfyConnectStatusText();
 
     if (!comfyURL) return null;
 
     return (
-
-        comfyWebviewLoadError ? (
-            <Alert message={comfyWebviewLoadError} type="error" />
-        ) : comfyWebviewLoading ? (
-            <Alert message="ComfyUI加载中..." type="info" />
-        ) : comfyHTTPCode !== 200 ? (
-            <Alert message={`ComfyUI连接失败，HTTP状态码：${translateHTTPCode(comfyHTTPCode)}`} type="error" />
-        ) : comfyWebviewConnectStatus === 'connecting' ? (
-            <Alert message="连接中..." type="info" />
-        ) :
-            <>
-                {comfyWebviewVersion && comfyWebviewVersion !== SDPPP_VERSION && <Alert message={`Comfy侧SDPPP版本与插件不匹配，运行可能有问题`} type="warning" />}
-                {(comfyURL && <ComfyFrontendRendererContent />)}
-            </>
+        // This Provider is used to provide the context for the WorkflowEditApiFormat
+        // 这个Provider是必须的，因为WorkflowEditApiFormat需要使用WidgetableProvider
+        <WidgetableProvider
+            uploader={async (uploadInput) => {
+                const { name } = await sdpppSDK.plugins.photoshop.uploadComfyImage({ uploadInput, overwrite: true });
+                return name;
+            }}
+        >
+            {statusTextType === 'empty' ? null :
+                <Alert message={statusText} type={statusTextType} />}
+            {showRenderer && comfyURL && <ComfyFrontendRendererContent />}
+        </WidgetableProvider>
     )
 }
 

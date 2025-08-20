@@ -45,7 +45,7 @@ export async function changeSelectedModel(selectedModel: typeof availableModels[
             return;
         }
 
-        const widgetResult = await client.getWidgets(selectedModel);
+        const widgetResult = await client.getNodes(selectedModel);
 
         if (abortController.signal.aborted) {
             return;
@@ -55,7 +55,7 @@ export async function changeSelectedModel(selectedModel: typeof availableModels[
 
         replicateStore.setState({
             currentValues: values,
-            currentWidgets: widgetResult.widgetableWidgets
+            currentNodes: widgetResult.widgetableNodes
         });
     });
 }

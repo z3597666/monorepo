@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { sdpppSDK } from "../../../sdk/sdppp-ps-sdk";
 import { createStore } from "zustand";
 import { createJSONStorage } from "zustand/middleware";
@@ -36,9 +36,29 @@ export interface Workflow {
     isDir: boolean;
     isFavorite: boolean;
     isVip: boolean;
+    thumbnailPath?: string;
+    size?: number;
 }
 
-export function useWorkflowList() {
+export interface WorkflowDataSource {
+    listWorkflows(): Promise<Workflow[]>;
+}
+
+class ComfyWorkflowDataSource implements WorkflowDataSource {
+    async listWorkflows(): Promise<Workflow[]> {
+        const listResult = await sdpppSDK.plugins.ComfyCaller.listWorkflows({});
+        return listResult.workflows.map((workflow: string) => ({
+            path: workflow,
+            isFavorite: false,
+            isVip: false,
+            isDir: false
+        }));
+    }
+}
+
+const defaultComfyDataSource = new ComfyWorkflowDataSource();
+
+function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource) {
     const [allWorkflowList, setAllWorkflowList] = useState<Record<string, Workflow>>({});
     const [currentViewingDirectory, setCurrentViewingDirectory] = useState<string>('');
     const [loading, setLoading] = useState(false);
@@ -50,15 +70,11 @@ export function useWorkflowList() {
             setLoading(true);
             setCurrentViewingDirectory('');
             setAllWorkflowList({});
-            const listResult = await sdpppSDK.plugins.ComfyCaller.listWorkflows({});
-            const workflowList: Record<string, Workflow> = listResult.workflows
-                .reduce((acc: Record<string, Workflow>, workflow: string) => {
-                    acc[workflow] = {
-                        path: workflow,
-                        isFavorite: false,
-                        isVip: false,
-                        isDir: false
-                    };
+            
+            const workflows = await dataSource.listWorkflows();
+            const workflowList: Record<string, Workflow> = workflows
+                .reduce((acc: Record<string, Workflow>, workflow: Workflow) => {
+                    acc[workflow.path] = workflow;
                     return acc;
                 }, {} as Record<string, Workflow>);
 
@@ -70,11 +86,11 @@ export function useWorkflowList() {
         } finally {
             setLoading(false);
         }
-    }, [setAllWorkflowList, setLoading, setError]);
+    }, [dataSource, setAllWorkflowList, setLoading, setError]);
 
     useEffect(() => {
         doFetchWorkflowList();
-    }, []);
+    }, [doFetchWorkflowList]);
 
     let showingList: Workflow[] = [];
 
@@ -112,4 +128,30 @@ export function useWorkflowList() {
 
         allWorkflowList: allWorkflowList,
     };
+}
+
+interface WorkflowListContextType {
+    showingWorkflowList: Workflow[];
+    currentViewingDirectory: string;
+    setCurrentViewingDirectory: (directory: string) => void;
+    loading: boolean;
+    error: string | null;
+    refetch: () => void;
+    allWorkflowList: Record<string, Workflow>;
+}
+
+const WorkflowListContext = createContext<WorkflowListContextType | undefined>(undefined);
+
+export function WorkflowListProvider({ children, dataSource }: { children: ReactNode; dataSource?: WorkflowDataSource }) {
+    const workflowListValue = useWorkflowList(dataSource);
+    
+    return React.createElement(WorkflowListContext.Provider, { value: workflowListValue }, children);
+}
+
+export function useWorkflowListContext() {
+    const context = useContext(WorkflowListContext);
+    if (context === undefined) {
+        throw new Error('useWorkflowListContext must be used within a WorkflowListProvider');
+    }
+    return context;
 }

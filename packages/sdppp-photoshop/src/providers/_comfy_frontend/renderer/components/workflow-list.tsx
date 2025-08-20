@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { List, Alert, Divider, Typography, Button, Flex } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import {
@@ -6,7 +6,7 @@ import {
   DirectoryItem,
   WorkflowItem
 } from "./workflow-item";
-import { useWorkflowList, Workflow } from "../comfy_frontend";
+import { useWorkflowListContext, Workflow } from "../comfy_frontend";
 import { t } from "@sdppp/common/i18n_next";
 
 interface WorkflowListProps {
@@ -27,8 +27,11 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
     error: workflowsError,
     refetch
 
-  } = useWorkflowList();
+  } = useWorkflowListContext();
   const [openWorkflowError, setOpenWorkflowError] = useState<string | null>(null);
+  useEffect(() => {
+    refetch();
+  }, []);
  
   // Show error if workflows failed to load
   if (workflowsError) {
@@ -113,61 +116,8 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
           );
         })}
       </List>
-
-      <Typography.Title level={5}>
-        示例工作流
-      </Typography.Title>
-
-      <List className="workflow-list__special">
-        {/* <SpecialWorkflowItem
-        setEditorMode={setEditorMode}
-        path={''}
-        title={i18n('### Active Workflow ###')}
-        onRun={async () => {
-          // await runPage(workflowAgentSID);
-        }}
-      /> */}
-        <SpecialWorkflowItem
-          currentWorkflow={currentWorkflow}
-          setCurrentWorkflow={setCurrentWorkflow}
-          path={'sdppp://Sample_SDXL.json'}
-          title={t('### Example SDXL ###')}
-          onRun={async () => {
-            // await runPage(workflowAgentSID);
-          }}
-          setOpenWorkflowError={setOpenWorkflowError}
-        />
-      </List>
     </div>
   );
 };
 
 export default WorkflowList;
-
-
-function translateHTTPCode(code: number) {
-  switch (code) {
-    case 200:
-      return '';
-    case 404:
-      return '未找到 (404)';
-    case 401:
-      return '未授权 (401)';
-    case 403:
-      return '禁止访问 (403)';
-    case 408:
-      return '请求超时 (408)';
-    case 500:
-      return '服务器错误 (500)';
-    case 501:
-      return '未实现 (501)';
-    case 502:
-      return '网关错误 (502)';
-    case 503:
-      return '服务不可用 (503)';
-    case 504:
-      return '网关超时 (504)';
-    default:
-      return `未知错误（${code}）`;
-  }
-}

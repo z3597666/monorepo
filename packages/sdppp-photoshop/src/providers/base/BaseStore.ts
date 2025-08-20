@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { WidgetableWidget } from "@sdppp/common/schemas/schemas";
+import { WidgetableNode, WidgetableWidget } from "@sdppp/common/schemas/schemas";
 import { sdpppSDK } from "../../sdk/sdppp-ps-sdk";
 import { Task } from "./Task";
 import { Client } from "./Client";
@@ -16,8 +16,8 @@ export interface BaseStoreState<TClient extends Client<any>> {
     setClient: (client: TClient | null) => void
     currentValues: Record<string, any>
     setCurrentValues: (currentValues: Record<string, any>) => void
-    currentWidgets: WidgetableWidget[]
-    setCurrentWidgets: (currentWidgets: WidgetableWidget[]) => void
+    currentNodes: WidgetableNode[]
+    setCurrentNodes: (currentNodes: WidgetableNode[]) => void
 
     runningTasks: Task<any>[]
     setRunningTasks: (runningTasks: Task<any>[]) => void
@@ -41,8 +41,8 @@ export function createBaseStore<TClient extends Client<any>, TState extends Base
         setClient: (client: TClient | null) => set({ client } as Partial<TState>),
         currentValues: {},
         setCurrentValues: (currentValues: Record<string, any>) => set({ currentValues } as Partial<TState>),
-        currentWidgets: [],
-        setCurrentWidgets: (currentWidgets: WidgetableWidget[]) => set({ currentWidgets } as Partial<TState>),
+        currentNodes: [],
+        setCurrentNodes: (currentNodes: WidgetableNode[]) => set({ currentNodes } as Partial<TState>),
 
         runningTasks: [],
         setRunningTasks: (runningTasks: Task<any>[]) => set({ runningTasks } as Partial<TState>),

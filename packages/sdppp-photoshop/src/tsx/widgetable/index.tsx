@@ -10,7 +10,7 @@ import { Alert } from "antd";
 
 interface WorkflowEditApiFormatProps {
     modelName: string;
-    widgets: WidgetableWidget[];
+    nodes: WidgetableNode[];
     values: Record<string, any>;
     errors: Record<string, string>;
     onWidgetChange: (widgetIndex: number, value: any, fieldInfo: WidgetableNode) => void;
@@ -18,7 +18,7 @@ interface WorkflowEditApiFormatProps {
 
 export function WorkflowEditApiFormat({
     modelName,
-    widgets,
+    nodes,
     values,
     errors,
 
@@ -29,19 +29,19 @@ export function WorkflowEditApiFormat({
         return {
             widgetableID: modelName,
             widgetablePath: modelName,
-            nodes: widgets.reduce((nodes, widget, index) => {
-                nodes[widget.name] = {
-                    id: widget.name,
-                    title: widget.name,
-                    widgets: [{ ...widget, name: '' }],
-                    uiWeightSum: widget.uiWeight,
+            nodes: nodes.reduce((nodes, node, index) => {
+                nodes[node.id] = {
+                    id: node.id,
+                    title: node.title,
+                    widgets: node.widgets,
+                    uiWeightSum: node.uiWeightSum,
                 }
                 return nodes;
             }, {} as Record<string, WidgetableNode>),
-            nodeIndexes: widgets.map((widget) => widget.name),
+            nodeIndexes: nodes.map((node) => node.id),
             options: {},
         }
-    }, [widgets, modelName]);
+    }, [nodes, modelName]);
     const widgetableValues = Object.keys(values).reduce((acc, key) => {
         acc[key] = [values[key as keyof typeof values]];
         return acc;
@@ -89,8 +89,7 @@ export default function WorkflowEdit({
             const fieldInfo = widgetableStructure.nodes[nodeID]
 
             const useShortTitle = fieldInfo.widgets.length == 1 && ((fieldInfo.uiWeightSum <= 8 && (
-                fieldInfo.widgets[0].outputType !== 'number' ||
-                !widgetableStructure.options?.useSliderForNumberWidget
+                fieldInfo.widgets[0].outputType !== 'number'
             )))
             return (
                 <div className="workflow-edit-field param-row" key={fieldInfo.id}>

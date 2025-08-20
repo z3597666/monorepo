@@ -7,7 +7,7 @@ export function SDPPPGateway() {
     const provider = MainStore(state => state.provider)
 
     const Renderer = useMemo(() => {
-        return provider ? Providers[provider].Renderer : null
+        return provider && Providers[provider] ? Providers[provider].Renderer : null
     }, [provider])
     
     const showingPreview = MainStore(state => state.showingPreview)

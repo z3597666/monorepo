@@ -42,7 +42,8 @@ export const WidgetableNumberWidgetSchema = z.object({
             min: z.number().optional(),
             max: z.number().optional(),
             step: z.number().optional(),
-            random: z.boolean().optional()
+            random: z.boolean().optional(),
+            slider: z.boolean().optional()
         })
 })
 export const WidgetableComboWidgetSchema = z.object({
@@ -50,7 +51,8 @@ export const WidgetableComboWidgetSchema = z.object({
         outputType: z.literal('combo'),
         options: z.object({
             required: z.boolean(),
-            values: z.array(z.string())
+            values: z.array(z.string()),
+            labels: z.array(z.string()).optional()
         })
 })
 export const WidgetableSegmentWidgetSchema = z.object({

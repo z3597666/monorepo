@@ -1,4 +1,4 @@
-import { WidgetableWidget } from "@sdppp/common/schemas/schemas";
+import { WidgetableNode } from "@sdppp/common/schemas/schemas";
 import type { Task } from "./Task";
 
 export abstract class Client<T> {
@@ -8,8 +8,8 @@ export abstract class Client<T> {
         this.config = config
     }
 
-    abstract getWidgets(model: string): Promise<{
-        widgetableWidgets: WidgetableWidget[],  
+    abstract getNodes(model: string): Promise<{
+        widgetableNodes: WidgetableNode[],  
         defaultInput: Record<string, any>,
         rawData: any
     }>;

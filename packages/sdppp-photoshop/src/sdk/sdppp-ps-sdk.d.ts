@@ -60,6 +60,8 @@ export declare const sdpppSDK: {
 			comfyUserToken: string;
 			comfyOrgLoggedIn: boolean;
 			comfyOrgAPIKey: string;
+			comfyWSState: "connected" | "reconnecting";
+			lastRunTime: number;
 		}>;
 	};
 	plugins: {

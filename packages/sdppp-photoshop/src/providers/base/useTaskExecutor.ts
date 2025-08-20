@@ -53,7 +53,6 @@ export function useTaskExecutor({
         // 在创建任务前调用 hook 来修改 currentValues
         const finalValues = beforeCreateTaskHook ? beforeCreateTaskHook(currentValues) : currentValues;
         
-        console.log('handleRun', selectedModel, finalValues);
         try {
             const task = await createTask(selectedModel, finalValues);
             setLastStartTime(Date.now());

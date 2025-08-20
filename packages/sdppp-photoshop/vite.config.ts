@@ -3,6 +3,7 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
+import { remoteConfigLoader } from '@sdppp/vite-remote-config-loader/vite';
 
 // 自定义插件来处理 sdpppX.js 文件
 function sdpppXPlugin() {
@@ -79,7 +80,16 @@ function sdkPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), sdpppXPlugin(), sdkPlugin(), viteSingleFile()],
+  plugins: [react(), sdpppXPlugin(), sdkPlugin(), viteSingleFile(),
+    remoteConfigLoader({
+      configs: [
+        {
+          id: 'banners',
+          url: 'https://sdppp.zombee.tech/banners/banners.json'
+        }
+      ]
+    })
+  ],
   resolve: {
   },
   define: {

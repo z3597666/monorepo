@@ -114,7 +114,7 @@ function ReplicateRendererModels() {
 }
 
 function ReplicateRendererForm() {
-    const currentWidgets = replicateStore((state) => state.currentWidgets);
+    const currentNodes = replicateStore((state) => state.currentNodes);
     const currentValues = replicateStore((state) => state.currentValues);
     const setCurrentValues = replicateStore((state) => state.setCurrentValues);
     const selectedModel = replicateStore((state) => state.selectedModel);
@@ -126,20 +126,19 @@ function ReplicateRendererForm() {
         createTask,
         runningTasks,
         beforeCreateTaskHook: (values) => {
-            // 根据注释中提供的数据结构，对image组件控制的字段进行修正
-            // 如果一个字段是image组件控制的，那么需要从value中取出url字段作为最终value
+            // 处理图片字段，从对象中提取URL
             const processedValues = { ...values };
             
-            currentWidgets.forEach((widget) => {
-                if (widget.outputType === 'images' || widget.outputType === 'masks') {
-                    const fieldValue = processedValues[widget.name];
+            currentNodes.forEach((node) => {
+                if (node.widgets[0].outputType === 'images') {
+                    const fieldValue = processedValues[node.id];
                     if (fieldValue) {
                         if (Array.isArray(fieldValue)) {
-                            processedValues[widget.name] = fieldValue.map((item: any) => 
+                            processedValues[node.id] = fieldValue.map((item: any) => 
                                 (typeof item === 'object' && item.url) ? item.url : item
                             );
                         } else if (typeof fieldValue === 'object' && fieldValue.url) {
-                            processedValues[widget.name] = fieldValue.url;
+                            processedValues[node.id] = fieldValue.url;
                         }
                     }
                 }
@@ -155,7 +154,7 @@ function ReplicateRendererForm() {
             {runError && <Alert message={runError} type="error" showIcon />}
             <WorkflowEditApiFormat
                 modelName={selectedModel}
-                widgets={currentWidgets}
+                nodes={currentNodes}
                 values={currentValues}
                 errors={{}}
                 onWidgetChange={(widgetIndex: number, value: any, fieldInfo: WidgetableNode) => {

@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react';
-import { Flex, InputNumber, Slider } from 'antd';
+import { Flex, InputNumber, Slider, Typography } from 'antd';
 import { useUIWeightCSS } from '../../utils';
 import { BaseWidgetProps } from './_base';
 
@@ -10,6 +10,7 @@ interface NumberWidgetProps extends BaseWidgetProps {
     value?: number;
     name?: string;
     onValueChange: (value: number) => void;
+    useSlider: boolean;
     extraOptions?: Record<string, any>;
 }
 
@@ -21,7 +22,8 @@ export const NumberWidget: React.FC<NumberWidgetProps> = ({
     value = 0,
     uiWeight = 1,
     extraOptions,
-    onValueChange
+    onValueChange,
+    useSlider = false
 }) => {
     const uiWeightCSS = useUIWeightCSS(uiWeight || 12);
     const [localValue, setLocalValue] = useState<number>(+value.toFixed(3));
@@ -48,12 +50,15 @@ export const NumberWidget: React.FC<NumberWidgetProps> = ({
     }, [localValue, onValueChange]);
 
     // 检查步长范围是否过大
-    if (uiWeight >= 1 && extraOptions?.useSliderForNumberWidget) {
-        return (
+    if (uiWeight >= 1 && useSlider) {
+        return ( 
             <Flex
                 style={{ width: '100%', ...uiWeightCSS }}
                 align='center'
             >
+                <Typography.Text
+                    style={{ width: 30 }}
+                    >{localValue}</Typography.Text>
                 <Slider
                     style={{ flex: 1 }}
                     min={inputMin}
@@ -63,13 +68,13 @@ export const NumberWidget: React.FC<NumberWidgetProps> = ({
                     onChange={handleValueChange}
                     onChangeComplete={handleBlur}
                 />
-                <InputNumber
+                {/* <InputNumber
                     style={{ width: 80 }}
                     value={localValue}
                     onChange={handleValueChange}
                     onBlur={handleBlur}
                     controls={false}
-                />
+                /> */}
             </Flex>
         );
     }

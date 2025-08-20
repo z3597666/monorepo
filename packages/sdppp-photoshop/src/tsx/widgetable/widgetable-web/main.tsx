@@ -45,6 +45,7 @@ export const useWidgetableRenderer = ({
         const min = widget.options?.min ?? 0;
         const max = widget.options?.max ?? 100;
         const step = widget.options?.step ?? 1;
+        const slider = widget.options?.slider || false;
 
         return (
             <NumberWidget
@@ -59,6 +60,7 @@ export const useWidgetableRenderer = ({
                     onWidgetChange(fieldInfo.id, widgetIndex, v, fieldInfo);
                 }}
                 extraOptions={extraOptions}
+                useSlider={slider}
             />
         );
     };
@@ -69,6 +71,7 @@ export const useWidgetableRenderer = ({
                 uiWeight={widget.uiWeight || 12}
                 key={widgetIndex}
                 options={widget?.options?.values || []}
+                labels={widget?.options?.labels || []}
                 name={widget.name}
                 onSelectUpdate={(v) => {
                     onWidgetChange(fieldInfo.id, widgetIndex, v, fieldInfo);
@@ -136,6 +139,7 @@ export const useWidgetableRenderer = ({
                 thumbnail: url,
                 source: 'comfyUI'
             }
+
         }
         if (widget.options?.maxCount && widget.options.maxCount > 1) {
             return (
@@ -152,7 +156,7 @@ export const useWidgetableRenderer = ({
         } else {
             return (
                 <ImageSelect
-                    value={widgetableValues[fieldInfo.id] ? [value] : []}
+                    value={widgetableValues[fieldInfo.id] && value ? [value] : []}
                     onValueChange={(v) => {
                         onWidgetChange(fieldInfo.id, widgetIndex, v[0], fieldInfo);
                     }}

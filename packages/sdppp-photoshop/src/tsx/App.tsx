@@ -9,7 +9,6 @@ import { SDPPPGateway } from './gateway/sdppp'
 
 export default function App() {
     const psTheme = useStore(sdpppSDK.stores.PhotoshopStore, state => state.theme)
-    const provider = MainStore(state => state.provider)
     const showingPreview = MainStore(state => state.showingPreview)
     const previewImageList = MainStore(state => state.previewImageList)
 

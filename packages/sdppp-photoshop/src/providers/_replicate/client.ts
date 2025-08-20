@@ -1,5 +1,5 @@
 import Replicate from "replicate";
-import { getDefaultValues, WidgetableWidget } from '@sdppp/common/schemas/schemas';
+import { getDefaultValues, WidgetableWidget, WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { Task } from "../base/Task";
 import { Client } from "../base/Client";
 import { sdpppSDK } from "../../sdk/sdppp-ps-sdk";
@@ -37,8 +37,8 @@ export class SDPPPReplicate extends Client<{
         })
     }
 
-    async getWidgets(model: string): Promise<{
-        widgetableWidgets: WidgetableWidget[],
+    async getNodes(model: string): Promise<{
+        widgetableNodes: WidgetableNode[],
         defaultInput: Record<string, any>,
         rawData: any
     }> {
@@ -48,15 +48,17 @@ export class SDPPPReplicate extends Client<{
             throw new Error('No latest version found')
         }
         modelIds[model] = modelInfo.latest_version.id;
-        const widgetableWidgets = convertInputSchemaToWidgetableWidgets(modelInfo.latest_version.openapi_schema['components']?.schemas);
+        const widgetableNodes = convertInputSchemaToWidgetableNodes(modelInfo.latest_version.openapi_schema['components']?.schemas);
         const defaultInput = modelInfo.default_example?.input ?? {};
-        widgetableWidgets.forEach((widget) => {
-            if (!(widget.name in defaultInput)) {
-                defaultInput[widget.name] = getDefaultValues(widget.outputType, widget.options)
-            }
+        widgetableNodes.forEach((node) => {
+            node.widgets.forEach((widget) => {
+                if (!(widget.name in defaultInput)) {
+                    defaultInput[widget.name] = getDefaultValues(widget.outputType, widget.options)
+                }
+            })
         })
         return {
-            widgetableWidgets,
+            widgetableNodes,
             defaultInput,
             rawData: modelInfo
         }
@@ -64,7 +66,7 @@ export class SDPPPReplicate extends Client<{
     async run(model: string, input: any) {
         const id = modelIds[model];
         if (!id) {
-            await this.getWidgets(model);
+            await this.getNodes(model);
         }
         const [modelProvider, modelId] = model.split('/');
         const result = await this.replicate.predictions.create({
@@ -110,7 +112,7 @@ export class SDPPPReplicate extends Client<{
     }
 }
 
-function convertInputSchemaToWidgetableWidgets(schemas: any): WidgetableWidget[] {
+function convertInputSchemaToWidgetableNodes(schemas: any): WidgetableNode[] {
     return Object.entries(schemas.Input.properties as Record<string, any>)
         .sort((a, b) => a[1]['x-order'] - b[1]['x-order'])
         .map(([name, prop]: [string, any]) => {
@@ -157,14 +159,21 @@ function convertInputSchemaToWidgetableWidgets(schemas: any): WidgetableWidget[]
                 required: schemas.Input.required && schemas.Input.required.indexOf(name) !== -1,
             }
 
-            return {
-                name,
+            const widget = {
+                name: '',
                 uiWeight: 12,
                 outputType,
                 options
             };
+            return {
+                id: name,
+                title: name,
+                widgets: [widget],
+                uiWeightSum: 12
+            };
         });
 }
+
 
 
 // Input Schema example
