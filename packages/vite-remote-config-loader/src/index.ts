@@ -1,5 +1,6 @@
 // 运行时 API
-export { loadRemoteConfig } from './runtime';
+export { loadRemoteConfig, init } from './runtime';
+export { setStorageAdapter } from './runtime';
 
 // 类型导出
 export type {
@@ -8,5 +9,6 @@ export type {
   LoadRemoteConfigOptions,
   ConfigMeta,
   ConfigMetaMap,
-  FallbackDataMap
+  FallbackDataMap,
+  StorageAdapter
 } from './types';

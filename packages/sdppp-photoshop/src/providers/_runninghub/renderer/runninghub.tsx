@@ -30,7 +30,7 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
                     const banners = loadRemoteConfig('banners');
                     const runninghubURL = banners.find((banner: any) => banner.type === 'runninghub')?.link;
                     sdpppSDK.plugins.photoshop.openExternalLink({ url: runninghubURL })
-                }}>如何获取RunningHub APIKey?</Link>
+                }}>点此获取RunningHub APIKey</Link>
             }
 
             {error && (

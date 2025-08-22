@@ -1,14 +1,64 @@
-import type { LoadRemoteConfigOptions, ConfigMetaMap, FallbackDataMap } from './types';
+import type { LoadRemoteConfigOptions, ConfigMetaMap, FallbackDataMap, StorageAdapter } from './types';
+
+// 默认 localStorage 实现
+class LocalStorageAdapter implements StorageAdapter {
+  async getItem(key: string): Promise<string | null> {
+    try {
+      if (typeof window === 'undefined') return null;
+      return localStorage.getItem(key);
+    } catch (error) {
+      console.warn('[vite-remote-config-loader] Failed to get item from localStorage:', error);
+      return null;
+    }
+  }
+
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      if (typeof window === 'undefined') return;
+      localStorage.setItem(key, value);
+    } catch (error) {
+      console.warn('[vite-remote-config-loader] Failed to set item to localStorage:', error);
+    }
+  }
+
+  async removeItem(key: string): Promise<void> {
+    try {
+      if (typeof window === 'undefined') return;
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.warn('[vite-remote-config-loader] Failed to remove item from localStorage:', error);
+    }
+  }
+}
+
+// 当前使用的存储适配器
+let storageAdapter: StorageAdapter = new LocalStorageAdapter();
+
+// 设置存储适配器
+export function setStorageAdapter(adapter: StorageAdapter): void {
+  storageAdapter = adapter;
+}
+
+// 获取当前存储适配器
+export function getStorageAdapter(): StorageAdapter {
+  return storageAdapter;
+}
 
 // 缓存配置元数据和降级数据
 let cachedConfigMeta: ConfigMetaMap | null = null;
 let cachedFallbackData: FallbackDataMap | null = null;
+
+// 内存缓存存储已加载的数据
+const memoryCache = new Map<string, any>();
 
 // 正在更新的配置ID，避免重复请求
 const updatingConfigs = new Set<string>();
 
 // 配置最后更新时间缓存，每小时最多更新一次
 const lastUpdateTimes = new Map<string, number>();
+
+// 初始化状态
+let isInitialized = false;
 
 // 获取配置元数据 - 同步函数
 function getConfigMeta(): ConfigMetaMap {
@@ -42,23 +92,30 @@ function getFallbackData(): FallbackDataMap {
   return {};
 }
 
-// 从 localStorage 获取缓存数据
+// 从内存缓存获取数据（同步）
 function getCachedData(key: string): any | null {
+  return memoryCache.get(key) ?? null;
+}
+
+// 异步从存储适配器加载数据到内存缓存
+async function loadCachedDataToMemory(key: string): Promise<void> {
   try {
-    if (typeof window === 'undefined') return null;
-    const cached = localStorage.getItem(key);
-    return cached ? JSON.parse(cached) : null;
+    const cached = await storageAdapter.getItem(key);
+    if (cached) {
+      const data = JSON.parse(cached);
+      memoryCache.set(key, data);
+    }
   } catch (error) {
-    console.warn('[vite-remote-config-loader] Failed to parse cached data:', error);
-    return null;
+    console.warn('[vite-remote-config-loader] Failed to load cached data:', error);
   }
 }
 
-// 保存数据到 localStorage
-function setCachedData(key: string, data: any): void {
+// 保存数据到存储适配器和内存缓存
+async function setCachedData(key: string, data: any): Promise<void> {
   try {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(key, JSON.stringify(data));
+    // 同时更新内存缓存和持久化存储
+    memoryCache.set(key, data);
+    await storageAdapter.setItem(key, JSON.stringify(data));
   } catch (error) {
     console.warn('[vite-remote-config-loader] Failed to cache data:', error);
   }
@@ -91,7 +148,7 @@ async function updateConfigInBackground(id: string, url: string, localStorageKey
     }
     
     const data = await response.json();
-    setCachedData(localStorageKey, data);
+    await setCachedData(localStorageKey, data);
     
     // 更新最后更新时间
     lastUpdateTimes.set(id, now);
@@ -112,6 +169,30 @@ async function updateConfigInBackground(id: string, url: string, localStorageKey
  * @param options 选项
  * @returns 配置数据
  */
+// 初始化函数 - 预加载所有配置的缓存数据
+export async function init(): Promise<void> {
+  if (isInitialized) {
+    return;
+  }
+
+  console.log('[vite-remote-config-loader] Initializing cache...');
+  
+  try {
+    const configMeta = getConfigMeta();
+    const loadPromises = Object.values(configMeta).map(meta => 
+      loadCachedDataToMemory(meta.localStorageKey)
+    );
+    
+    await Promise.all(loadPromises);
+    isInitialized = true;
+    
+    console.log('[vite-remote-config-loader] Cache initialization completed');
+  } catch (error) {
+    console.warn('[vite-remote-config-loader] Cache initialization failed:', error);
+    isInitialized = true; // 即使失败也标记为已初始化，避免重复尝试
+  }
+}
+
 export function loadRemoteConfig<T = any>(
   id: string, 
   options: LoadRemoteConfigOptions = {}
@@ -128,7 +209,7 @@ export function loadRemoteConfig<T = any>(
   // 使用选项覆盖默认配置
   const localStorageKey = options.localStorageKey ?? meta.localStorageKey;
 
-  // 1. 优先返回 localStorage 中的缓存数据
+  // 1. 优先返回内存缓存中的数据
   const cachedData = getCachedData(localStorageKey);
   if (cachedData !== null) {
     console.log(`[vite-remote-config-loader] Using cached data for config: ${id}`);

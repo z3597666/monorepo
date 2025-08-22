@@ -1,13 +1,7 @@
-import { loadRemoteConfig } from "@sdppp/vite-remote-config-loader";
 import { useEffect, useState } from "react";
 import { sdpppSDK } from "../../../sdk/sdppp-ps-sdk";
 import { Button } from "antd";
-
-const comfyCloudRecommend: {
-    link: string,
-    name_chn: string,
-    icon: string
-}[] = loadRemoteConfig('banners').filter((banner: any) => banner.type === 'comfy_cloud');
+import { loadRemoteConfig } from "@sdppp/vite-remote-config-loader";
 
 
 export function ComfyCloudRecommendBanner() {
@@ -18,6 +12,12 @@ export function ComfyCloudRecommendBanner() {
     }[]>([]);
 
     useEffect(() => {
+        const comfyCloudRecommend: {
+            link: string,
+            name_chn: string,
+            icon: string
+        }[] = loadRemoteConfig('banners').filter((banner: any) => banner.type === 'comfy_cloud');
+
         if (comfyCloudRecommend.length === 0) return;
 
         const shuffleArray = (array: any[]) => {

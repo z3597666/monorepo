@@ -1,5 +1,5 @@
 import type { Plugin } from 'vite';
-import type { RemoteConfigLoaderOptions, ConfigMeta, ConfigMetaMap, FallbackDataMap } from './types';
+import type { RemoteConfigLoaderOptions, ConfigMeta, ConfigMetaMap, FallbackDataMap } from './types.ts';
 
 const VIRTUAL_MODULE_META = 'virtual:remote-configs-meta';
 const VIRTUAL_MODULE_FALLBACK = 'virtual:remote-configs-fallback';

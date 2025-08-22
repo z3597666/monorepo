@@ -62,7 +62,7 @@ async function resetClient(state: RunningHubStoreState, prevState: RunningHubSto
         // 获取账户状态 - 使用 setTimeout 避免在同一个 setState 调用中再次调用 setState
         setTimeout(async () => {
             // 只有当runninghub是当前provider时才轮询账户状态
-            if (MainStore.getState().provider !== 'runninghub') {
+            if (MainStore.getState().provider !== 'RunningHub') {
                 return;
             }
             
@@ -118,7 +118,7 @@ function startExecutingRefresh() {
         const { client, runningTasks } = state;
         
         // 只有在runninghub是当前provider、有运行任务且有客户端时才刷新
-        if (MainStore.getState().provider === 'runninghub' && client && runningTasks.length > 0) {
+        if (MainStore.getState().provider === 'RunningHub' && client && runningTasks.length > 0) {
             try {
                 const accountStatus = await client.getAccountStatus();
                 runninghubStore.setState({ accountStatus });
@@ -141,7 +141,7 @@ function startIdleRefresh() {
         const { client, runningTasks } = state;
         
         // 只有在runninghub是当前provider、没有运行任务且有客户端时才刷新
-        if (MainStore.getState().provider === 'runninghub' && client && runningTasks.length === 0) {
+        if (MainStore.getState().provider === 'RunningHub' && client && runningTasks.length === 0) {
             try {
                 const accountStatus = await client.getAccountStatus();
                 runninghubStore.setState({ accountStatus });

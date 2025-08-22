@@ -4,7 +4,6 @@
   "description": "A Vite plugin for loading remote JSON configuration files with intelligent fallback strategy",
   "main": "src/index.ts",
   "module": "src/index.ts",
-  "types": "index.d.ts",
   "exports": {
     ".": {
       "types": "./index.d.ts",

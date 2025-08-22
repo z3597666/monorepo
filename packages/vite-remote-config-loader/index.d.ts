@@ -1,3 +1,2 @@
-// Re-export from src
+// Re-export from src/index
 export * from './src/index';
-export * from './src/client';

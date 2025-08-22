@@ -2,7 +2,6 @@ import react from '@vitejs/plugin-react';
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
-import { viteSingleFile } from 'vite-plugin-singlefile';
 import { remoteConfigLoader } from '@sdppp/vite-remote-config-loader/vite';
 
 // 自定义插件来处理 sdpppX.js 文件
@@ -44,6 +43,43 @@ function sdpppXPlugin() {
   };
 }
 
+function moveScriptToBodyPlugin() {
+  return {
+    name: 'move-script-to-body',
+    writeBundle(options) {
+      const outDir = options.dir || './plugin/webview';
+      const htmlPath = resolve(import.meta.dirname, outDir, 'content.html');
+      
+      if (existsSync(htmlPath)) {
+        try {
+          let html = readFileSync(htmlPath, 'utf-8');
+          
+          // 匹配主脚本标签
+          const scriptMatch = html.match(/<script[^>]*type="module"[^>]*src="[^"]*"[^>]*><\/script>/);
+          
+          if (scriptMatch) {
+            const scriptTag = scriptMatch[0];
+            
+            // 从 head 中移除脚本
+            html = html.replace(scriptTag, '');
+            
+            // 将脚本添加到 body 末尾（在现有脚本之后）
+            html = html.replace(
+              '</body>',
+              '    ' + scriptTag + '\n  </body>'
+            );
+            
+            writeFileSync(htmlPath, html, 'utf-8');
+            console.log('✅ Moved main script to body end');
+          }
+        } catch (error) {
+          console.error('❌ Error moving script to body:', error);
+        }
+      }
+    }
+  };
+}
+
 function sdkPlugin() {
   return {
     name: 'sdk-plugin',
@@ -80,7 +116,7 @@ function sdkPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), sdpppXPlugin(), sdkPlugin(), viteSingleFile(),
+  plugins: [react(), sdpppXPlugin(), moveScriptToBodyPlugin(), sdkPlugin(),
     remoteConfigLoader({
       configs: [
         {
@@ -97,15 +133,18 @@ export default defineConfig({
   },
   base: './',
   build: {
+    // minify: false,
     outDir: resolve(import.meta.dirname, './plugin/webview'),
     rollupOptions: {
       input: {
         content: resolve(import.meta.dirname, './content.html'),
       },
       output: {
+        // format: 'cjs',
         entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
         assetFileNames: '[name][extname]',
+        inlineDynamicImports: false,
       },
     },
   },
