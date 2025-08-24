@@ -44,9 +44,10 @@ interface UploadProviderProps {
     children: React.ReactNode;
     onSetImages: (images: ImageDetail[]) => void;
     onCallOnValueChange: (images: ImageDetail[]) => void;
+    maxCount?: number;
 }
 
-export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetImages, onCallOnValueChange }) => {
+export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetImages, onCallOnValueChange, maxCount = 1 }) => {
     const { addUploadPass, removeUploadPass, runUploadPassOnce } = useWidgetable();
     const [uploadState, setUploadState] = useState<UploadState>({
         uploading: false,
@@ -58,6 +59,15 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
     const layerIdentifyRef = useRef<string>('');
     const currentThumbnailRef = useRef<string>('');
     const originalImagesRef = useRef<ImageDetail[]>([]);
+
+    // 处理多图片添加的辅助方法
+    const handleImagesChange = useCallback((newImages: ImageDetail[]) => {
+        const finalImages = maxCount > 1 
+            ? [...originalImagesRef.current, ...newImages]
+            : newImages;
+        originalImagesRef.current = finalImages;
+        onCallOnValueChange(finalImages);
+    }, [maxCount, onCallOnValueChange]);
 
     const createImageUploadPass = useCallback((config: PhotoshopParams) => {
         const passKey = `${config.content}-${config.boundary}-${config.cropBySelection}`;
@@ -222,9 +232,12 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                 return; // 可能是取消
             }
 
-            // 获取到thumbnail时调用setImages
-            const newImages = [{ url: thumbnail_url, source, thumbnail: thumbnail_url }];
-            onSetImages(newImages);
+            // 获取到thumbnail时先显示缩略图
+            const thumbnailImages = [{ url: thumbnail_url, source, thumbnail: thumbnail_url }];
+            const tempImages = maxCount > 1 
+                ? [...originalImagesRef.current, ...thumbnailImages]
+                : thumbnailImages;
+            onSetImages(tempImages);
             setUploadState(prev => ({ ...prev, uploadError: '' }));
 
             await runUploadPassOnce({
@@ -232,9 +245,9 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                     return { type: 'token', tokenOrBuffer: file_token, fileName: `${v4()}.png` };
                 },
                 onUploaded: async (url) => {
-                    // 上传成功后调用onCallOnValueChange
-                    const finalImages = [{ url, source, thumbnail: thumbnail_url }];
-                    onCallOnValueChange(finalImages);
+                    // 上传成功后使用handleImagesChange处理多图片逻辑
+                    const newImages = [{ url, source, thumbnail: thumbnail_url }];
+                    handleImagesChange(newImages);
                     await new Promise(resolve => setTimeout(resolve, 100));
                 },
                 onUploadError: (error: Error) => {
@@ -248,7 +261,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
             onSetImages(originalImages);
             setUploadState(prev => ({ ...prev, uploadError: error.message }));
         }
-    }, [runUploadPassOnce, onSetImages, onCallOnValueChange]);
+    }, [runUploadPassOnce, onSetImages, handleImagesChange, maxCount]);
 
     const uploadFromDisk = useCallback(async (file: File) => {
         // 保存原始images状态，用当前最新状态
@@ -261,10 +274,14 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         }
 
         const thumbnailURL = URL.createObjectURL(file);
-        const newImages = [{ url: thumbnailURL, source: 'disk', thumbnail: thumbnailURL }];
+        const thumbnailImages = [{ url: thumbnailURL, source: 'disk', thumbnail: thumbnailURL }];
 
         setUploadState(prev => ({ ...prev, uploadError: '' }));
-        onSetImages(newImages);
+        // 先显示缩略图，支持多图片
+        const tempImages = maxCount > 1 
+            ? [...originalImagesRef.current, ...thumbnailImages]
+            : thumbnailImages;
+        onSetImages(tempImages);
 
         try {
             await runUploadPassOnce({
@@ -273,9 +290,9 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                     return { type: 'buffer', tokenOrBuffer: Buffer.from(buffer), fileName: file.name };
                 },
                 onUploaded: async (url) => {
-                    // 上传成功后调用onCallOnValueChange
-                    const finalImages = [{ url, source: 'disk', thumbnail: thumbnailURL }];
-                    onCallOnValueChange(finalImages);
+                    // 上传成功后使用handleImagesChange处理多图片逻辑
+                    const newImages = [{ url, source: 'disk', thumbnail: thumbnailURL }];
+                    handleImagesChange(newImages);
                     await new Promise(resolve => setTimeout(resolve, 100));
                 },
                 onUploadError: (error: Error) => {
@@ -289,7 +306,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
             onSetImages(originalImages);
             setUploadState(prev => ({ ...prev, uploadError: error.message }));
         }
-    }, [runUploadPassOnce, onSetImages, onCallOnValueChange]);
+    }, [runUploadPassOnce, onSetImages, handleImagesChange, maxCount]);
 
     // 提供给子组件使用的集中化函数
     const setImages = useCallback((images: ImageDetail[]) => {

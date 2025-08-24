@@ -60,6 +60,7 @@ export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight
         <UploadProvider
             onCallOnValueChange={callOnValueChange}
             onSetImages={handleImagesSet}
+            maxCount={maxCount}
         >
             {isMask ? (
                 <MaskComponent

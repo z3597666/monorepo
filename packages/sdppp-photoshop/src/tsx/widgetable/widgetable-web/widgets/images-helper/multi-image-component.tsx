@@ -2,6 +2,9 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { ActionButtons, EmptyState } from './lib/common-components';
 import { MultipleImagesPreview } from './lib/multiple-images-preview';
 import { ImageDetail } from './upload-context';
+import { sdpppSDK } from '../../../../../sdk/sdppp-ps-sdk';
+
+const log = sdpppSDK.logger.extend('MultiImageComponent');
 
 interface MultiImageProps {
     images: ImageDetail[];
