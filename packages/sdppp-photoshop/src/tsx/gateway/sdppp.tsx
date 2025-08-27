@@ -1,19 +1,28 @@
+import { useStore } from "zustand";
 import { Providers } from "../../providers";
 import { MainStore } from "../App.store";
 import { Select } from "antd";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { sdpppSDK } from "../../sdk/sdppp-ps-sdk";
 
 export function SDPPPGateway() {
     const provider = MainStore(state => state.provider)
+    const sdpppX = useStore(sdpppSDK.stores.PhotoshopStore, state => state.sdpppX)
 
     const Renderer = useMemo(() => {
         return provider && Providers[provider] ? Providers[provider].Renderer : null
     }, [provider])
-    
+    const forceProvider = sdpppX?.["settings.forceProvider"]
     const showingPreview = MainStore(state => state.showingPreview)
+    useEffect(()=> {
+        if (forceProvider && forceProvider !== provider) {
+            MainStore.setState({ provider: forceProvider as (keyof typeof Providers) | '' })
+        }
+    }, [forceProvider])
+    
     return <>
         {
-            !showingPreview ? <Select
+            !showingPreview && !forceProvider ? <Select
                 className='app-select'
                 showSearch={true}
                 value={provider}
