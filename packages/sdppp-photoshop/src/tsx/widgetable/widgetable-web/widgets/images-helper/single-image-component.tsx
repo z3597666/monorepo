@@ -2,6 +2,9 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { ActionButtons, EmptyState } from './lib/common-components';
 import { SingleImagePreview } from './lib/single-image-preview';
 import { ImageDetail, useAutoImageUpload, useImageUpload } from './upload-context';
+import { sdpppSDK } from '../../../../../sdk/sdppp-ps-sdk';
+
+const log = sdpppSDK.logger.extend('images.tsx')
 
 interface SingleImageProps {
     images: ImageDetail[];
@@ -14,6 +17,7 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
     maxCount,
     uiWeightCSS
 }) => {
+    // log(images)
     const { callOnValueChange } = useImageUpload();
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewCurrent, setPreviewCurrent] = useState(0);

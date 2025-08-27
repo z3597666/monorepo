@@ -282,9 +282,6 @@ importers:
       '@sdppp/ps-uxp':
         specifier: workspace:*
         version: link:../ps-uxp
-      '@sdppp/vite-remote-config-loader':
-        specifier: workspace:*
-        version: link:../../packages/vite-remote-config-loader
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12

@@ -1,8 +1,9 @@
-import { z } from 'zod';
 import { WidgetableNode, WidgetableWidget } from '@sdppp/common/schemas/schemas';
-import { Task } from '../base/Task';
-import { Client } from '../base/Client';
 import { sdpppSDK } from '../../sdk/sdppp-ps-sdk';
+import { Client } from '../base/Client';
+import { Task } from '../base/Task';
+
+const log = sdpppSDK.logger.extend('runninghub')
 
 sdpppSDK.plugins.fetchProxy.registerProxyDomains('runninghub.cn');
 
@@ -308,7 +309,7 @@ export class SDPPPRunningHub extends Client<{
         };
 
         widgetableNodes.push(widgetableNode);
-        defaultInput[widgetableNode.id] = node.fieldValue || this.getDefaultValueForType(widget.outputType);
+        defaultInput[widgetableNode.id] = widget.outputType === 'images' ? null : node.fieldValue || this.getDefaultValueForType(widget.outputType);
       });
     }
 
@@ -343,24 +344,31 @@ export class SDPPPRunningHub extends Client<{
     const options: any = {
       required: node.required || false
     };
+    let fieldData = null
+    try {
+      fieldData = JSON.parse(node.fieldData || '[]');
+    } catch (e) {
+      fieldData = [];
+    }
 
     if (node.fieldType === 'FLOAT' || node.fieldType === 'INT') {
-      options.min = node.min;
-      options.max = node.max;
+      options.min = fieldData[1].min;
+      options.max = fieldData[1].max;
       options.step = node.fieldType === 'INT' ? 1 : 0.01;
-      options.slider = true;
+      if (options.max - options.min < 1000) {
+        options.slider = true;
+      } else {
+        options.slider = false;
+      }
     }
 
     if (node.fieldType === 'LIST' || node.fieldType === 'select' || node.fieldType === 'dropdown') {
-      try {
-        let fieldData = JSON.parse(node.fieldData || '[]');
-        if (fieldData[0] && Array.isArray(fieldData[0])) {
-          options.values = fieldData[0];
-        } else if (Array.isArray(fieldData)) {
-          options.values = fieldData.filter(item => item.name && item.index).map(item => item.name);
-          options.labels = fieldData.filter(item => item.name && item.index).map(item => item.description || item.name);
-        }
-      } catch (e) {
+      if (fieldData[0] && Array.isArray(fieldData[0])) {
+        options.values = fieldData[0];
+      } else if (Array.isArray(fieldData)) {
+        options.values = fieldData.filter(item => item.name && item.index).map(item => item.name);
+        options.labels = fieldData.filter(item => item.name && item.index).map(item => item.description || item.name);
+      } else {
         options.values = [];
       }
     }
@@ -368,7 +376,6 @@ export class SDPPPRunningHub extends Client<{
     if (node.fieldType === 'IMAGE' || node.fieldType === 'file') {
       options.maxCount = node.maxCount || 1;
     }
-
     return options;
   }
 

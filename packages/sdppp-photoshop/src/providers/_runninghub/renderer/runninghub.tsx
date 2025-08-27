@@ -10,6 +10,8 @@ import { useWidgetable, WidgetableProvider } from '../../../tsx/widgetable/conte
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
 
+const log = sdpppSDK.logger.extend('runninghub')
+
 const { Password } = Input;
 
 export default function RunningHubRenderer({ showingPreview }: { showingPreview: boolean }) {

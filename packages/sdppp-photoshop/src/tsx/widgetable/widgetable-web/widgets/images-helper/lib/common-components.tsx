@@ -27,7 +27,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     }, [maxCount, imagesRef, callOnValueChange]);
 
     const uploadProps: UploadProps = {
-        multiple: false,
+        multiple: maxCount > 1,
         showUploadList: false,
         fileList: [],
         beforeUpload: () => false,
