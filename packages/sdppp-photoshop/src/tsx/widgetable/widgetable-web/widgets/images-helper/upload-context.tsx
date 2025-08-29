@@ -229,7 +229,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                 : await sdpppSDK.plugins.photoshop.requestImageGet({});
 
             if (!thumbnail_url || !source) {
-                return; // 可能是取消
+                return; // 可能是取消 
             }
 
             // 获取到thumbnail时先显示缩略图

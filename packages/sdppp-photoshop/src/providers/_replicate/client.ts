@@ -10,6 +10,7 @@ const modelIds: Record<string, string> = {
 }
 
 export const availableModels = [
+    'google/nano-banana',
     'black-forest-labs/flux-kontext-dev',
     'black-forest-labs/flux-kontext-pro',
     'flux-kontext-apps/multi-image-kontext-pro',
@@ -145,12 +146,14 @@ function convertInputSchemaToWidgetableNodes(schemas: any): WidgetableNode[] {
             } else if (prop.type === 'string' || prop.type === 'password') {
                 if (prop.format === 'uri') {
                     outputType = 'images';
+                    options = { maxCount: 1 };
                 } else {
                     outputType = 'string';
                 }
             } else if (prop.type === 'array') {
                 if (prop.items.type === 'string' && prop.items.format === 'uri') {
                     outputType = 'images';
+                    options = { maxCount: 4 };
                 }
             }
 
