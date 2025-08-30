@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { sdpppSDK } from "../../../sdk/sdppp-ps-sdk";
 import { Button } from "antd";
 import { loadRemoteConfig } from "@sdppp/vite-remote-config-loader";
+import { useI18n } from "@sdppp/common";
 
 
 export function ComfyCloudRecommendBanner() {
+    const { t } = useI18n()
     const [shuffledBanners, setShuffledBanners] = useState<{
         link: string,
         name_chn: string,
@@ -44,7 +46,7 @@ export function ComfyCloudRecommendBanner() {
 
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--sdppp-host-text-color-secondary)' }}>云端推荐：</span>
+            <span style={{ color: 'var(--sdppp-host-text-color-secondary)' }}>{t('comfy.cloud_recommend')}</span>
             {shuffledBanners.map((banner, index) => (
                 <Button
                     key={`${banner.link}-${index}`}

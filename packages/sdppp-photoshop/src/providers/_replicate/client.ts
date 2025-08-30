@@ -100,7 +100,12 @@ export class SDPPPReplicate extends Client<{
             }
         })
     }
-    async uploadImage(type: 'token' | 'buffer', image: ArrayBuffer | string, format: 'png' | 'jpg' | 'jpeg' | 'webp'): Promise<string> {
+    async uploadImage(type: 'token' | 'buffer', image: ArrayBuffer | string, format: 'png' | 'jpg' | 'jpeg' | 'webp', signal?: AbortSignal): Promise<string> {
+        // Check if already aborted
+        if (signal?.aborted) {
+            throw new DOMException('Upload aborted', 'AbortError');
+        }
+
         if (type === 'token') {
             const file = await this.replicate.files.create(new Blob([image as string], {
                 type: `image/uxp`

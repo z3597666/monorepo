@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useWidgetable } from '../../tsx/widgetable/context';
 import { MainStore } from '../../tsx/App.store';
+import { t } from '@sdppp/common';
 
 export interface UseTaskExecutorOptions {
     selectedModel: string;
@@ -30,7 +31,10 @@ export function useTaskExecutor({
         }
         const interval = setInterval(() => {
             if (lastStartTime > 0 && runningTasks.length > 0) {
-                setProgressMessage(` 运行了 ${((Date.now() - lastStartTime) / 1000).toFixed(2)} 秒，${runningTasks[0].progressMessage}`);
+                setProgressMessage(t('task.running_duration', { 
+                    duration: ((Date.now() - lastStartTime) / 1000).toFixed(2), 
+                    message: runningTasks[0].progressMessage 
+                }));
             }
         }, 100);
 
@@ -45,10 +49,10 @@ export function useTaskExecutor({
         // must call waitAllUploadPasses, otherwise the image component may not finished uploading
         // waitAllUploadPasses一定要调，否则图片组件的上传可能还未完成
         setRunError('');
-        setProgressMessage('正在等待图片上传...');
+        setProgressMessage(t('task.waiting_upload'));
         await waitAllUploadPasses();
 
-        setProgressMessage('正在创建任务...');
+        setProgressMessage(t('task.creating_task'));
         
         // 在创建任务前调用 hook 来修改 currentValues
         const finalValues = beforeCreateTaskHook ? beforeCreateTaskHook(currentValues) : currentValues;

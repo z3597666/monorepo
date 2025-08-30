@@ -9,10 +9,12 @@ import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
 import { WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { useWidgetable, WidgetableProvider } from '../../../tsx/widgetable/context';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
+import { useI18n } from '@sdppp/common';
 
 const { Password } = Input;
 
 export default function LiblibRenderer({ showingPreview }: { showingPreview: boolean }) {
+    const { t } = useI18n()
     const { apiKey, apiSecret, setApiKey, setApiSecret } = liblibStore();
     const [error, setError] = useState<string>('');
 
@@ -31,7 +33,7 @@ export default function LiblibRenderer({ showingPreview }: { showingPreview: boo
                 />
             </Flex> : null}
             {
-                !apiKey && <Link onClick={() => sdpppSDK.plugins.photoshop.openExternalLink({ url: "https://www.liblib.art/apis" })}>如何获取APIKey和API Secret</Link>
+                !apiKey && <Link onClick={() => sdpppSDK.plugins.photoshop.openExternalLink({ url: "https://www.liblib.art/apis" })}>{t('liblib.get_apikey')}</Link>
             }
 
             {error && (
@@ -115,6 +117,7 @@ function LiblibRendererModels() {
 }
 
 function LiblibRendererForm() {
+    const { t } = useI18n()
     const currentWidgets = liblibStore((state) => state.currentWidgets);
     const currentValues = liblibStore((state) => state.currentValues);
     const setCurrentValues = liblibStore((state) => state.setCurrentValues);
@@ -130,7 +133,7 @@ function LiblibRendererForm() {
 
     return (
         <>
-            <Button type="primary" onClick={handleRun}>执行</Button>
+            <Button type="primary" onClick={handleRun}>{t('liblib.execute')}</Button>
             {progressMessage && <Alert message={progressMessage} type="info" showIcon />}
             {runError && <Alert message={runError} type="error" showIcon />}
             <WorkflowEditApiFormat

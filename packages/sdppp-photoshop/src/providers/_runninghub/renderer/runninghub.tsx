@@ -1,20 +1,23 @@
 import './runninghub.less';
-import { Input, Alert, Flex, Spin, Button, Typography, Select } from 'antd';
-import { useEffect, useState } from 'react';
+import { Input, Alert, Flex, Button } from 'antd';
+import { useState } from 'react';
 import { runninghubStore, changeSelectedModel, createTask } from './runninghub.store';
 import { WorkflowEditApiFormat } from '../../../tsx/widgetable';
 import Link from 'antd/es/typography/Link';
 import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
 import { WidgetableNode } from '@sdppp/common/schemas/schemas';
-import { useWidgetable, WidgetableProvider } from '../../../tsx/widgetable/context';
+import { WidgetableProvider } from '../../../tsx/widgetable/context';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
+import { useI18n } from '@sdppp/common';
+import { ModelSelector } from '../../base/ModelSelector';
 
 const log = sdpppSDK.logger.extend('runninghub')
 
 const { Password } = Input;
 
 export default function RunningHubRenderer({ showingPreview }: { showingPreview: boolean }) {
+    const { t } = useI18n()
     const { apiKey, setApiKey } = runninghubStore();
     const [error, setError] = useState<string>('');
 
@@ -32,7 +35,7 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
                     const banners = loadRemoteConfig('banners');
                     const runninghubURL = banners.find((banner: any) => banner.type === 'runninghub')?.link;
                     sdpppSDK.plugins.photoshop.openExternalLink({ url: runninghubURL })
-                }}>点此获取RunningHub APIKey</Link>
+                }}>{t('runninghub.get_apikey')}</Link>
             }
 
             {error && (
@@ -55,36 +58,11 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
 }
 
 function RunningHubRendererModels() {
-    const { webappId, setWebappId, webappHistory, appName } = runninghubStore();
+    const { webappId, setWebappId, webappHistory } = runninghubStore();
     const client = runninghubStore((state) => state.client);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string>('');
-    const [inputValue, setInputValue] = useState(() => {
-        // 如果当前webappId在历史记录中，显示对应的appName，否则显示webappId
-        const historyItem = webappHistory.find(item => item.webappId === webappId);
-        return historyItem ? historyItem.appName : webappId;
-    });
-
-    useEffect(() => {
-        if (client && webappId && webappId.trim()) {
-            setLoading(true);
-            setLoadError('');
-            changeSelectedModel(webappId)
-                .catch((error: any) => {
-                    setLoadError(error.message || error.toString());
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
-        }
-    }, [client, webappId]);
-
-    // 当appName变化时，更新输入框显示
-    useEffect(() => {
-        if (appName && webappId) {
-            setInputValue(appName);
-        }
-    }, [appName, webappId]);
+    const [inputValue, setInputValue] = useState('');
 
     if (!client) {
         return null;
@@ -101,17 +79,16 @@ function RunningHubRendererModels() {
         if (actualWebappId === webappId || !actualWebappId.trim()) {
             return;
         }
-        if (client) {
-            setLoadError('');
-            setLoading(true);
-            try {
-                await changeSelectedModel(actualWebappId);
-                setWebappId(actualWebappId);
-            } catch (error: any) {
-                setLoadError(error.message || error.toString());
-            } finally {
-                setLoading(false);
-            }
+        
+        setLoadError('');
+        setLoading(true);
+        try {
+            await changeSelectedModel(actualWebappId);
+            setWebappId(actualWebappId);
+        } catch (error: any) {
+            setLoadError(error.message || error.toString());
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -119,9 +96,9 @@ function RunningHubRendererModels() {
     const selectOptions = webappHistory.map(item => ({
         value: item.webappId,
         label: (
-            <div>
-                <div style={{ fontWeight: 'bold', color: 'var(--sdppp-host-text-color)' }}>{item.appName}</div>
-                <div style={{ fontSize: '12px', color: 'var(--sdppp-host-text-color-secondary)', marginTop: '2px' }}>{item.webappId}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 'bold', color: 'var(--sdppp-host-text-color)' }}>{item.appName}</span>
+                <span style={{ fontSize: '12px', color: 'var(--sdppp-host-text-color-secondary)' }}>{item.webappId}</span>
             </div>
         ),
         // 用于搜索的纯文本
@@ -130,67 +107,37 @@ function RunningHubRendererModels() {
         displayText: item.appName
     }));
 
+    const { t } = useI18n();
+    
+    const notFoundContent = inputValue && inputValue.trim() ? (
+        <div style={{ padding: '8px 12px', color: 'var(--sdppp-host-text-color-secondary)' }}>
+            {t('runninghub.open_app', { appName: inputValue })}
+        </div>
+    ) : null;
+
     return (
         <WidgetableProvider
-            uploader={async (uploadInput) => {
-                return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg');
+            uploader={async (uploadInput, signal) => {
+                return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg', signal);
             }}
         >
-            <Flex gap={8} align='center'>
-                <Typography.Text>应用ID:</Typography.Text>
-                <Select
-                    placeholder="此处粘贴 WebApp ID"
-                    value={inputValue || undefined}
-                    onChange={(value, option) => {
-                        // 如果选择的是历史项目，显示appName
-                        const selectedOption = option as any;
-                        if (selectedOption && selectedOption.displayText) {
-                            setInputValue(selectedOption.displayText);
-                            handleWebappIdChange(value);
-                        } else {
-                            setInputValue(value);
-                        }
-                    }}
-                    onSearch={(value) => setInputValue(value)}
-                    onBlur={() => {
-                        // 失焦时尝试设置webappId
-                        if (inputValue && inputValue.trim()) {
-                            handleWebappIdChange(inputValue);
-                        }
-                    }}
-                    onInputKeyDown={(e) => {
-                        // 按回车时尝试设置webappId
-                        if (e.key === 'Enter' && inputValue && inputValue.trim()) {
-                            handleWebappIdChange(inputValue);
-                        }
-                    }}
-                    options={selectOptions}
-                    showSearch
-                    allowClear
-                    filterOption={(input, option) => {
-                        if (!option) return false;
-                        const searchText = (option as any).searchText || '';
-                        return searchText.toLowerCase().includes(input.toLowerCase());
-                    }}
-                    notFoundContent={
-                        inputValue && inputValue.trim() ? (
-                            <div style={{ padding: '8px 12px', color: 'var(--sdppp-host-text-color-secondary)' }}>
-                                按回车打开应用： {inputValue}
-                            </div>
-                        ) : null
-                    }
-                    className="renderer-model-select"
-                    style={{ flex: 1 }}
-                />
-            </Flex>
-            {loadError && <Alert message={loadError} type="error" showIcon />}
-            {loading && <Flex justify="center" align="center" style={{ width: '100%', height: '200px' }}><Spin /></Flex>}
+            <ModelSelector
+                value={webappId}
+                placeholder={t('runninghub.webapp_id_placeholder')}
+                loading={loading}
+                loadError={loadError}
+                options={selectOptions}
+                onChange={handleWebappIdChange}
+                onInputChange={setInputValue}
+                notFoundContent={notFoundContent}
+            />
             {webappId && !loading && !loadError && <RunningHubRendererForm />}
         </WidgetableProvider>
     )
 }
 
 function RunningHubRendererForm() {
+    const { t } = useI18n()
     const currentNodes = runninghubStore((state) => state.currentNodes);
     const currentValues = runninghubStore((state) => state.currentValues);
     const setCurrentValues = runninghubStore((state) => state.setCurrentValues);
@@ -228,7 +175,7 @@ function RunningHubRendererForm() {
 
     return (
         <>
-            <Button type="primary" onClick={handleRun}>执行</Button>
+            <Button type="primary" onClick={handleRun}>{t('runninghub.execute')}</Button>
             {progressMessage && <Alert message={progressMessage} type="info" showIcon />}
             {runError && <Alert message={runError} type="error" showIcon />}
             <WorkflowEditApiFormat
@@ -246,6 +193,7 @@ function RunningHubRendererForm() {
 }
 
 function AccountStatus() {
+    const { t } = useI18n()
     const { accountStatus } = runninghubStore();
 
     if (!accountStatus) {
@@ -255,11 +203,11 @@ function AccountStatus() {
     return (
         <Flex justify='space-between' gap={16} style={{ color: 'var(--sdppp-host-text-color-secondary)', fontSize: '12px' }}>
             <div>
-                <span>RH币:</span>
+                <span>{t('runninghub.rh_coins')}</span>
                 <span>{accountStatus.remainCoins}</span>
             </div>
             <div>
-                <span>当前任务数:</span>
+                <span>{t('runninghub.current_tasks')}</span>
                 <span>{accountStatus.currentTaskCounts}</span>
             </div>
         </Flex>

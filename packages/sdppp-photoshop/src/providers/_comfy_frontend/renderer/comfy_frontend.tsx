@@ -7,12 +7,14 @@ import './comfy_frontend.less';
 import { ComfyFrontendRendererContent } from './components';
 import { WorkflowListProvider } from './comfy_frontend';
 import { ComfyCloudRecommendBanner } from './cloud_recommend';
+import { useI18n } from '@sdppp/common';
 
 const log = sdpppSDK.logger.extend("comfy-frontend")
 
 declare const SDPPP_VERSION: string;
 
 export function ComfyFrontendRenderer() {
+    const { t } = useI18n()
     const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
     const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
     const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
@@ -34,7 +36,7 @@ export function ComfyFrontendRenderer() {
                     <Button type="primary" onClick={() => {
                         sdpppSDK.plugins.photoshop.setComfyWebviewURL({ url: currentInputURL });
                     }}>
-                        连接
+                        {t('comfy.connect')}
                     </Button> : null
                 }
             </Flex>
@@ -47,6 +49,7 @@ export function ComfyFrontendRenderer() {
 }
 
 export function ComfyConnectStatusText() {
+    const { t } = useI18n()
     const comfyWebviewConnectStatus = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewConnectStatus);
     const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
     const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
@@ -59,22 +62,22 @@ export function ComfyConnectStatusText() {
     let showRenderer = false
 
     if (comfyHTTPCode !== 200) {
-        statusText = `ComfyUI加载失败，HTTP状态码：${translateHTTPCode(comfyHTTPCode)}`
+        statusText = t('comfy.load_failed', { code: translateHTTPCode(comfyHTTPCode) })
         statusTextType = 'error'
     } else if (comfyWebviewLoadError) {
         statusText = comfyWebviewLoadError
         statusTextType = 'error'
     } else if (comfyWebviewLoading) {
-        statusText = 'ComfyUI加载中...'
+        statusText = t('comfy.loading')
         statusTextType = 'info'
     } else if (comfyWebviewConnectStatus === 'connecting') {
-        statusText = '通道连接中...'
+        statusText = t('comfy.channel_connecting')
         statusTextType = 'info'
     } else if (comfyWSState === 'reconnecting') {
-        statusText = 'ComfyUI服务器重连中'
+        statusText = t('comfy.server_reconnecting')
         statusTextType = 'warning'
     } else if (!comfyWebviewVersion || comfyWebviewVersion !== SDPPP_VERSION) {
-        statusText = `Comfy侧SDPPP版本(${comfyWebviewVersion})与插件(${SDPPP_VERSION})不匹配，运行可能有问题`
+        statusText = t('comfy.version_mismatch', { comfyVersion: comfyWebviewVersion, pluginVersion: SDPPP_VERSION })
         statusTextType = 'warning'
         showRenderer = true
     } else {
@@ -98,7 +101,11 @@ export function ComfyFrontendContent() {
         // This Provider is used to provide the context for the WorkflowEditApiFormat
         // 这个Provider是必须的，因为WorkflowEditApiFormat需要使用WidgetableProvider
         <WidgetableProvider
-            uploader={async (uploadInput) => {
+            uploader={async (uploadInput, signal) => {
+                // Check if already aborted
+                if (signal?.aborted) {
+                    throw new DOMException('Upload aborted', 'AbortError');
+                }
                 const { name } = await sdpppSDK.plugins.photoshop.uploadComfyImage({ uploadInput, overwrite: true });
                 return name;
             }}
@@ -112,28 +119,30 @@ export function ComfyFrontendContent() {
 
 
 function translateHTTPCode(code: number) {
+    const { t } = useI18n()
+    
     switch (code) {
         case 200:
             return '';
         case 404:
-            return 'SDPPP可能未安装或和插件版本不匹配 (404)';
+            return t('http.404');
         case 401:
-            return '未授权 (401)';
+            return t('http.401');
         case 403:
-            return '禁止访问 (403)';
+            return t('http.403');
         case 408:
-            return '请求超时 (408)';
+            return t('http.408');
         case 500:
-            return '服务器错误 (500)';
+            return t('http.500');
         case 501:
-            return '未实现 (501)';
+            return t('http.501');
         case 502:
-            return '网关错误 (502)';
+            return t('http.502');
         case 503:
-            return '服务不可用 (503)';
+            return t('http.503');
         case 504:
-            return '网关超时 (504)';
+            return t('http.504');
         default:
-            return `未知错误（${code}）`;
+            return t('http.unknown', { code });
     }
 }

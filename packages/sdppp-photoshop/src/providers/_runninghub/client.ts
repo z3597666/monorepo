@@ -2,6 +2,7 @@ import { WidgetableNode, WidgetableWidget } from '@sdppp/common/schemas/schemas'
 import { sdpppSDK } from '../../sdk/sdppp-ps-sdk';
 import { Client } from '../base/Client';
 import { Task } from '../base/Task';
+import { t } from '@sdppp/common';
 
 const log = sdpppSDK.logger.extend('runninghub')
 
@@ -90,13 +91,13 @@ export class SDPPPRunningHub extends Client<{
   private mapStatusToChineseMessage(status: string): string {
     switch (status) {
       case 'QUEUED':
-        return '排队等待';
+        return t('runninghub.status.waiting');
       case 'RUNNING':
-        return '正在运行';
+        return t('runninghub.status.running');
       case 'FAILED':
-        return '执行失败';
+        return t('runninghub.status.failed');
       case 'SUCCESS':
-        return '执行成功';
+        return t('runninghub.status.success');
       default:
         return status;
     }
@@ -208,7 +209,7 @@ export class SDPPPRunningHub extends Client<{
             const outputsData = await outputsResponse.json();
             
             if (outputsData.code !== 0) {
-              throw new Error(`获取结果失败: ${outputsData.msg || '未知错误'}`);
+              throw new Error(t('runninghub.error.get_result_failed', { error: outputsData.msg || '未知错误' }));
             }
 
             // 根据API返回格式处理结果
@@ -218,9 +219,9 @@ export class SDPPPRunningHub extends Client<{
               rawData: output
             }));
           } else if (lastStatusResult.rawData.data === 'FAILED') {
-            throw new Error(`任务执行失败: ${lastStatusResult.rawData.msg || '未知错误'}`);
+            throw new Error(t('runninghub.error.task_failed', { error: lastStatusResult.rawData.msg || '未知错误' }));
           } else {
-            throw new Error(`任务未完成，当前状态: ${this.mapStatusToChineseMessage(lastStatusResult.rawData.data)}`);
+            throw new Error(t('runninghub.error.task_incomplete', { status: this.mapStatusToChineseMessage(lastStatusResult.rawData.data) }));
           }
         },
         canceler: async (id: string) => {
@@ -242,8 +243,13 @@ export class SDPPPRunningHub extends Client<{
     }
   }
 
-  async uploadImage(type: 'token' | 'buffer', image: ArrayBuffer | string, format: 'png' | 'jpg' | 'jpeg' | 'webp'): Promise<string> {
+  async uploadImage(type: 'token' | 'buffer', image: ArrayBuffer | string, format: 'png' | 'jpg' | 'jpeg' | 'webp', signal?: AbortSignal): Promise<string> {
     try {
+      // Check if already aborted
+      if (signal?.aborted) {
+        throw new DOMException('Upload aborted', 'AbortError');
+      }
+
       const filename = `runninghub_${Math.random().toString(36).substring(2, 8)}_${Date.now()}.${format}`;
 
       // Create form data for file upload
@@ -257,7 +263,8 @@ export class SDPPPRunningHub extends Client<{
 
       const response = await fetch('https://www.runninghub.cn/task/openapi/upload', {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: signal
       });
       // {
       //   "code": 0,

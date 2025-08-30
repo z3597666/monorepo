@@ -4,11 +4,14 @@ import { sdpppSDK } from '../../../../../sdk/sdppp-ps-sdk';
 import { v4 } from 'uuid';
 import { PhotoshopMaskParams, PhotoshopParams, useSourceInfo } from './lib/source-render';
 
+const log = sdpppSDK.logger.extend('UploadContext');
+
 export interface ImageDetail {
     url: string;
     source: string;
     thumbnail?: string;
     auto?: boolean;
+    uploadId?: string;
 }
 
 export interface UploadState {
@@ -32,6 +35,7 @@ export interface UploadContextValue {
     removeImageUploadPass: (config: PhotoshopParams) => void;
     createMaskUploadPass: (config: PhotoshopMaskParams) => void;
     removeMaskUploadPass: (config: PhotoshopMaskParams) => void;
+    cancelAllUploads: () => void;
 
     // Direct upload methods
     uploadFromPhotoshop: (isMask?: boolean) => Promise<void>;
@@ -48,7 +52,7 @@ interface UploadProviderProps {
 }
 
 export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetImages, onCallOnValueChange, maxCount = 1 }) => {
-    const { addUploadPass, removeUploadPass, runUploadPassOnce } = useWidgetable();
+    const { addUploadPass, removeUploadPass, runUploadPassOnce, cancelAllUploads: cancelWidgetableUploads } = useWidgetable();
     const [uploadState, setUploadState] = useState<UploadState>({
         uploading: false,
         uploadError: '',
@@ -59,6 +63,20 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
     const layerIdentifyRef = useRef<string>('');
     const currentThumbnailRef = useRef<string>('');
     const originalImagesRef = useRef<ImageDetail[]>([]);
+    const activeUploadsCount = useRef<number>(0);
+
+    // 上传状态管理辅助函数
+    const incrementUploadCount = useCallback(() => {
+        activeUploadsCount.current += 1;
+        setUploadState(prev => ({ ...prev, uploading: true }));
+    }, []);
+
+    const decrementUploadCount = useCallback(() => {
+        activeUploadsCount.current = Math.max(0, activeUploadsCount.current - 1);
+        if (activeUploadsCount.current === 0) {
+            setUploadState(prev => ({ ...prev, uploading: false }));
+        }
+    }, []);
 
     // 处理多图片添加的辅助方法
     const handleImagesChange = useCallback((newImages: ImageDetail[]) => {
@@ -81,10 +99,16 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         let sourceInfoRef = '';
 
         const uploadPass = {
-            getUploadFile: async () => {
-                setUploadState(prev => ({ ...prev, uploading: true }));
+            getUploadFile: async (signal?: AbortSignal) => {
+                log('increment upload count') 
+                incrementUploadCount();
 
                 try {
+                    // Check if already aborted
+                    if (signal?.aborted) {
+                        throw new DOMException('Upload aborted', 'AbortError');
+                    }
+
                     const content = config.content || layerIdentifyRef.current;
                     const { thumbnail_url, file_token, source } = await sdpppSDK.plugins.photoshop.doGetImage({
                         content,
@@ -93,6 +117,11 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                         imageQuality: config.imageQuality || 1,
                         cropBySelection: config.cropBySelection || 'no'
                     });
+
+                    // Check if aborted during the async operation
+                    if (signal?.aborted) {
+                        throw new DOMException('Upload aborted', 'AbortError');
+                    }
 
                     const thumbnailUrl = thumbnail_url || '';
                     currentThumbnailRef.current = thumbnailUrl;
@@ -109,17 +138,22 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                     return { type: 'token' as const, tokenOrBuffer: file_token || '', fileName: `${v4()}.png` };
                 } catch (error: any) {
                     // 上传失败时恢复到原始状态
-                    onSetImages(originalImagesRef.current);
+                    if (error.name !== 'AbortError') {
+                        onSetImages(originalImagesRef.current);
+                    }
                     throw error;
                 }
             },
             onUploadError: (error: Error) => {
-                setUploadState(prev => ({ ...prev, uploading: false, uploadError: error.message }));
-                // 上传失败时恢复到原始状态
-                onSetImages(originalImagesRef.current);
+                decrementUploadCount();
+                setUploadState(prev => ({ ...prev, uploadError: error.name === 'AbortError' ? '' : error.message }));
+                // 上传失败时恢复到原始状态（但取消时不恢复）
+                if (error.name !== 'AbortError') {
+                    onSetImages(originalImagesRef.current);
+                }
             },
             onUploaded: async (url: string) => {
-                setUploadState(prev => ({ ...prev, uploading: false }));
+                decrementUploadCount();
                 // switchImageSource逻辑改为调用onCallOnValueChange
                 const newImages = [{
                     url, source: sourceInfoRef,
@@ -147,16 +181,27 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         let sourceInfoRef = '';
 
         const uploadPass = {
-            getUploadFile: async () => {
-                setUploadState(prev => ({ ...prev, uploading: true }));
+            getUploadFile: async (signal?: AbortSignal) => {
+                log('increment upload count')
+                incrementUploadCount();
 
                 try {
+                    // Check if already aborted
+                    if (signal?.aborted) {
+                        throw new DOMException('Upload aborted', 'AbortError');
+                    }
+
                     const content = config.content || layerIdentifyRef.current;
                     const { thumbnail_url, file_token, source } = await sdpppSDK.plugins.photoshop.doGetMask({
                         content,
                         reverse: config.reverse || false,
                         imageSize: config.imageSize || 0
                     });
+
+                    // Check if aborted during the async operation
+                    if (signal?.aborted) {
+                        throw new DOMException('Upload aborted', 'AbortError');
+                    }
 
                     const thumbnailUrl = thumbnail_url || '';
                     currentThumbnailRef.current = thumbnailUrl;
@@ -173,17 +218,22 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                     return { type: 'token' as const, tokenOrBuffer: file_token || '', fileName: `${v4()}.png` };
                 } catch (error: any) {
                     // 上传失败时恢复到原始状态
-                    onSetImages(originalImagesRef.current);
+                    if (error.name !== 'AbortError') {
+                        onSetImages(originalImagesRef.current);
+                    }
                     throw error;
                 }
             },
             onUploadError: (error: Error) => {
-                setUploadState(prev => ({ ...prev, uploading: false, uploadError: error.message }));
-                // 上传失败时恢复到原始状态
-                onSetImages(originalImagesRef.current);
+                decrementUploadCount();
+                setUploadState(prev => ({ ...prev, uploadError: error.name === 'AbortError' ? '' : error.message }));
+                // 上传失败时恢复到原始状态（但取消时不恢复）
+                if (error.name !== 'AbortError') {
+                    onSetImages(originalImagesRef.current);
+                }
             },
             onUploaded: async (url: string) => {
-                setUploadState(prev => ({ ...prev, uploading: false }));
+                decrementUploadCount();
                 // switchImageSource逻辑改为调用onCallOnValueChange
                 const newImages = [{
                     url, source: sourceInfoRef,
@@ -224,6 +274,8 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         const originalImages = [...originalImagesRef.current];
 
         try {
+            setUploadState(prev => ({ ...prev, uploadError: '' }));
+            
             const { thumbnail_url, file_token, source } = isMask
                 ? await sdpppSDK.plugins.photoshop.requestMaskGet({ isMask: true })
                 : await sdpppSDK.plugins.photoshop.requestImageGet({});
@@ -232,28 +284,53 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                 return; // 可能是取消 
             }
 
-            // 获取到thumbnail时先显示缩略图
-            const thumbnailImages = [{ url: thumbnail_url, source, thumbnail: thumbnail_url }];
+            // 为这个上传任务生成唯一ID
+            const uploadId = v4();
+            
+            // 获取到thumbnail时先显示缩略图，添加uploadId标识
+            const thumbnailImages = [{ url: thumbnail_url, source, thumbnail: thumbnail_url, uploadId }];
             const tempImages = maxCount > 1 
-                ? [...originalImagesRef.current, ...thumbnailImages]
+                ? [...originalImages, ...thumbnailImages]
                 : thumbnailImages;
             onSetImages(tempImages);
-            setUploadState(prev => ({ ...prev, uploadError: '' }));
+            // 立即更新 originalImagesRef 以确保后续操作基于正确的状态
+            originalImagesRef.current = tempImages;
 
             await runUploadPassOnce({
-                getUploadFile: async () => {
+                getUploadFile: async (signal?: AbortSignal) => {
+                    incrementUploadCount();
+                    // Check if already aborted
+                    if (signal?.aborted) {
+                        throw new DOMException('Upload aborted', 'AbortError');
+                    }
                     return { type: 'token', tokenOrBuffer: file_token, fileName: `${v4()}.png` };
                 },
                 onUploaded: async (url) => {
-                    // 上传成功后使用handleImagesChange处理多图片逻辑
-                    const newImages = [{ url, source, thumbnail: thumbnail_url }];
-                    handleImagesChange(newImages);
+                    // 上传成功后替换对应的缩略图
+                    const currentImages = [...originalImagesRef.current];
+                    const targetIndex = currentImages.findIndex(img => img.uploadId === uploadId);
+                    
+                    if (targetIndex !== -1) {
+                        // 替换找到的缩略图
+                        currentImages[targetIndex] = { url, source, thumbnail: thumbnail_url };
+                        originalImagesRef.current = currentImages;
+                        onCallOnValueChange(currentImages);
+                    } else {
+                        // 如果找不到对应缩略图，降级为追加模式
+                        const newImages = [{ url, source, thumbnail: thumbnail_url }];
+                        handleImagesChange(newImages);
+                    }
+                    
+                    decrementUploadCount();
                     await new Promise(resolve => setTimeout(resolve, 100));
                 },
                 onUploadError: (error: Error) => {
-                    // 上传失败时恢复到原始状态
-                    onSetImages(originalImages);
-                    setUploadState(prev => ({ ...prev, uploadError: error.message }));
+                    // 上传失败时恢复到原始状态（但取消时不恢复）
+                    if (error.name !== 'AbortError') {
+                        onSetImages(originalImages);
+                    }
+                    decrementUploadCount();
+                    setUploadState(prev => ({ ...prev, uploadError: error.name === 'AbortError' ? '' : error.message }));
                 }
             });
         } catch (error: any) {
@@ -273,38 +350,63 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
             return;
         }
 
+        // 为这个上传任务生成唯一ID
+        const uploadId = v4();
+        
         const thumbnailURL = URL.createObjectURL(file);
-        const thumbnailImages = [{ url: thumbnailURL, source: 'disk', thumbnail: thumbnailURL }];
+        const thumbnailImages = [{ url: thumbnailURL, source: 'disk', thumbnail: thumbnailURL, uploadId }];
 
         setUploadState(prev => ({ ...prev, uploadError: '' }));
         // 先显示缩略图，支持多图片
         const tempImages = maxCount > 1 
-            ? [...originalImagesRef.current, ...thumbnailImages]
+            ? [...originalImages, ...thumbnailImages]
             : thumbnailImages;
         onSetImages(tempImages);
+        // 立即更新 originalImagesRef 以确保后续操作基于正确的状态
+        originalImagesRef.current = tempImages;
 
         try {
             await runUploadPassOnce({
-                getUploadFile: async () => {
+                getUploadFile: async (signal?: AbortSignal) => {
+                    // Check if already aborted
+                    if (signal?.aborted) {
+                        throw new DOMException('Upload aborted', 'AbortError');
+                    }
                     const buffer = await file.arrayBuffer();
                     return { type: 'buffer', tokenOrBuffer: Buffer.from(buffer), fileName: file.name };
                 },
                 onUploaded: async (url) => {
-                    // 上传成功后使用handleImagesChange处理多图片逻辑
-                    const newImages = [{ url, source: 'disk', thumbnail: thumbnailURL }];
-                    handleImagesChange(newImages);
+                    // 上传成功后替换对应的缩略图
+                    const currentImages = [...originalImagesRef.current];
+                    const targetIndex = currentImages.findIndex(img => img.uploadId === uploadId);
+                    
+                    if (targetIndex !== -1) {
+                        // 替换找到的缩略图
+                        currentImages[targetIndex] = { url, source: 'disk', thumbnail: thumbnailURL };
+                        originalImagesRef.current = currentImages;
+                        onCallOnValueChange(currentImages);
+                    } else {
+                        // 如果找不到对应缩略图，降级为追加模式
+                        const newImages = [{ url, source: 'disk', thumbnail: thumbnailURL }];
+                        handleImagesChange(newImages);
+                    }
+                    
+                    decrementUploadCount();
                     await new Promise(resolve => setTimeout(resolve, 100));
                 },
                 onUploadError: (error: Error) => {
-                    // 上传失败时恢复到原始状态
-                    onSetImages(originalImages);
-                    setUploadState(prev => ({ ...prev, uploadError: error.message }));
+                    // 上传失败时恢复到原始状态（但取消时不恢复）
+                    if (error.name !== 'AbortError') {
+                        onSetImages(originalImages);
+                    }
+                    decrementUploadCount();
+                    setUploadState(prev => ({ ...prev, uploadError: error.name === 'AbortError' ? '' : error.message }));
                 }
             });
         } catch (error: any) {
             // 上传失败时恢复到原始状态
             onSetImages(originalImages);
-            setUploadState(prev => ({ ...prev, uploadError: error.message }));
+            setUploadState(prev => ({ ...prev, uploading: false, uploadError: error.message }));
         }
     }, [runUploadPassOnce, onSetImages, handleImagesChange, maxCount]);
 
@@ -319,10 +421,26 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         onCallOnValueChange(images);
     }, [onCallOnValueChange]);
 
+    const cancelAllUploads = useCallback(() => {
+        // Cancel all widgetable uploads
+        cancelWidgetableUploads();
+        
+        // Clear all active upload passes
+        activeUploadPasses.current.clear();
+        
+        // Reset upload counter and state
+        activeUploadsCount.current = 0;
+        setUploadState(prev => ({ ...prev, uploading: false, uploadError: '' }));
+    }, [cancelWidgetableUploads]);
+
     const clearImages = useCallback(() => {
+        // First cancel all uploads
+        cancelAllUploads();
+        
+        // Then clear images
         originalImagesRef.current = [];
         onCallOnValueChange([]);
-    }, [onCallOnValueChange]);
+    }, [onCallOnValueChange, cancelAllUploads]);
 
     const setUploadErrorFunc = useCallback((error: string) => {
         setUploadState(prev => ({ ...prev, uploadError: error }));
@@ -338,6 +456,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         removeImageUploadPass: removeImageUploadPassByConfig,
         createMaskUploadPass,
         removeMaskUploadPass: removeMaskUploadPassByConfig,
+        cancelAllUploads,
         uploadFromPhotoshop,
         uploadFromDisk
     };

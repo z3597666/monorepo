@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useMemo } from 'react';
-import { Button, Upload, Row, Col, Tooltip, Alert } from 'antd';
-import { PlusOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Upload, Row, Col, Tooltip, Alert, Spin } from 'antd';
+import { PlusOutlined, DeleteOutlined, UploadOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { useImageUpload, ImageDetail } from '../upload-context';
 
@@ -72,12 +72,24 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                     </Col>
                 )}
             </Row>
+            {uploadState.uploading && (
+                <div style={{ marginTop: 8, textAlign: 'center' }}>
+                    <Spin 
+                        indicator={<LoadingOutlined style={{ fontSize: 16 }} spin />}
+                        size="small"
+                    />
+                    <span style={{ marginLeft: 8, fontSize: '12px', color: 'var(--sdppp-host-text-color-secondary)' }}>
+                        上传中...
+                    </span>
+                </div>
+            )}
             {uploadState.uploadError && (
                 <Alert
                     message={uploadState.uploadError}
                     type="error"
                     showIcon
                     closable
+                    style={{ marginTop: 8 }}
                 />
             )}
         </>

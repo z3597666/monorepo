@@ -7,7 +7,7 @@ import {
   WorkflowItem
 } from "./workflow-item";
 import { useWorkflowListContext, Workflow } from "../comfy_frontend";
-import { t } from "@sdppp/common/i18n_next";
+import { useI18n } from "@sdppp/common";
 
 interface WorkflowListProps {
   setCurrentWorkflow: (workflow: string) => void;
@@ -18,6 +18,7 @@ interface WorkflowListProps {
 const WorkflowList: React.FC<WorkflowListProps> = ({
   setCurrentWorkflow, currentWorkflow, hidden
 }) => {
+  const { t } = useI18n()
   const {
     showingWorkflowList,
     currentViewingDirectory,
@@ -51,7 +52,7 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
     <div className="workflow-list" style={{ display: hidden ? 'none' : 'block' }}>
       <Flex align="center" gap={8} style={{ margin: '8px 0' }}>
         <Typography.Title level={5} style={{ margin: 0 }}>
-          你的工作流
+          {t('comfy.your_workflows')}
         </Typography.Title>
         <Button
           type="text"
@@ -59,7 +60,7 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
           onClick={refetch}
           loading={loading}
           size="small"
-          title="刷新工作流列表"
+          title={t('comfy.refresh_workflows')}
         />
       </Flex>
       {openWorkflowError && (

@@ -4,8 +4,11 @@ import { sdpppSDK } from '../sdk/sdppp-ps-sdk'
 import { Button, ConfigProvider, Flex, Select, theme } from 'antd'
 import { Providers } from '../providers'
 import { MainStore } from './App.store'
-import ImagePreview from './components/ImagePreview'
+import ImagePreviewWrapper from './components/ImagePreviewWrapper'
 import { SDPPPGateway } from './gateway/sdppp'
+import { useI18n, i18nAntd, I18nextProvider } from '@sdppp/common'
+import zhCN from 'antd/locale/zh_CN'
+import enUS from 'antd/locale/en_US'
 
 export default function App() {
     const psTheme = useStore(sdpppSDK.stores.PhotoshopStore, state => state.theme)
@@ -14,8 +17,23 @@ export default function App() {
 
     const fontSize = 12
 
+    return <I18nextProvider i18n={i18nAntd}>
+        <AppContent psTheme={psTheme} showingPreview={showingPreview} previewImageList={previewImageList} fontSize={fontSize} />
+    </I18nextProvider>
+}
+
+function AppContent({ psTheme, showingPreview, previewImageList, fontSize }: {
+    psTheme: string;
+    showingPreview: boolean;
+    previewImageList: any[];
+    fontSize: number;
+}) {
+    const { t, isZhCN } = useI18n()
+    const antdLocale = isZhCN ? zhCN : enUS
+
     return <div id="app" className={themeClassName(psTheme)}>
         <ConfigProvider
+            locale={antdLocale}
             getPopupContainer={trigger => trigger?.parentElement || document.body}
             theme={{
                 token: {
@@ -92,11 +110,11 @@ export default function App() {
             }}>
             {!showingPreview && previewImageList.length ? <Flex gap={8} justify="center" align="center" style={{ marginBottom: 16 }}>
                 <Button size="small" type="primary" onClick={() => MainStore.setState({ showingPreview: true })}>
-                    显示预览框 ({previewImageList.length}张图片)
+                    {t('preview.show', { count: previewImageList.length })}
                 </Button>
             </Flex> : null}
             {
-                showingPreview ? <ImagePreview /> : null
+                showingPreview ? <ImagePreviewWrapper /> : null
             }
             <SDPPPGateway />
         </ConfigProvider>

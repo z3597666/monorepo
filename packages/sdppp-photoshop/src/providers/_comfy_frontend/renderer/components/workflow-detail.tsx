@@ -16,11 +16,13 @@ import './workflow-detail.less';
 import { MainStore } from '../../../../tsx/App.store';
 import { comfyWorkflowStore } from '../comfy_frontend';
 import { debug } from 'debug';
+import { useI18n } from '@sdppp/common';
 
 const log = debug('comfy-frontend:workflow-detail')
 const { Text } = Typography;
 
 const WorkflowStatus: React.FC<{ currentWorkflow: string }> = ({ currentWorkflow }) => {
+  const { t } = useI18n()
   const comfyStore = useStore(sdpppSDK.stores.ComfyStore)
   const { lastError, progress, executingNodeTitle, queueSize } = comfyStore;
   const autoRunning = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyAutoRunning)
@@ -31,7 +33,7 @@ const WorkflowStatus: React.FC<{ currentWorkflow: string }> = ({ currentWorkflow
   if (executingNodeTitle) {
     return (
       <div className="workflow-run-status">
-        <Text ellipsis={{ tooltip: true }}>{`(队列:${queueSize}) ${progress}% ${executingNodeTitle}...`}</Text>
+        <Text ellipsis={{ tooltip: true }}>{t('comfy.queue_progress', { queueSize, progress, executingNodeTitle })}</Text>
         <Progress percent={progress} size="small" showInfo={false} />
       </div>
     );
@@ -46,8 +48,9 @@ const WorkflowStatus: React.FC<{ currentWorkflow: string }> = ({ currentWorkflow
 };
 
 const SaveButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
+  const { t } = useI18n()
   return (
-    <Tooltip title="保存">
+    <Tooltip title={t('comfy.save')}>
       <Button icon={<SaveOutlined />} onClick={() => {
         sdpppSDK.plugins.ComfyCaller.saveWorkflow({
           workflow_path: currentWorkflow,
@@ -58,8 +61,9 @@ const SaveButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
 };
 
 const RefreshButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
+  const { t } = useI18n()
   return (
-    <Tooltip title="刷新">
+    <Tooltip title={t('comfy.refresh')}>
       <Button icon={<ReloadOutlined />} onClick={() =>
         sdpppSDK.plugins.ComfyCaller.openWorkflow({
           workflow_path: currentWorkflow,
@@ -71,20 +75,22 @@ const RefreshButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
 };
 
 const StopAndCancelButton = () => {
+  const { t } = useI18n()
   const onClearAndInterrupt = useCallback(async () => {
     sdpppSDK.plugins.ComfyCaller.stopAll({});
   }, []);
   return (
-    <Tooltip title="停止并取消全部">
+    <Tooltip title={t('comfy.stop_cancel_all')}>
       <Button icon={<CloseCircleOutlined />} danger onClick={onClearAndInterrupt} />
     </Tooltip>
   );
 };
 
 const AutoRunButton = () => {
+  const { t } = useI18n()
   const autoRunning = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyAutoRunning)
   return (
-    <Tooltip title={autoRunning ? '停止自动运行' : '开启自动运行'}>
+    <Tooltip title={autoRunning ? t('comfy.stop_auto_run') : t('comfy.start_auto_run')}>
       <Button
         icon={<ForwardOutlined />}
         type={autoRunning ? 'primary' : 'default'}
@@ -123,6 +129,7 @@ async function runAndWaitResult(multi: number, currentWorkflow: string) {
 }
 
 const RunButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
+  const { t } = useI18n()
   const { waitAllUploadPasses } = useWidgetable();
 
   const doRun = useCallback(async () => {
@@ -132,7 +139,7 @@ const RunButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
     runAndWaitResult(1, currentWorkflow)
   }, [waitAllUploadPasses])
   return (
-    <Tooltip title="运行">
+    <Tooltip title={t('comfy.run')}>
       <Button type="primary" icon={<PlayCircleFilled />} onClick={doRun} />
     </Tooltip>
   );
@@ -154,11 +161,14 @@ const RunMultiButtons = ({ currentWorkflow }: { currentWorkflow: string }) => {
   );
 };
 
-const BackButton = ({ onBack }: { onBack: () => void }) => (
-  <Tooltip title="返回">
-    <Button icon={<ArrowLeftOutlined />} onClick={onBack} />
-  </Tooltip>
-);
+const BackButton = ({ onBack }: { onBack: () => void }) => {
+  const { t } = useI18n()
+  return (
+    <Tooltip title={t('comfy.back')}>
+      <Button icon={<ArrowLeftOutlined />} onClick={onBack} />
+    </Tooltip>
+  )
+};
 
 export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { currentWorkflow: string, setCurrentWorkflow: (workflow: string) => void }) {
   const widgetableValues = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableValues)

@@ -15,7 +15,7 @@ export type UploadPassInput = z.infer<typeof uploadImageInputSchama>
 
 // 定义hook函数的类型
 export type UploadPass = {
-    getUploadFile: () => Promise<UploadPassInput>,
+    getUploadFile: (signal?: AbortSignal) => Promise<UploadPassInput>,
     onUploaded?: (fileURL: string) => Promise<void>,
     onUploadError?: (error: any) => void,
 };
@@ -25,6 +25,7 @@ interface WidgetableContextType {
     runUploadPassOnce: (pass: UploadPass) => Promise<string>;
     addUploadPass: (pass: UploadPass) => string;
     removeUploadPass: (pass: UploadPass) => void;
+    cancelAllUploads: () => void;
 
     waitAllUploadPasses: () => Promise<void>;
 }
@@ -35,17 +36,21 @@ const WidgetableContext = createContext<WidgetableContextType | undefined>(undef
 // Provider组件的Props类型
 interface WidgetableProviderProps {
     children: ReactNode;
-    uploader: (uploadInput: UploadPassInput) => Promise<string>;
+    uploader: (uploadInput: UploadPassInput, signal?: AbortSignal) => Promise<string>;
 }
 
 const uploadPassesStore = createStore<{
     uploadPasses: UploadPass[],
     runningUploadPasses: {
         [id: string]: Promise<string>
+    },
+    abortControllers: {
+        [id: string]: AbortController
     }
 }>((set) => ({
     uploadPasses: [],
     runningUploadPasses: {},
+    abortControllers: {},
 }))
 
 // Provider组件
@@ -55,27 +60,36 @@ export function WidgetableProvider({ children, uploader }: WidgetableProviderPro
             if (!uploader) {
                 throw new Error('Uploader not set, please call setUploader first');
             }
+            const runID = uuidv4();
+            const abortController = new AbortController();
+            
             const promise = new Promise<string>(async (resolve, reject) => {
-                const uploadInput = await pass.getUploadFile();
                 try {
-                    const fileURL = await uploader(uploadInput);
+                    const uploadInput = await pass.getUploadFile(abortController.signal);
+                    const fileURL = await uploader(uploadInput, abortController.signal);
                     if (pass.onUploaded) {
                         await pass.onUploaded(fileURL);
                     }
                     resolve(fileURL);
                 } catch (error) {
-                    pass.onUploadError?.(error);
-                    return '';
+                    if (error instanceof Error && error.name === 'AbortError') {
+                        reject(error);
+                    } else {
+                        pass.onUploadError?.(error);
+                        reject(error);
+                    }
                 } finally {
                     uploadPassesStore.setState((state) => {
                         delete state.runningUploadPasses[runID];
+                        delete state.abortControllers[runID];
                         return state;
                     });
                 }
-            })
-            const runID = uuidv4();
+            });
+            
             uploadPassesStore.setState((state) => {
                 state.runningUploadPasses[runID] = promise;
+                state.abortControllers[runID] = abortController;
                 return state;
             });
 
@@ -92,6 +106,20 @@ export function WidgetableProvider({ children, uploader }: WidgetableProviderPro
         removeUploadPass: (pass: UploadPass) => {
             uploadPassesStore.setState((state) => {
                 state.uploadPasses = state.uploadPasses.filter(p => p !== pass);
+                return state;
+            });
+        },
+        cancelAllUploads: () => {
+            const state = uploadPassesStore.getState();
+            // Cancel all running uploads
+            Object.values(state.abortControllers).forEach(controller => {
+                controller.abort();
+            });
+            // Clear all queued uploads
+            uploadPassesStore.setState((state) => {
+                state.uploadPasses = [];
+                state.runningUploadPasses = {};
+                state.abortControllers = {};
                 return state;
             });
         },
