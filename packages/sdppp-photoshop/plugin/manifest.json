@@ -38,7 +38,7 @@
       "type": "panel",
       "id": "sd-ppp",
       "label": {
-        "default": "AIX"
+        "default": "SD-PPP 2.0-beta.6"
       },
       "minimumSize": {
         "width": 330,
