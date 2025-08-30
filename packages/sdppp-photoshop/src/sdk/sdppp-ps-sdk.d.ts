@@ -26,6 +26,7 @@ export declare const sdpppSDK: {
 			}[];
 			theme: string;
 			sdpppX: Record<string, any>;
+			locale: "zh-CN" | "en-US";
 			comfyWebviewConnectStatus: "connecting" | "connected" | "disconnected";
 			comfyWebviewLoadError: string;
 			comfyWebviewLoading: boolean;
@@ -36,6 +37,7 @@ export declare const sdpppSDK: {
 			sdkWebviewFocusing: boolean;
 			sdkWebviewConnectStatus: "connecting" | "connected" | "disconnected";
 			isLogin: boolean;
+			isGuest: boolean;
 			requestingLogin: boolean;
 			loginMessage: string;
 			token: string;
@@ -251,6 +253,7 @@ export declare const sdpppSDK: {
 				phone?: string | undefined;
 			}, signal?: AbortSignal) => Promise<{}>;
 			logout: (data: {}, signal?: AbortSignal) => Promise<{}>;
+			guestLogin: (data: {}, signal?: AbortSignal) => Promise<{}>;
 			log: (data: {
 				messages: string[];
 				level: "error" | "info" | "log" | "warn";
