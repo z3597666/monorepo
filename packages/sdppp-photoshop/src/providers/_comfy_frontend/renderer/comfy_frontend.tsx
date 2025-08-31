@@ -80,7 +80,7 @@ export function ComfyConnectStatusText() {
         showRenderer = true
     }
     if (comfyHTTPCode === 200 && (!comfyWebviewVersion || comfyWebviewVersion !== SDPPP_VERSION)) {
-        statusText = t('comfy.version_mismatch', { comfyVersion: comfyWebviewVersion, pluginVersion: SDPPP_VERSION })
+        statusText += (statusText ? ' | ' : '') + t('comfy.version_mismatch', { comfyVersion: comfyWebviewVersion, pluginVersion: SDPPP_VERSION })
         statusTextType = statusTextType == 'error' ? 'error' : 'warning'
     }
 
