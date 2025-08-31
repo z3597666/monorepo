@@ -7,14 +7,14 @@ import './comfy_frontend.less';
 import { ComfyFrontendRendererContent } from './components';
 import { WorkflowListProvider } from './comfy_frontend';
 import { ComfyCloudRecommendBanner } from './cloud_recommend';
-import { useI18n } from '@sdppp/common';
+import { useTranslation } from '@sdppp/common';
 
 const log = sdpppSDK.logger.extend("comfy-frontend")
 
 declare const SDPPP_VERSION: string;
 
 export function ComfyFrontendRenderer() {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
     const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
     const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
@@ -49,7 +49,7 @@ export function ComfyFrontendRenderer() {
 }
 
 export function ComfyConnectStatusText() {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const comfyWebviewConnectStatus = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewConnectStatus);
     const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
     const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
@@ -119,7 +119,7 @@ export function ComfyFrontendContent() {
 
 
 function translateHTTPCode(code: number) {
-    const { t } = useI18n()
+    const { t } = useTranslation()
 
     switch (code) {
         case 200:

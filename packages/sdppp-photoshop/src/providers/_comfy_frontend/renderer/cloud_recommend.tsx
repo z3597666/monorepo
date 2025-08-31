@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { sdpppSDK } from "../../../sdk/sdppp-ps-sdk";
 import { Button } from "antd";
 import { loadRemoteConfig } from "@sdppp/vite-remote-config-loader";
-import { useI18n } from "@sdppp/common";
+import { useTranslation } from '@sdppp/common';
 
 
 export function ComfyCloudRecommendBanner() {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const [shuffledBanners, setShuffledBanners] = useState<{
         link: string,
         name_chn: string,

@@ -6,7 +6,7 @@ import { Providers } from '../providers'
 import { MainStore } from './App.store'
 import ImagePreviewWrapper from './components/ImagePreviewWrapper'
 import { SDPPPGateway } from './gateway/sdppp'
-import { useI18n, i18nAntd, I18nextProvider } from '@sdppp/common'
+import { useTranslation, I18nextProvider, i18n } from '@sdppp/common'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 
@@ -17,7 +17,7 @@ export default function App() {
 
     const fontSize = 12
 
-    return <I18nextProvider i18n={i18nAntd}>
+    return <I18nextProvider i18n={i18n}>
         <AppContent psTheme={psTheme} showingPreview={showingPreview} previewImageList={previewImageList} fontSize={fontSize} />
     </I18nextProvider>
 }
@@ -28,8 +28,8 @@ function AppContent({ psTheme, showingPreview, previewImageList, fontSize }: {
     previewImageList: any[];
     fontSize: number;
 }) {
-    const { t, isZhCN } = useI18n()
-    const antdLocale = isZhCN ? zhCN : enUS
+    const { t, isZhCN } = useTranslation()
+    const antdLocale = isZhCN() ? zhCN : enUS
 
     return <div id="app" className={themeClassName(psTheme)}>
         <ConfigProvider

@@ -16,13 +16,13 @@ import './workflow-detail.less';
 import { MainStore } from '../../../../tsx/App.store';
 import { comfyWorkflowStore } from '../comfy_frontend';
 import { debug } from 'debug';
-import { useI18n } from '@sdppp/common';
+import { useTranslation } from '@sdppp/common';
 
 const log = debug('comfy-frontend:workflow-detail')
 const { Text } = Typography;
 
-const WorkflowStatus: React.FC<{ currentWorkflow: string, uploading: boolean }> = ({ currentWorkflow, uploading }) => {
-  const { t } = useI18n()
+const WorkflowStatus: React.FC<{ currentWorkflow: string }> = ({ currentWorkflow }) => {
+  const { t } = useTranslation()
   const comfyStore = useStore(sdpppSDK.stores.ComfyStore)
   const { lastError, progress, executingNodeTitle, queueSize } = comfyStore;
   const autoRunning = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyAutoRunning)
@@ -51,7 +51,7 @@ const WorkflowStatus: React.FC<{ currentWorkflow: string, uploading: boolean }> 
 };
 
 const SaveButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
-  const { t } = useI18n()
+  const { t } = useTranslation()
   return (
     <Tooltip title={t('comfy.save')}>
       <Button icon={<SaveOutlined />} onClick={() => {
@@ -64,7 +64,7 @@ const SaveButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
 };
 
 const RefreshButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
-  const { t } = useI18n()
+  const { t } = useTranslation()
   return (
     <Tooltip title={t('comfy.refresh')}>
       <Button icon={<ReloadOutlined />} onClick={() =>
@@ -78,7 +78,7 @@ const RefreshButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
 };
 
 const StopAndCancelButton = () => {
-  const { t } = useI18n()
+  const { t } = useTranslation()
   const onClearAndInterrupt = useCallback(async () => {
     sdpppSDK.plugins.ComfyCaller.stopAll({});
   }, []);
@@ -90,7 +90,7 @@ const StopAndCancelButton = () => {
 };
 
 const AutoRunButton = () => {
-  const { t } = useI18n()
+  const { t } = useTranslation()
   const autoRunning = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyAutoRunning)
   return (
     <Tooltip title={autoRunning ? t('comfy.stop_auto_run') : t('comfy.start_auto_run')}>
@@ -131,8 +131,8 @@ async function runAndWaitResult(multi: number, currentWorkflow: string) {
   }
 }
 
-const RunButton = ({ currentWorkflow, setUploading }: { currentWorkflow: string, setUploading: (uploading: boolean) => void }) => {
-  const { t } = useI18n()
+const RunButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
+  const { t } = useTranslation()
   const { waitAllUploadPasses } = useWidgetable();
 
   const doRun = useCallback(async () => {
@@ -167,7 +167,7 @@ const RunMultiButtons = ({ currentWorkflow, setUploading }: { currentWorkflow: s
 };
 
 const BackButton = ({ onBack }: { onBack: () => void }) => {
-  const { t } = useI18n()
+  const { t } = useTranslation()
   return (
     <Tooltip title={t('comfy.back')}>
       <Button icon={<ArrowLeftOutlined />} onClick={onBack} />

@@ -9,7 +9,7 @@ import { WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { WidgetableProvider } from '../../../tsx/widgetable/context';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
-import { useI18n } from '@sdppp/common';
+import { useTranslation } from '@sdppp/common';
 import { ModelSelector } from '../../base/ModelSelector';
 
 const log = sdpppSDK.logger.extend('runninghub')
@@ -17,7 +17,7 @@ const log = sdpppSDK.logger.extend('runninghub')
 const { Password } = Input;
 
 export default function RunningHubRenderer({ showingPreview }: { showingPreview: boolean }) {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const { apiKey, setApiKey } = runninghubStore();
     const [error, setError] = useState<string>('');
 
@@ -107,7 +107,7 @@ function RunningHubRendererModels() {
         displayText: item.appName
     }));
 
-    const { t } = useI18n();
+    const { t } = useTranslation();
     
     const notFoundContent = inputValue && inputValue.trim() ? (
         <div style={{ padding: '8px 12px', color: 'var(--sdppp-host-text-color-secondary)' }}>
@@ -137,7 +137,7 @@ function RunningHubRendererModels() {
 }
 
 function RunningHubRendererForm() {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const currentNodes = runninghubStore((state) => state.currentNodes);
     const currentValues = runninghubStore((state) => state.currentValues);
     const setCurrentValues = runninghubStore((state) => state.setCurrentValues);
@@ -193,7 +193,7 @@ function RunningHubRendererForm() {
 }
 
 function AccountStatus() {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const { accountStatus } = runninghubStore();
 
     if (!accountStatus) {

@@ -5,7 +5,7 @@
   "license": "ISC",
   "author": "",
   "type": "module",
-  "main": "index.js",
+  "main": "i18n/index.js",
   "dependencies": {
     "@types/node": "^24.0.7",
     "i18next": "^25.2.1",

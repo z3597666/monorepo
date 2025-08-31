@@ -152,7 +152,12 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                     onSetImages(originalImagesRef.current);
                 }
             },
-            onUploaded: async (url: string) => {
+            onUploaded: async (url: string, signal?: AbortSignal) => {
+                // Check if already aborted
+                if (signal?.aborted) {
+                    return;
+                }
+
                 decrementUploadCount();
                 // switchImageSource逻辑改为调用onCallOnValueChange
                 const newImages = [{
@@ -193,7 +198,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
 
                     const content = config.content || layerIdentifyRef.current;
                     const { thumbnail_url, file_token, source } = await sdpppSDK.plugins.photoshop.doGetMask({
-                        content,
+                        content: content as 'canvas' | 'curlayer' | 'selection',
                         reverse: config.reverse || false,
                         imageSize: config.imageSize || 0
                     });
@@ -232,7 +237,12 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                     onSetImages(originalImagesRef.current);
                 }
             },
-            onUploaded: async (url: string) => {
+            onUploaded: async (url: string, signal?: AbortSignal) => {
+                // Check if already aborted
+                if (signal?.aborted) {
+                    return;
+                }
+
                 decrementUploadCount();
                 // switchImageSource逻辑改为调用onCallOnValueChange
                 const newImages = [{
@@ -305,7 +315,12 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                     }
                     return { type: 'token', tokenOrBuffer: file_token, fileName: `${v4()}.png` };
                 },
-                onUploaded: async (url) => {
+                onUploaded: async (url, signal?: AbortSignal) => {
+                    // Check if already aborted
+                    if (signal?.aborted) {
+                        return;
+                    }
+
                     // 上传成功后替换对应的缩略图
                     const currentImages = [...originalImagesRef.current];
                     const targetIndex = currentImages.findIndex(img => img.uploadId === uploadId);
@@ -375,7 +390,12 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
                     const buffer = await file.arrayBuffer();
                     return { type: 'buffer', tokenOrBuffer: Buffer.from(buffer), fileName: file.name };
                 },
-                onUploaded: async (url) => {
+                onUploaded: async (url, signal?: AbortSignal) => {
+                    // Check if already aborted
+                    if (signal?.aborted) {
+                        return;
+                    }
+
                     // 上传成功后替换对应的缩略图
                     const currentImages = [...originalImagesRef.current];
                     const targetIndex = currentImages.findIndex(img => img.uploadId === uploadId);

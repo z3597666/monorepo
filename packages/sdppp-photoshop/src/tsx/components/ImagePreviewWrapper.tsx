@@ -3,7 +3,7 @@ import { Button, Divider } from 'antd';
 import { CloseOutlined, DeleteOutlined, StepForwardOutlined, SendOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { MainStore } from '../App.store';
 import { sdpppSDK } from '../../sdk/sdppp-ps-sdk';
-import { useI18n } from '@sdppp/common';
+import { useTranslation } from '@sdppp/common';
 import ImagePreview from './ImagePreview';
 
 interface ImagePreviewWrapperProps {
@@ -11,7 +11,7 @@ interface ImagePreviewWrapperProps {
 }
 
 export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperProps) {
-  const { t } = useI18n();
+  const { t } = useTranslation();
   const images = MainStore(state => state.previewImageList);
   const [currentIndex, setCurrentIndex] = React.useState(0);
 

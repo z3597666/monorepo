@@ -4,10 +4,10 @@ import { MainStore } from "../App.store";
 import { Select } from "antd";
 import { useEffect, useMemo } from "react";
 import { sdpppSDK } from "../../sdk/sdppp-ps-sdk";
-import { useI18n } from "@sdppp/common";
+import { useTranslation } from '@sdppp/common';
 
 export function SDPPPGateway() {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const provider = MainStore(state => state.provider)
     const sdpppX = useStore(sdpppSDK.stores.PhotoshopStore, state => state.sdpppX)
 

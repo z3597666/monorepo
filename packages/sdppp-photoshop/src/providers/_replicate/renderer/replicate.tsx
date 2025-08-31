@@ -10,12 +10,12 @@ import { WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { WidgetableProvider } from '../../../tsx/widgetable/context';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { ModelSelector } from '../../base/ModelSelector';
-import { useI18n } from '@sdppp/common';
+import { useTranslation } from '@sdppp/common';
 
 const { Password } = Input;
 
 export default function ReplicateRenderer({ showingPreview }: { showingPreview: boolean }) {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const { apiKey, setApiKey } = replicateStore();
 
     return (
@@ -40,7 +40,7 @@ export default function ReplicateRenderer({ showingPreview }: { showingPreview: 
 }
 
 function ReplicateRendererModels() {
-    const { t } = useI18n();
+    const { t } = useTranslation();
     const { selectedModel } = replicateStore();
     const client = replicateStore((state) => state.client);
     const [loading, setLoading] = useState(false);
@@ -108,7 +108,7 @@ function ReplicateRendererModels() {
 }
 
 function ReplicateRendererForm() {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const currentNodes = replicateStore((state) => state.currentNodes);
     const currentValues = replicateStore((state) => state.currentValues);
     const setCurrentValues = replicateStore((state) => state.setCurrentValues);

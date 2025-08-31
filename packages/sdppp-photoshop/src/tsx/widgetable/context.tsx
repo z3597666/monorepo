@@ -67,7 +67,7 @@ export function WidgetableProvider({ children, uploader }: WidgetableProviderPro
                 try {
                     const uploadInput = await pass.getUploadFile(abortController.signal);
                     const fileURL = await uploader(uploadInput, abortController.signal);
-                    if (pass.onUploaded) {
+                    if (pass.onUploaded && !abortController.signal.aborted) {
                         await pass.onUploaded(fileURL);
                     }
                     resolve(fileURL);

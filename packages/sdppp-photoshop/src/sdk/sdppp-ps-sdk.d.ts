@@ -37,7 +37,10 @@ export declare const sdpppSDK: {
 			sdkWebviewFocusing: boolean;
 			sdkWebviewConnectStatus: "connecting" | "connected" | "disconnected";
 			isLogin: boolean;
+<<<<<<< HEAD
 			isGuest: boolean;
+=======
+>>>>>>> db8a3fe (i18n)
 			requestingLogin: boolean;
 			loginMessage: string;
 			token: string;
@@ -115,8 +118,13 @@ export declare const sdpppSDK: {
 				}>;
 				widgetableID: string;
 				widgetablePath: string;
+<<<<<<< HEAD
 				note: string;
 				nodeIndexes: string[];
+=======
+				nodeIndexes: string[];
+				note?: string | undefined;
+>>>>>>> db8a3fe (i18n)
 			};
 			widgetableValues: Record<string, any[]>;
 			widgetableErrors: Record<string, string>;
@@ -203,7 +211,11 @@ export declare const sdpppSDK: {
 		};
 		photoshop: {
 			register: (data: {
+<<<<<<< HEAD
 				passwordPayload: {
+=======
+				passwordPayload?: {
+>>>>>>> db8a3fe (i18n)
 					username: string;
 					password: string;
 				} | {
@@ -212,17 +224,23 @@ export declare const sdpppSDK: {
 				} | {
 					password: string;
 					phone: string;
+<<<<<<< HEAD
 				} | {
 					password: string;
 					identifier: string;
 				};
 			} | {
 				passcodePayload: {
+=======
+				} | undefined;
+				passcodePayload?: {
+>>>>>>> db8a3fe (i18n)
 					code: string;
 					phone: string;
 				} | {
 					code: string;
 					email: string;
+<<<<<<< HEAD
 				};
 			}, signal?: AbortSignal) => Promise<{}>;
 			login: (data: {
@@ -247,13 +265,29 @@ export declare const sdpppSDK: {
 					code: string;
 					email: string;
 				};
+=======
+				} | undefined;
+			}, signal?: AbortSignal) => Promise<{}>;
+			login: (data: {
+				passwordPayload?: {
+					username: string;
+					password: string;
+				} | undefined;
+				passcodePayload?: {
+					code: string;
+					phone: string;
+				} | undefined;
+>>>>>>> db8a3fe (i18n)
 			}, signal?: AbortSignal) => Promise<{}>;
 			sendPassCode: (data: {
 				email?: string | undefined;
 				phone?: string | undefined;
 			}, signal?: AbortSignal) => Promise<{}>;
 			logout: (data: {}, signal?: AbortSignal) => Promise<{}>;
+<<<<<<< HEAD
 			guestLogin: (data: {}, signal?: AbortSignal) => Promise<{}>;
+=======
+>>>>>>> db8a3fe (i18n)
 			log: (data: {
 				messages: string[];
 				level: "error" | "info" | "log" | "warn";

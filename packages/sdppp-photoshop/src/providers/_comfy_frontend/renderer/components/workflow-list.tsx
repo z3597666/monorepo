@@ -7,7 +7,7 @@ import {
   WorkflowItem
 } from "./workflow-item";
 import { useWorkflowListContext, Workflow } from "../comfy_frontend";
-import { useI18n } from "@sdppp/common";
+import { useTranslation } from '@sdppp/common';
 
 interface WorkflowListProps {
   setCurrentWorkflow: (workflow: string) => void;
@@ -18,7 +18,7 @@ interface WorkflowListProps {
 const WorkflowList: React.FC<WorkflowListProps> = ({
   setCurrentWorkflow, currentWorkflow, hidden
 }) => {
-  const { t } = useI18n()
+  const { t } = useTranslation()
   const {
     showingWorkflowList,
     currentViewingDirectory,

@@ -9,12 +9,12 @@ import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
 import { WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { useWidgetable, WidgetableProvider } from '../../../tsx/widgetable/context';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
-import { useI18n } from '@sdppp/common';
+import { useTranslation } from '@sdppp/common';
 
 const { Password } = Input;
 
 export default function LiblibRenderer({ showingPreview }: { showingPreview: boolean }) {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const { apiKey, apiSecret, setApiKey, setApiSecret } = liblibStore();
     const [error, setError] = useState<string>('');
 
@@ -117,7 +117,7 @@ function LiblibRendererModels() {
 }
 
 function LiblibRendererForm() {
-    const { t } = useI18n()
+    const { t } = useTranslation()
     const currentWidgets = liblibStore((state) => state.currentWidgets);
     const currentValues = liblibStore((state) => state.currentValues);
     const setCurrentValues = liblibStore((state) => state.setCurrentValues);
