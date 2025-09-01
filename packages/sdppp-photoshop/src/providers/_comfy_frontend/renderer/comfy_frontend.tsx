@@ -62,7 +62,7 @@ export function ComfyConnectStatusText() {
     let showRenderer = false
 
     if (comfyHTTPCode !== 200) {
-        statusText = t('comfy.load_failed', { code: translateHTTPCode(comfyHTTPCode) })
+        statusText = t('comfy.load_failed', { code: translateHTTPCode(comfyHTTPCode, t) })
         statusTextType = 'error'
     } else if (comfyWebviewLoadError) {
         statusText = comfyWebviewLoadError
@@ -118,9 +118,7 @@ export function ComfyFrontendContent() {
 }
 
 
-function translateHTTPCode(code: number) {
-    const { t } = useTranslation()
-
+function translateHTTPCode(code: number, t: (key: string, params?: any) => string) {
     switch (code) {
         case 200:
             return '';
