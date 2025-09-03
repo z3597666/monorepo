@@ -21,12 +21,15 @@ import { useI18n } from '@sdppp/common';
 const log = debug('comfy-frontend:workflow-detail')
 const { Text } = Typography;
 
-const WorkflowStatus: React.FC<{ currentWorkflow: string }> = ({ currentWorkflow }) => {
+const WorkflowStatus: React.FC<{ currentWorkflow: string, uploading: boolean }> = ({ currentWorkflow, uploading }) => {
   const { t } = useI18n()
   const comfyStore = useStore(sdpppSDK.stores.ComfyStore)
   const { lastError, progress, executingNodeTitle, queueSize } = comfyStore;
   const autoRunning = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyAutoRunning)
 
+  if (uploading) {
+    return <Alert type="info" message={t('comfy.uploading')} showIcon className="workflow-run-status" />;
+  }
   if (lastError) {
     return <Alert type="error" message={lastError} showIcon className="workflow-run-status" />;
   }
@@ -128,16 +131,16 @@ async function runAndWaitResult(multi: number, currentWorkflow: string) {
   }
 }
 
-const RunButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
+const RunButton = ({ currentWorkflow, setUploading }: { currentWorkflow: string, setUploading: (uploading: boolean) => void }) => {
   const { t } = useI18n()
   const { waitAllUploadPasses } = useWidgetable();
 
   const doRun = useCallback(async () => {
-    log('waiting for upload passes')
+    setUploading(true)
     await waitAllUploadPasses();
-    log('upload passes done')
+    setUploading(false)
     runAndWaitResult(1, currentWorkflow)
-  }, [waitAllUploadPasses])
+  }, [waitAllUploadPasses, setUploading])
   return (
     <Tooltip title={t('comfy.run')}>
       <Button type="primary" icon={<PlayCircleFilled />} onClick={doRun} />
@@ -145,11 +148,13 @@ const RunButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
   );
 };
 
-const RunMultiButtons = ({ currentWorkflow }: { currentWorkflow: string }) => {
+const RunMultiButtons = ({ currentWorkflow, setUploading }: { currentWorkflow: string, setUploading: (uploading: boolean) => void }) => {
   const { waitAllUploadPasses } = useWidgetable();
 
   const doRun = useCallback(async (multi: number) => {
+    setUploading(true)
     await waitAllUploadPasses();
+    setUploading(false)
     runAndWaitResult(multi, currentWorkflow)
   }, [waitAllUploadPasses])
   return (
@@ -174,8 +179,8 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
   const widgetableValues = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableValues)
   const widgetableStructure = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableStructure)
   const widgetableErrors = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableErrors)
-  const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL)
   const [hasRecoverHistory, setHasRecoverHistory] = useState<boolean>(false);
+  const [uploading, setUploading] = useState<boolean>(false);
   useEffect(() => {
     if (currentWorkflow === widgetableStructure.widgetablePath.replace(/^workflows\//, '') && !hasRecoverHistory) {
       const historyValues = comfyWorkflowStore.getState().historyValues[currentWorkflow]
@@ -224,14 +229,14 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
               </div>
             </div>
             <div className="workflow-edit-controls-main-bottom">
-              <WorkflowStatus currentWorkflow={currentWorkflow} />
+              <WorkflowStatus currentWorkflow={currentWorkflow} uploading={uploading} />
             </div>
           </div>
           <div className="workflow-edit-controls-center">
-            <RunButton currentWorkflow={currentWorkflow} />
+            <RunButton currentWorkflow={currentWorkflow} setUploading={setUploading} />
           </div>
           <div className="workflow-edit-multibuttons-vertical">
-            <RunMultiButtons currentWorkflow={currentWorkflow} />
+            <RunMultiButtons currentWorkflow={currentWorkflow} setUploading={setUploading} />
           </div>
         </div>
       </div>

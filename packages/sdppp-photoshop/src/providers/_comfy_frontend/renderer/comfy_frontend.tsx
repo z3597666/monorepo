@@ -76,12 +76,12 @@ export function ComfyConnectStatusText() {
     } else if (comfyWSState === 'reconnecting') {
         statusText = t('comfy.server_reconnecting')
         statusTextType = 'warning'
-    } else if (!comfyWebviewVersion || comfyWebviewVersion !== SDPPP_VERSION) {
-        statusText = t('comfy.version_mismatch', { comfyVersion: comfyWebviewVersion, pluginVersion: SDPPP_VERSION })
-        statusTextType = 'warning'
-        showRenderer = true
     } else {
         showRenderer = true
+    }
+    if (comfyHTTPCode === 200 && (!comfyWebviewVersion || comfyWebviewVersion !== SDPPP_VERSION)) {
+        statusText = t('comfy.version_mismatch', { comfyVersion: comfyWebviewVersion, pluginVersion: SDPPP_VERSION })
+        statusTextType = statusTextType == 'error' ? 'error' : 'warning'
     }
 
     return {
@@ -120,7 +120,7 @@ export function ComfyFrontendContent() {
 
 function translateHTTPCode(code: number) {
     const { t } = useI18n()
-    
+
     switch (code) {
         case 200:
             return '';

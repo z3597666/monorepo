@@ -79,7 +79,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                         size="small"
                     />
                     <span style={{ marginLeft: 8, fontSize: '12px', color: 'var(--sdppp-host-text-color-secondary)' }}>
-                        上传中...
+                        上传中...若图片过大可能会有卡顿
                     </span>
                 </div>
             )}

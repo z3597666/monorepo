@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node package-psccx.js",
+    "build": "vite build",
     "test": "vitest"
   },
   "author": "",

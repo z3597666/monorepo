@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "build": "pnpm --filter !./packages/sdppp-photoshop... --filter !./release-repos/sd-ppp... build && pnpm --filter ./packages/sdppp-photoshop... build && pnpm --filter ./release-repos/sd-ppp... build",
+    "build": "node build/build.js",
     "dev": "cross-env NODE_ENV=development pnpm --filter '*' --parallel dev"
   },
   "author": "",
@@ -19,5 +19,8 @@
     "vite": "^6.3.5",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.1.4"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1"
   }
 }

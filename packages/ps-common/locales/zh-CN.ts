@@ -19,6 +19,7 @@ export default {
   
   // ComfyUI 前端相关
   'comfy.connect': '连接',
+  'comfy.uploading': '正在上传图片...',
   'comfy.load_failed': 'ComfyUI加载失败，HTTP状态码：{{code}}',
   'comfy.loading': 'ComfyUI加载中...',
   'comfy.channel_connecting': '通道连接中...',

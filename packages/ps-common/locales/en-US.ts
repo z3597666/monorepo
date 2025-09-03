@@ -19,6 +19,7 @@ export default {
   
   // ComfyUI Frontend related
   'comfy.connect': 'Connect',
+  'comfy.uploading': 'Images uploading...',
   'comfy.load_failed': 'ComfyUI failed to load, HTTP status code: {{code}}',
   'comfy.loading': 'ComfyUI loading...',
   'comfy.channel_connecting': 'Channel connecting...',
