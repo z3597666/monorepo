@@ -21,6 +21,8 @@ export function useTaskExecutor({
     const [runError, setRunError] = useState<string>('');
     const [lastStartTime, setLastStartTime] = useState<number>(0);
     const [progressMessage, setProgressMessage] = useState<string>('');
+    const [currentTask, setCurrentTask] = useState<any>(null);
+    const [isRunning, setIsRunning] = useState<boolean>(false);
     const { waitAllUploadPasses } = useWidgetable();
     const setPreviewImageList = MainStore((state) => state.setPreviewImageList);
 
@@ -50,6 +52,7 @@ export function useTaskExecutor({
         // waitAllUploadPasses一定要调，否则图片组件的上传可能还未完成
         setRunError('');
         setProgressMessage(t('task.waiting_upload'));
+        setIsRunning(true);
         await waitAllUploadPasses();
 
         setProgressMessage(t('task.creating_task'));
@@ -59,6 +62,7 @@ export function useTaskExecutor({
         
         try {
             const task = await createTask(selectedModel, finalValues);
+            setCurrentTask(task);
             setLastStartTime(Date.now());
             if (task) {
                 try {
@@ -75,19 +79,45 @@ export function useTaskExecutor({
                     setRunError(error.message || error.toString());
                 } finally {
                     setLastStartTime(0);
+                    setCurrentTask(null);
+                    setIsRunning(false);
                 }
             }
         } catch (error: any) {
             setProgressMessage('');
             setRunError(error.message || error.toString());
+            setIsRunning(false);
         } finally {
-            setProgressMessage('');
+            if (!currentTask) {
+                setProgressMessage('');
+                setIsRunning(false);
+            }
+        }
+    };
+
+    // 任务中断逻辑
+    const handleCancel = async () => {
+        if (currentTask && currentTask.cancelable) {
+            try {
+                await currentTask.cancel();
+                setProgressMessage(t('task.cancelled'));
+                setRunError('');
+            } catch (error: any) {
+                setRunError(t('task.cancel_failed', { error: error.message || error.toString() }));
+            } finally {
+                setLastStartTime(0);
+                setCurrentTask(null);
+                setIsRunning(false);
+            }
         }
     };
 
     return {
         runError,
         progressMessage,
-        handleRun
+        handleRun,
+        handleCancel,
+        isRunning,
+        canCancel: currentTask && currentTask.cancelable
     };
 } 

@@ -121,7 +121,7 @@ export default defineConfig({
       configs: [
         {
           id: 'banners',
-          url: 'https://sdppp.zombee.tech/banners/banners.json'
+          url: 'https://sdppp.zombee.tech/banners/banners2.json'
         }
       ]
     })

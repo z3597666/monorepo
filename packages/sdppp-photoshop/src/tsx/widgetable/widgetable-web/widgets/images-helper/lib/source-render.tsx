@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from '@sdppp/common/i18n/react';
 
 interface SourceRenderProps {
     source: string;
@@ -77,73 +78,74 @@ export function useSourceInfo(source: string): SourceInfo {
 
 export const SourceRender: React.FC<SourceRenderProps> = ({ source }) => {
     const sourceInfo = useSourceInfo(source);
+    const { t } = useTranslation();
 
     const displayText = useMemo(() => {
         if (sourceInfo.type === 'disk') {
-            return '来源：磁盘';
+            return `${t('source.source')}：${t('source.disk')}`;
         }
 
         if (sourceInfo.type === 'remote') {
-            return '来源：远端';
+            return `${t('source.source')}：${t('source.remote')}`;
         }
 
         if (sourceInfo.type === 'unknown') {
-            return '来源：未知';
+            return `${t('source.source')}：${t('source.unknown')}`;
         }
 
         if (sourceInfo.type === 'photoshop_image') {
             const params = sourceInfo.params;
             const contentMap: Record<string, string> = {
-                'canvas': '内容：整个画布',
-                'curlayer': '内容：当前图层',
-                'selection': '内容：选区'
+                'canvas': t('source.canvas'),
+                'curlayer': t('source.current_layer'),
+                'selection': t('source.selection')
             };
             const boundaryMap: Record<string, string> = {
-                'canvas': '范围：整个画布',
-                'curlayer': '范围：当前图层',
-                'selection': '范围：选区'
+                'canvas': t('source.canvas'),
+                'curlayer': t('source.current_layer'),
+                'selection': t('source.selection')
             };
 
-            const boundaryText = params?.boundary ? boundaryMap[params.boundary] || params.boundary : '';
-            const contentText = params?.content ? contentMap[params.content] || params.content : '';
+            const boundaryText = params?.boundary ? `${t('source.boundary')}：${boundaryMap[params.boundary] || params.boundary}` : '';
+            const contentText = params?.content ? `${t('source.content')}：${contentMap[params.content] || params.content}` : '';
 
             // 添加额外的信息如果存在
             const extras = [];
             if (params?.imageSize) extras.push(`${params.imageSize}px`);
-            if (params?.imageQuality && params.imageQuality !== 1) extras.push(`质量${Math.round(params.imageQuality * 100)}%`);
+            if (params?.imageQuality && params.imageQuality !== 1) extras.push(t('source.quality_percent', { percent: Math.round(params.imageQuality * 100) }));
             if (params?.cropBySelection && params.cropBySelection !== 'no') {
                 const cropMap: Record<string, string> = {
-                    'positive': '正向裁剪',
-                    'negative': '反向裁剪' 
+                    'positive': t('source.crop.positive'),
+                    'negative': t('source.crop.negative')
                 };
                 extras.push(cropMap[params.cropBySelection] || params.cropBySelection);
             }
 
-            const baseText = `来源：PS图片\n${contentText}\n${boundaryText}`;
+            const baseText = `${t('source.source')}：${t('source.ps_image')}\n${contentText}\n${boundaryText}`;
             return extras.length > 0 ? `${baseText}\n(${extras.join(', ')})` : baseText;
         }
 
         if (sourceInfo.type === 'photoshop_mask') {
             const maskParams = sourceInfo.maskParams;
             const contentMap: Record<string, string> = {
-                'canvas': '遮罩：整个画布',
-                'curlayer': '遮罩：当前图层',
-                'selection': '遮罩：选区'
+                'canvas': t('source.canvas'),
+                'curlayer': t('source.current_layer'),
+                'selection': t('source.selection')
             };
 
-            const contentText = maskParams?.content ? contentMap[maskParams.content] || maskParams.content : '';
+            const contentText = maskParams?.content ? `${t('source.mask')}：${contentMap[maskParams.content] || maskParams.content}` : '';
 
             // 添加额外的信息如果存在
             const extras = [];
             if (maskParams?.imageSize) extras.push(`${maskParams.imageSize}px`);
-            if (maskParams?.reverse !== undefined) extras.push(maskParams.reverse ? '反转' : '');
+            if (maskParams?.reverse !== undefined) extras.push(maskParams.reverse ? t('source.reverse') : '');
 
-            const baseText = `来源：PS遮罩\n${contentText}`;
+            const baseText = `${t('source.source')}：${t('source.ps_mask')}\n${contentText}`;
             return extras.length > 0 ? `${baseText}\n(${extras.join(', ')})` : baseText;
         }
 
         return source;
-    }, [sourceInfo, source]);
+    }, [sourceInfo, source, t]);
 
     return (
         <span style={{

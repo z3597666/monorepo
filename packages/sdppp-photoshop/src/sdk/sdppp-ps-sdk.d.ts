@@ -38,9 +38,13 @@ export declare const sdpppSDK: {
 			sdkWebviewConnectStatus: "connecting" | "connected" | "disconnected";
 			isLogin: boolean;
 <<<<<<< HEAD
+<<<<<<< HEAD
 			isGuest: boolean;
 =======
 >>>>>>> db8a3fe (i18n)
+=======
+			isGuest: boolean;
+>>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 			requestingLogin: boolean;
 			loginMessage: string;
 			token: string;
@@ -212,10 +216,14 @@ export declare const sdpppSDK: {
 		photoshop: {
 			register: (data: {
 <<<<<<< HEAD
+<<<<<<< HEAD
 				passwordPayload: {
 =======
 				passwordPayload?: {
 >>>>>>> db8a3fe (i18n)
+=======
+				passwordPayload: {
+>>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 					username: string;
 					password: string;
 				} | {
@@ -225,21 +233,28 @@ export declare const sdpppSDK: {
 					password: string;
 					phone: string;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 				} | {
 					password: string;
 					identifier: string;
 				};
 			} | {
 				passcodePayload: {
+<<<<<<< HEAD
 =======
 				} | undefined;
 				passcodePayload?: {
 >>>>>>> db8a3fe (i18n)
+=======
+>>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 					code: string;
 					phone: string;
 				} | {
 					code: string;
 					email: string;
+<<<<<<< HEAD
 <<<<<<< HEAD
 				};
 			}, signal?: AbortSignal) => Promise<{}>;
@@ -267,17 +282,37 @@ export declare const sdpppSDK: {
 				};
 =======
 				} | undefined;
+=======
+				};
+>>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 			}, signal?: AbortSignal) => Promise<{}>;
 			login: (data: {
-				passwordPayload?: {
+				passwordPayload: {
 					username: string;
 					password: string;
-				} | undefined;
-				passcodePayload?: {
+				} | {
+					email: string;
+					password: string;
+				} | {
+					password: string;
+					phone: string;
+				} | {
+					password: string;
+					identifier: string;
+				};
+			} | {
+				passcodePayload: {
 					code: string;
 					phone: string;
+<<<<<<< HEAD
 				} | undefined;
 >>>>>>> db8a3fe (i18n)
+=======
+				} | {
+					code: string;
+					email: string;
+				};
+>>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 			}, signal?: AbortSignal) => Promise<{}>;
 			sendPassCode: (data: {
 				email?: string | undefined;
@@ -285,9 +320,13 @@ export declare const sdpppSDK: {
 			}, signal?: AbortSignal) => Promise<{}>;
 			logout: (data: {}, signal?: AbortSignal) => Promise<{}>;
 <<<<<<< HEAD
+<<<<<<< HEAD
 			guestLogin: (data: {}, signal?: AbortSignal) => Promise<{}>;
 =======
 >>>>>>> db8a3fe (i18n)
+=======
+			guestLogin: (data: {}, signal?: AbortSignal) => Promise<{}>;
+>>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 			log: (data: {
 				messages: string[];
 				level: "error" | "info" | "log" | "warn";

@@ -1,6 +1,6 @@
 import './runninghub.less';
-import { Input, Alert, Flex, Button } from 'antd';
-import { useState } from 'react';
+import { Input, Alert, Flex, Button, Tooltip } from 'antd';
+import { useState, useEffect } from 'react';
 import { runninghubStore, changeSelectedModel, createTask } from './runninghub.store';
 import { WorkflowEditApiFormat } from '../../../tsx/widgetable';
 import Link from 'antd/es/typography/Link';
@@ -17,7 +17,7 @@ const log = sdpppSDK.logger.extend('runninghub')
 const { Password } = Input;
 
 export default function RunningHubRenderer({ showingPreview }: { showingPreview: boolean }) {
-    const { t } = useTranslation()
+    const { t, language } = useTranslation()
     const { apiKey, setApiKey } = runninghubStore();
     const [error, setError] = useState<string>('');
 
@@ -33,7 +33,7 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
             {
                 !apiKey && <Link underline onClick={async () => {
                     const banners = loadRemoteConfig('banners');
-                    const runninghubURL = banners.find((banner: any) => banner.type === 'runninghub')?.link;
+                    const runninghubURL = banners.find((banner: any) => banner.type === 'runninghub' && banner.locale == language)?.link;
                     sdpppSDK.plugins.photoshop.openExternalLink({ url: runninghubURL })
                 }}>{t('runninghub.get_apikey')}</Link>
             }
@@ -58,25 +58,47 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
 }
 
 function RunningHubRendererModels() {
-    const { webappId, setWebappId, webappHistory } = runninghubStore();
+    const { webappId, setWebappId, webappHistory, removeWebappHistory } = runninghubStore();
     const client = runninghubStore((state) => state.client);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string>('');
     const [inputValue, setInputValue] = useState('');
+
+    // Auto-load selected webapp on component mount
+    useEffect(() => {
+        if (webappId && client && !loading) {
+            log('Auto-loading webapp on mount:', webappId);
+            setLoading(true);
+            changeSelectedModel(webappId)
+                .catch((error: any) => {
+                    setLoadError(error.message || error.toString());
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        }
+    }, [client]); // Only depend on client availability
 
     if (!client) {
         return null;
     }
 
     const handleWebappIdChange = async (value: string) => {
+        log('handleWebappIdChange called with value:', value);
+        log('current webappId:', webappId);
+        
         // 如果输入的是appName，需要找到对应的webappId
         let actualWebappId = value;
         const historyItem = webappHistory.find(item => item.appName === value);
         if (historyItem) {
             actualWebappId = historyItem.webappId;
+            log('found in history, actualWebappId:', actualWebappId);
         }
 
+        log('final actualWebappId:', actualWebappId);
+        
         if (actualWebappId === webappId || !actualWebappId.trim()) {
+            log('skipping - same as current or empty');
             return;
         }
         
@@ -95,16 +117,36 @@ function RunningHubRendererModels() {
     // 准备Select的选项
     const selectOptions = webappHistory.map(item => ({
         value: item.webappId,
-        label: (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 'bold', color: 'var(--sdppp-host-text-color)' }}>{item.appName}</span>
-                <span style={{ fontSize: '12px', color: 'var(--sdppp-host-text-color-secondary)' }}>{item.webappId}</span>
-            </div>
+        label: item.webappId ? (
+            <Tooltip title={item.webappId} placement="right">
+                <span 
+                    style={{ 
+                        fontWeight: 'bold', 
+                        color: 'var(--sdppp-host-text-color)',
+                        width: '100%',
+                        display: 'block'
+                    }}
+                >
+                    {item.appName}
+                </span>
+            </Tooltip>
+        ) : (
+            <span 
+                style={{ 
+                    fontWeight: 'bold', 
+                    color: 'var(--sdppp-host-text-color)',
+                    width: '100%',
+                    display: 'block'
+                }}
+            >
+                {item.appName}
+            </span>
         ),
         // 用于搜索的纯文本
         searchText: `${item.appName} ${item.webappId}`,
         // 用于显示的文本（选中后显示在输入框中）
-        displayText: item.appName
+        displayText: item.appName,
+        deletable: true
     }));
 
     const { t } = useTranslation();
@@ -129,6 +171,7 @@ function RunningHubRendererModels() {
                 options={selectOptions}
                 onChange={handleWebappIdChange}
                 onInputChange={setInputValue}
+                onDelete={removeWebappHistory}
                 notFoundContent={notFoundContent}
             />
             {webappId && !loading && !loadError && <RunningHubRendererForm />}
@@ -145,7 +188,7 @@ function RunningHubRendererForm() {
     const runningTasks = runninghubStore((state) => state.runningTasks);
     const appName = runninghubStore((state) => state.appName);
 
-    const { runError, progressMessage, handleRun } = useTaskExecutor({
+    const { runError, progressMessage, handleRun, handleCancel, isRunning, canCancel } = useTaskExecutor({
         selectedModel: webappId,
         currentValues,
         createTask,
@@ -176,7 +219,18 @@ function RunningHubRendererForm() {
     return (
         <>
             <Button type="primary" onClick={handleRun}>{t('runninghub.execute')}</Button>
-            {progressMessage && <Alert message={progressMessage} type="info" showIcon />}
+            {progressMessage && (
+                <Alert 
+                    message={progressMessage} 
+                    type="info" 
+                    showIcon
+                    action={canCancel ? (
+                        <Button size="small" type="text" onClick={handleCancel}>
+                            {t('common.cancel')}
+                        </Button>
+                    ) : undefined}
+                />
+            )}
             {runError && <Alert message={runError} type="error" showIcon />}
             <WorkflowEditApiFormat
                 modelName={webappId}

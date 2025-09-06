@@ -5,9 +5,6 @@ let currentLanguage: 'zh-CN' | 'en-US' | null = null
 
 // 获取当前翻译资源
 function getTranslations() {
-  if (currentLanguage === null) {
-    throw new Error('Language not initialized. Call changeLanguage() first.')
-  }
   return currentLanguage === 'zh-CN' ? zhCN : enUS
 }
 

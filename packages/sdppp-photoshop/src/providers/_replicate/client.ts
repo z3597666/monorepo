@@ -64,7 +64,12 @@ export class SDPPPReplicate extends Client<{
             rawData: modelInfo
         }
     }
-    async run(model: string, input: any) {
+    async run(model: string, input: any, signal?: AbortSignal) {
+        // Check if already aborted
+        if (signal?.aborted) {
+            throw new DOMException('Task creation aborted', 'AbortError');
+        }
+
         const id = modelIds[model];
         if (!id) {
             await this.getNodes(model);
@@ -77,6 +82,11 @@ export class SDPPPReplicate extends Client<{
         })
         return new Task(result.id, {
             statusGetter: async (id) => {
+                // Check if aborted before making status request
+                if (signal?.aborted) {
+                    throw new DOMException('Status check aborted', 'AbortError');
+                }
+                
                 const r = await this.replicate.predictions.get(id)
                 if (r.status === 'failed') {
                     throw new Error(String(r.error))
@@ -89,6 +99,11 @@ export class SDPPPReplicate extends Client<{
                 }
             },
             resultGetter: async (id, lastStatusResult) => {
+                // Check if aborted before getting results
+                if (signal?.aborted) {
+                    throw new DOMException('Result fetch aborted', 'AbortError');
+                }
+                
                 return (lastStatusResult.rawData.output instanceof Array ? lastStatusResult.rawData.output : [lastStatusResult.rawData.output]).map((item: any) => {
                     return {
                         url: item
@@ -107,6 +122,11 @@ export class SDPPPReplicate extends Client<{
         }
 
         if (type === 'token') {
+            // Check if aborted before file upload
+            if (signal?.aborted) {
+                throw new DOMException('File upload aborted', 'AbortError');
+            }
+            
             const file = await this.replicate.files.create(new Blob([image as string], {
                 type: `image/uxp`
             }));

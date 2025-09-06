@@ -18,6 +18,7 @@ interface RunningHubStoreState extends BaseStoreState<SDPPPRunningHub> {
     setAccountStatus: (status: { remainCoins: number; currentTaskCounts: number } | null) => void
     setAppName: (appName: string) => void
     addWebappHistory: (webappId: string, appName: string) => void
+    removeWebappHistory: (webappId: string) => void
 }
 
 // 创建RunningHub store
@@ -42,6 +43,11 @@ export const runninghubStore = createBaseStore<SDPPPRunningHub, RunningHubStoreS
                 const newHistory = [...state.webappHistory, { webappId, appName }];
                 runninghubStore.setState({ webappHistory: newHistory });
             }
+        },
+        removeWebappHistory: (webappId) => {
+            const state = runninghubStore.getState();
+            const newHistory = state.webappHistory.filter(item => item.webappId !== webappId);
+            runninghubStore.setState({ webappHistory: newHistory });
         },
     },
     (state) => ({

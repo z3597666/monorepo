@@ -48,6 +48,7 @@ export const zhCN = {
   'runninghub.status.running': '正在运行',
   'runninghub.status.failed': '执行失败',
   'runninghub.status.success': '执行成功',
+  'image.auto_refetch': '自动重新获取',
   'runninghub.error.get_result_failed': '获取结果失败: {{error}}',
   'runninghub.error.task_failed': '任务执行失败: {{error}}',
   'runninghub.error.task_incomplete': '任务未完成，当前状态: {{status}}',
@@ -139,4 +140,29 @@ export const zhCN = {
   // ComfyUI 管理相关翻译
   'ComfyManager not found, cannot reboot': 'Comfy Manager未安装，无法重启',
   'Failed to reboot ComfyUI': '重启ComfyUI失败',
+
+  // 图片上传组件相关翻译
+  'image.upload.from_ps': '从PS',
+  'image.upload.from_disk': '从磁盘',
+  'image.upload.clear': '清空',
+  'image.upload.uploading': '上传中...',
+  'image.upload.no_images': '暂无图片',
+
+  // 来源渲染组件相关翻译
+  'source.source': '来源',
+  'source.content': '内容',
+  'source.boundary': '范围',
+  'source.mask': '遮罩',
+  'source.disk': '磁盘',
+  'source.remote': '远端',
+  'source.unknown': '未知',
+  'source.ps_image': 'PS图片',
+  'source.ps_mask': 'PS遮罩',
+  'source.canvas': '整个画布',
+  'source.current_layer': '当前图层',
+  'source.selection': '选区',
+  'source.quality_percent': '质量{{percent}}%',
+  'source.crop.positive': '正向裁剪',
+  'source.crop.negative': '反向裁剪',
+  'source.reverse': '反转',
 } as const

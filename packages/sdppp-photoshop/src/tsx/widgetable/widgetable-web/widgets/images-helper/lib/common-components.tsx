@@ -3,6 +3,7 @@ import { Button, Upload, Row, Col, Tooltip, Alert, Spin } from 'antd';
 import { PlusOutlined, DeleteOutlined, UploadOutlined, LoadingOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { useImageUpload, ImageDetail } from '../upload-context';
+import { useTranslation } from '@sdppp/common/i18n/react';
 
 interface ActionButtonsProps {
     images: ImageDetail[];
@@ -18,6 +19,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     imagesRef
 }) => {
     const { uploadFromPhotoshop, uploadFromDisk, uploadState, clearImages, setImages, callOnValueChange } = useImageUpload();
+    const { t } = useTranslation();
 
     const handleImagesChange = useCallback((newImages: ImageDetail[]) => {
         const finalImages = maxCount > 1 
@@ -53,17 +55,17 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                         icon={<PlusOutlined />}
                         onClick={handlePSImageAdd}
                     >
-                        从PS
+                        {t('image.upload.from_ps')}
                     </Button>
                 </Col>
                 <Col flex="1 1 0">
                     <Upload style={{ width: '100%' }} {...uploadProps}>
-                        <Button style={{ width: '100%' }} icon={<UploadOutlined />}>从磁盘</Button>
+                        <Button style={{ width: '100%' }} icon={<UploadOutlined />}>{t('image.upload.from_disk')}</Button>
                     </Upload>
                 </Col>
                 {images.length > 0 && (
                     <Col flex="0 0 auto">
-                        <Tooltip title="清空">
+                        <Tooltip title={t('image.upload.clear')}>
                             <Button
                                 icon={<DeleteOutlined />}
                                 onClick={clearImages}
@@ -79,7 +81,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                         size="small"
                     />
                     <span style={{ marginLeft: 8, fontSize: '12px', color: 'var(--sdppp-host-text-color-secondary)' }}>
-                        上传中...若图片过大可能会有卡顿
+                        {t('image.upload.uploading')}
                     </span>
                 </div>
             )}
@@ -101,11 +103,13 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ className = "image-preview-empty" }) => {
+    const { t } = useTranslation();
+    
     return (
         <div className={className}>
             <div className="empty-content">
                 <div style={{ marginTop: 8, color: 'var(--sdppp-host-text-color-secondary)' }}>
-                    暂无图片
+                    {t('image.upload.no_images')}
                 </div>
             </div>
         </div>

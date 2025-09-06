@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, Image, Row, Col, Tooltip, Segmented, Switch } from 'antd';
 import { ThunderboltFilled, ThunderboltOutlined } from '@ant-design/icons';
+import { useTranslation } from '@sdppp/common/i18n/react';
 import { SourceRender, useSourceInfo } from './source-render';
 
 interface ImageDetail {
@@ -29,6 +30,7 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
     onPreviewChange,
     onImageUpdate
 }) => {
+    const { t } = useTranslation();
     const handleAutoToggle = (checked: boolean) => {
         if (onImageUpdate) {
             onImageUpdate({
@@ -64,7 +66,7 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
                         </div>
                         {isPSSource && (
                             <div className="info-actions">
-                                <Tooltip title="自动重新获取">
+                                <Tooltip title={t('image.auto_refetch')}>
                                     <Switch
                                         style={{ width: '100%' }}
                                         checked={image.auto || false}

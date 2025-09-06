@@ -103,8 +103,13 @@ export class SDPPPRunningHub extends Client<{
     }
   }
 
-  async run(webappId: string, input: any): Promise<Task<any>> {
+  async run(webappId: string, input: any, signal?: AbortSignal): Promise<Task<any>> {
     try {
+      // Check if already aborted
+      if (signal?.aborted) {
+        throw new DOMException('Task creation aborted', 'AbortError');
+      }
+
       // 动态导入store以避免循环依赖
       const { runninghubStore } = await import('./renderer/runninghub.store');
       const { currentNodeInfoList } = runninghubStore.getState();
@@ -126,7 +131,8 @@ export class SDPPPRunningHub extends Client<{
           webappId: webappId,
           nodeInfoList: mergedNodeInfoList,
           instanceType: 'default'
-        })
+        }),
+        signal: signal
       });
 
       if (!response.ok) {
@@ -143,6 +149,11 @@ export class SDPPPRunningHub extends Client<{
 
       return new Task(taskId, {
         statusGetter: async (id: string) => {
+          // Check if aborted before making status request
+          if (signal?.aborted) {
+            throw new DOMException('Status check aborted', 'AbortError');
+          }
+
           const statusResponse = await fetch(`https://www.runninghub.cn/task/openapi/status`, {
             method: 'POST',
             headers: {
@@ -151,7 +162,8 @@ export class SDPPPRunningHub extends Client<{
             body: JSON.stringify({
               apiKey: this.config.apiKey,
               taskId: id
-            })
+            }),
+            signal: signal
           });
           //   export interface ApifoxModel {
           //     /**
@@ -189,6 +201,11 @@ export class SDPPPRunningHub extends Client<{
           };
         },
         resultGetter: async (id: string, lastStatusResult: any) => {
+          // Check if aborted before getting results
+          if (signal?.aborted) {
+            throw new DOMException('Result fetch aborted', 'AbortError');
+          }
+
           if (lastStatusResult.rawData.data === 'SUCCESS') {
             // 调用outputs接口获取结果
             const outputsResponse = await fetch(`https://www.runninghub.cn/task/openapi/outputs`, {
@@ -199,7 +216,8 @@ export class SDPPPRunningHub extends Client<{
               body: JSON.stringify({
                 apiKey: this.config.apiKey,
                 taskId: id
-              })
+              }),
+              signal: signal
             });
 
             if (!outputsResponse.ok) {

@@ -2,7 +2,6 @@ import './replicate.less';
 import { Input, Alert, Flex, Button } from 'antd';
 import { useState, useEffect } from 'react';
 import { replicateStore, changeSelectedModel, createTask } from './replicate.store';
-import { availableModels } from '../client';
 import { WorkflowEditApiFormat } from '../../../tsx/widgetable';
 import Link from 'antd/es/typography/Link';
 import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
@@ -41,7 +40,7 @@ export default function ReplicateRenderer({ showingPreview }: { showingPreview: 
 
 function ReplicateRendererModels() {
     const { t } = useTranslation();
-    const { selectedModel } = replicateStore();
+    const { selectedModel, availableModels, removeModel } = replicateStore();
     const client = replicateStore((state) => state.client);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string>('');
@@ -71,7 +70,7 @@ function ReplicateRendererModels() {
             setLoadError('');
             setLoading(true);
             try {
-                await changeSelectedModel(value as typeof availableModels[number]);
+                await changeSelectedModel(value);
                 replicateStore.setState({
                     selectedModel: value
                 });
@@ -85,7 +84,8 @@ function ReplicateRendererModels() {
 
     const modelOptions = availableModels.map((model) => ({ 
         label: model, 
-        value: model 
+        value: model,
+        deletable: model !== selectedModel
     }));
 
     return (
@@ -101,6 +101,7 @@ function ReplicateRendererModels() {
                 loadError={loadError}
                 options={modelOptions}
                 onChange={handleModelChange}
+                onDelete={removeModel}
             />
             {selectedModel && !loading && !loadError && <ReplicateRendererForm />}
         </WidgetableProvider>
@@ -115,7 +116,7 @@ function ReplicateRendererForm() {
     const selectedModel = replicateStore((state) => state.selectedModel);
     const runningTasks = replicateStore((state) => state.runningTasks);
 
-    const { runError, progressMessage, handleRun } = useTaskExecutor({
+    const { runError, progressMessage, handleRun, handleCancel, isRunning, canCancel } = useTaskExecutor({
         selectedModel,
         currentValues,
         createTask,
@@ -145,7 +146,18 @@ function ReplicateRendererForm() {
     return (
         <>
             <Button type="primary" onClick={handleRun}>{t('replicate.execute')}</Button>
-            {progressMessage && <Alert message={progressMessage} type="info" showIcon />}
+            {progressMessage && (
+                <Alert 
+                    message={progressMessage} 
+                    type="info" 
+                    showIcon
+                    action={canCancel ? (
+                        <Button size="small" type="text" onClick={handleCancel}>
+                            {t('common.cancel')}
+                        </Button>
+                    ) : undefined}
+                />
+            )}
             {runError && <Alert message={runError} type="error" showIcon />}
             <WorkflowEditApiFormat
                 modelName={selectedModel}

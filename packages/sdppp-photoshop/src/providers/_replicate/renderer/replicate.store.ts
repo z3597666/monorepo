@@ -5,7 +5,10 @@ import { Task } from "../../base/Task";
 // replicate特有的状态接口
 interface ReplicateStoreState extends BaseStoreState<SDPPPReplicate> {
     apiKey: string
+    availableModels: string[]
     setApiKey: (apiKey: string) => void
+    removeModel: (model: string) => void
+    resetModels: () => void
 }
 
 // 创建replicate store
@@ -14,12 +17,22 @@ export const replicateStore = createBaseStore<SDPPPReplicate, ReplicateStoreStat
     availableModels[0],
     {
         apiKey: '',
+        availableModels: [...availableModels],
         setApiKey: (apiKey) => replicateStore.setState({ apiKey }),
+        removeModel: (model) => {
+            const state = replicateStore.getState();
+            const newModels = state.availableModels.filter(m => m !== model);
+            replicateStore.setState({ availableModels: newModels });
+        },
+        resetModels: () => {
+            replicateStore.setState({ availableModels: [...availableModels] });
+        },
     },
     (state) => ({
         apiKey: state.apiKey,
         selectedModel: state.selectedModel,
         allValues: state.allValues,
+        availableModels: state.availableModels,
     })
 );
 
@@ -38,7 +51,7 @@ resetClient(replicateStore.getState(), {} as any);
 const asyncManager = new AsyncOperationManager();
 
 // replicate特有的changeSelectedModel实现
-export async function changeSelectedModel(selectedModel: typeof availableModels[number]) {
+export async function changeSelectedModel(selectedModel: string) {
     await asyncManager.executeWithAbort(async (abortController) => {
         const client = replicateStore.getState().client;
         if (!client) {

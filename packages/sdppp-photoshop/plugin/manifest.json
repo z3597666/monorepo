@@ -1,8 +1,8 @@
 {
   "id": "sd-ppp2",
-  "name": "aix",
+  "name": "SD-PPP2.0",
   "version": "0.0.6",
-  "main": "sdppp/photoshop.html",
+  "main": "sdppp/photoshop.html", 
   "manifestVersion": 5,
   "host": {
     "app": "PS",

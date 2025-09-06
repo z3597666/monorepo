@@ -6,7 +6,7 @@ import { useTranslation } from '@sdppp/common';
 
 
 export function ComfyCloudRecommendBanner() {
-    const { t } = useTranslation()
+    const { t, language } = useTranslation()
     const [shuffledBanners, setShuffledBanners] = useState<{
         link: string,
         name_chn: string,
@@ -18,7 +18,7 @@ export function ComfyCloudRecommendBanner() {
             link: string,
             name_chn: string,
             icon: string
-        }[] = loadRemoteConfig('banners').filter((banner: any) => banner.type === 'comfy_cloud');
+        }[] = loadRemoteConfig('banners').filter((banner: any) => banner.type === 'comfy_cloud' && banner.locale === language);
 
         if (comfyCloudRecommend.length === 0) return;
 
@@ -40,7 +40,7 @@ export function ComfyCloudRecommendBanner() {
         const interval = setInterval(updateBanners, 10000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [language]);
 
     if (shuffledBanners.length === 0) return null;
 

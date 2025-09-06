@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, Flex, Spin, Typography, Select } from 'antd';
+import { Alert, Flex, Spin, Typography, Select, Button } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 
 export interface ModelOption {
     value: string;
     label: React.ReactNode | string;
     searchText?: string;
     displayText?: string;
+    deletable?: boolean;
 }
 
 interface ModelSelectorProps {
@@ -22,6 +24,7 @@ interface ModelSelectorProps {
     // Callbacks
     onChange: (value: string) => Promise<void> | void;
     onInputChange?: (value: string) => void;
+    onDelete?: (value: string) => Promise<void> | void;
     
     // Optional advanced features
     notFoundContent?: React.ReactNode;
@@ -36,21 +39,25 @@ export function ModelSelector({
     options,
     onChange,
     onInputChange,
+    onDelete,
     notFoundContent
 }: ModelSelectorProps) {
     const [inputValue, setInputValue] = useState<string>(value || '');
     const [isHandling, setIsHandling] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    const [userInput, setUserInput] = useState<string>(''); // 追踪用户的真实输入
 
     useEffect(() => {
-        if (value) {
-            // Try to find display text from options
+        if (value && !isFocused) {
+            // Try to find display text from options, but only update if not focused
             const option = options.find(opt => opt.value === value);
             setInputValue(option?.displayText || value);
-        } else {
+            setUserInput(''); // 清空用户输入追踪
+        } else if (!value) {
             setInputValue('');
+            setUserInput('');
         }
-    }, [value, options]);
+    }, [value, options, isFocused]);
 
     const handleChange = async (newValue: string) => {
         if (newValue === value || isHandling) {
@@ -67,6 +74,7 @@ export function ModelSelector({
 
     const handleInputChange = (newValue: string) => {
         setInputValue(newValue);
+        setUserInput(newValue); // 记录用户的真实输入
         onInputChange?.(newValue);
     };
 
@@ -83,11 +91,22 @@ export function ModelSelector({
 
     const handleBlur = () => {
         setIsFocused(false);
-        if (inputValue && inputValue.trim()) {
-            handleChange(inputValue);
+        // 优先使用用户的真实输入，否则使用当前输入值
+        const valueToUse = userInput || inputValue;
+        if (valueToUse && valueToUse.trim()) {
+            handleChange(valueToUse);
         } else {
             // 如果没有输入值，恢复到之前的值，不触发变化事件
             setInputValue(value || '');
+        }
+        setUserInput(''); // 清空用户输入追踪
+    };
+
+    const handleEnterPress = () => {
+        // 优先使用用户的真实输入，否则使用当前输入值
+        const valueToUse = userInput || inputValue;
+        if (valueToUse && valueToUse.trim()) {
+            handleChange(valueToUse);
         }
     };
 
@@ -109,11 +128,34 @@ export function ModelSelector({
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 onInputKeyDown={(e) => {
-                    if (e.key === 'Enter' && inputValue && inputValue.trim()) {
-                        handleChange(inputValue);
+                    if (e.key === 'Enter') {
+                        handleEnterPress();
                     }
                 }}
-                options={options}
+                options={options.map(option => ({
+                    ...option,
+                    label: option.deletable && onDelete ? (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                {React.isValidElement(option.label) ? option.label : <span>{option.label}</span>}
+                            </div>
+                            <Button
+                                type="text"
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(option.value);
+                                }}
+                                style={{ 
+                                    color: 'var(--sdppp-host-text-color-secondary)',
+                                    flexShrink: 0,
+                                    marginLeft: 8
+                                }}
+                            />
+                        </div>
+                    ) : option.label
+                }))}
                 showSearch={true}
                 allowClear={true}
                 filterOption={(input, option) => {

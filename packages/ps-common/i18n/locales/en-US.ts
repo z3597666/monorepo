@@ -16,7 +16,7 @@ export const enUS = {
   'comfy.channel_connecting': 'Channel connecting...',
   'comfy.server_reconnecting': 'ComfyUI server reconnecting',
   'comfy.version_mismatch': 'Comfy SDPPP version ({{comfyVersion}}) does not match plugin ({{pluginVersion}}), may cause issues',
-  'comfy.cloud_recommend': 'Cloud Recommend:',
+  'comfy.cloud_recommend': 'Cloud:',
   'comfy.your_workflows': 'Your Workflows',
   'comfy.refresh_workflows': 'Refresh workflow list',
   'comfy.queue_progress': '(Queue:{{queueSize}}) {{progress}}% {{executingNodeTitle}}...',
@@ -48,6 +48,7 @@ export const enUS = {
   'runninghub.status.running': 'Running',
   'runninghub.status.failed': 'Failed',
   'runninghub.status.success': 'Success',
+  'image.auto_refetch': 'Auto re-fetch',
   'runninghub.error.get_result_failed': 'Failed to get result: {{error}}',
   'runninghub.error.task_failed': 'Task execution failed: {{error}}',
   'runninghub.error.task_incomplete': 'Task incomplete, current status: {{status}}',
@@ -139,4 +140,29 @@ export const enUS = {
   // ComfyUI management related translations
   'ComfyManager not found, cannot reboot': 'ComfyManager not found, cannot reboot',
   'Failed to reboot ComfyUI': 'Failed to reboot ComfyUI',
+
+  // Image upload component related translations
+  'image.upload.from_ps': 'From PS',
+  'image.upload.from_disk': 'From Disk',
+  'image.upload.clear': 'Clear',
+  'image.upload.uploading': 'Uploading...',
+  'image.upload.no_images': 'No images',
+
+  // Source render component related translations
+  'source.source': 'Source',
+  'source.content': 'Content',
+  'source.boundary': 'Boundary',
+  'source.mask': 'Mask',
+  'source.disk': 'Disk',
+  'source.remote': 'Remote',
+  'source.unknown': 'Unknown',
+  'source.ps_image': 'PS Image',
+  'source.ps_mask': 'PS Mask',
+  'source.canvas': 'Canvas',
+  'source.current_layer': 'CurLayer',
+  'source.selection': 'Selection',
+  'source.quality_percent': 'Quality {{percent}}%',
+  'source.crop.positive': 'Positive Crop',
+  'source.crop.negative': 'Negative Crop',
+  'source.reverse': 'Reverse',
 } as const
