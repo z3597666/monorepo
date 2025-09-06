@@ -25,7 +25,7 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
         <Flex className="runninghub-renderer" vertical gap={8}>
             {!showingPreview ? <Flex gap={8}>
                 <Password
-                    placeholder="Enter your RunningHub API Key"
+                    placeholder={t('runninghub.apikey_placeholder')}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                 />
@@ -58,15 +58,14 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
 }
 
 function RunningHubRendererModels() {
-    const { webappId, setWebappId, webappHistory, removeWebappHistory } = runninghubStore();
+    const { webappId, setWebappId, webappHistory, removeWebappHistory, appName } = runninghubStore();
     const client = runninghubStore((state) => state.client);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string>('');
-    const [inputValue, setInputValue] = useState('');
 
     // Auto-load selected webapp on component mount
     useEffect(() => {
-        if (webappId && client && !loading) {
+        if (webappId && client && !loading && !runninghubStore.getState().currentNodes.length) {
             log('Auto-loading webapp on mount:', webappId);
             setLoading(true);
             changeSelectedModel(webappId)
@@ -77,7 +76,7 @@ function RunningHubRendererModels() {
                     setLoading(false);
                 });
         }
-    }, [client]); // Only depend on client availability
+    }, [client, webappId]); // Depend on both client and webappId
 
     if (!client) {
         return null;
@@ -97,8 +96,8 @@ function RunningHubRendererModels() {
 
         log('final actualWebappId:', actualWebappId);
         
-        if (actualWebappId === webappId || !actualWebappId.trim()) {
-            log('skipping - same as current or empty');
+        if (!actualWebappId.trim()) {
+            log('skipping - empty webappId');
             return;
         }
         
@@ -150,12 +149,6 @@ function RunningHubRendererModels() {
     }));
 
     const { t } = useTranslation();
-    
-    const notFoundContent = inputValue && inputValue.trim() ? (
-        <div style={{ padding: '8px 12px', color: 'var(--sdppp-host-text-color-secondary)' }}>
-            {t('runninghub.open_app', { appName: inputValue })}
-        </div>
-    ) : null;
 
     return (
         <WidgetableProvider
@@ -164,15 +157,13 @@ function RunningHubRendererModels() {
             }}
         >
             <ModelSelector
-                value={webappId}
+                value={appName || webappId}
                 placeholder={t('runninghub.webapp_id_placeholder')}
                 loading={loading}
                 loadError={loadError}
                 options={selectOptions}
                 onChange={handleWebappIdChange}
-                onInputChange={setInputValue}
                 onDelete={removeWebappHistory}
-                notFoundContent={notFoundContent}
             />
             {webappId && !loading && !loadError && <RunningHubRendererForm />}
         </WidgetableProvider>

@@ -21,7 +21,7 @@ export default function ReplicateRenderer({ showingPreview }: { showingPreview: 
         <Flex className="replicate-renderer" vertical gap={8}>
             {!showingPreview ? <Flex gap={8}>
                 <Password
-                    placeholder="Enter your Replicate API Key"
+                    placeholder={t('replicate.apikey_placeholder')}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                 />
@@ -40,7 +40,7 @@ export default function ReplicateRenderer({ showingPreview }: { showingPreview: 
 
 function ReplicateRendererModels() {
     const { t } = useTranslation();
-    const { selectedModel, availableModels, removeModel } = replicateStore();
+    const { selectedModel, availableModels, removeModel, addModel } = replicateStore();
     const client = replicateStore((state) => state.client);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string>('');
@@ -71,6 +71,7 @@ function ReplicateRendererModels() {
             setLoading(true);
             try {
                 await changeSelectedModel(value);
+                addModel(value);
                 replicateStore.setState({
                     selectedModel: value
                 });

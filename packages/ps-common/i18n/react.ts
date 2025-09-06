@@ -1,27 +1,7 @@
 import i18n from 'i18next'
 import { initReactI18next, useTranslation as useI18nextTranslation } from 'react-i18next'
-import { zhCN, enUS, type TranslationKey, type TranslationOptions } from './locales'
-
-// 语言检测函数，与 vanilla.ts 保持一致
-function detectLanguage(): 'zh-CN' | 'en-US' {
-  // 1. 优先检测 navigator.language (浏览器环境)
-  if (typeof navigator !== 'undefined' && navigator.language) {
-    return navigator.language === "zh-CN" ? 'zh-CN' : 'en-US'
-  }
-  
-  // 2. 检测 UXP 环境
-  try {
-    //@ts-ignore
-    const require_ = typeof require !== 'undefined' ? require : undefined
-    if (require_) {
-      const uxp = require_('uxp')
-      return uxp.host.uiLocale.startsWith("zh") ? 'zh-CN' : 'en-US'
-    }
-  } catch {}
-  
-  // 3. 默认英文
-  return 'en-US'
-}
+import { type TranslationKey, type TranslationOptions } from './locales'
+import { getMergedTranslations, setTranslationText as coreSetTranslationText, getCurrentLanguage, setTranslationChangeCallback } from './core'
 
 // 初始化 i18next
 if (!i18n.isInitialized) {
@@ -30,23 +10,29 @@ if (!i18n.isInitialized) {
     .init({
       resources: {
         'zh-CN': {
-          translation: zhCN
+          translation: getMergedTranslations('zh-CN')
         },
         'en-US': {
-          translation: enUS
+          translation: getMergedTranslations('en-US')
         }
       },
-      lng: detectLanguage(),
+      lng: getCurrentLanguage(),
       fallbackLng: 'en-US',
       interpolation: {
-        escapeValue: false // React 已经默认转义
+        escapeValue: false
       }
     })
+    
+  // 注册回调，当 core 中的翻译文本变化时自动更新 i18next
+  setTranslationChangeCallback((language) => {
+    i18n.addResourceBundle(language, 'translation', getMergedTranslations(language), true, true)
+    // 实际切换 i18next 的当前语言
+    i18n.changeLanguage(language)
+  })
 }
 
 /**
  * React Hook for translations
- * @returns Translation utilities
  */
 export function useTranslation() {
   const { t: i18nT, i18n: i18nInstance } = useI18nextTranslation()
@@ -61,38 +47,6 @@ export function useTranslation() {
     language: i18nInstance.language as 'zh-CN' | 'en-US',
     isZhCN: () => i18nInstance.language === 'zh-CN'
   }
-}
-
-/**
- * 非组件中使用的翻译函数
- * @param key 翻译键
- * @param options 参数对象
- * @returns 翻译后的文本
- */
-export function t(key: TranslationKey, options?: TranslationOptions): string {
-  return i18n.t(key, options)
-}
-
-/**
- * 切换语言
- * @param language 目标语言
- */
-export function changeLanguage(language: 'zh-CN' | 'en-US'): Promise<any> {
-  return i18n.changeLanguage(language)
-}
-
-/**
- * 获取当前语言
- */
-export function getCurrentLanguage(): 'zh-CN' | 'en-US' {
-  return i18n.language as 'zh-CN' | 'en-US'
-}
-
-/**
- * 检查是否为中文
- */
-export function isZhCN(): boolean {
-  return i18n.language === 'zh-CN'
 }
 
 export default i18n

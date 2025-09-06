@@ -7,6 +7,7 @@ interface ReplicateStoreState extends BaseStoreState<SDPPPReplicate> {
     apiKey: string
     availableModels: string[]
     setApiKey: (apiKey: string) => void
+    addModel: (model: string) => void
     removeModel: (model: string) => void
     resetModels: () => void
 }
@@ -19,6 +20,13 @@ export const replicateStore = createBaseStore<SDPPPReplicate, ReplicateStoreStat
         apiKey: '',
         availableModels: [...availableModels],
         setApiKey: (apiKey) => replicateStore.setState({ apiKey }),
+        addModel: (model) => {
+            const state = replicateStore.getState();
+            if (!state.availableModels.includes(model)) {
+                const newModels = [...state.availableModels, model];
+                replicateStore.setState({ availableModels: newModels });
+            }
+        },
         removeModel: (model) => {
             const state = replicateStore.getState();
             const newModels = state.availableModels.filter(m => m !== model);

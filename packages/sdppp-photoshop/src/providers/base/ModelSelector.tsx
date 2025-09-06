@@ -60,7 +60,7 @@ export function ModelSelector({
     }, [value, options, isFocused]);
 
     const handleChange = async (newValue: string) => {
-        if (newValue === value || isHandling) {
+        if (isHandling) {
             return;
         }
         
@@ -129,7 +129,15 @@ export function ModelSelector({
                 onBlur={handleBlur}
                 onInputKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                        handleEnterPress();
+                        // 在Enter事件中直接获取输入框的值，因为handleInputChange可能在Enter后被清空
+                        const currentValue = (e.target as HTMLInputElement).value;
+                        if (currentValue && currentValue.trim()) {
+                            handleChange(currentValue);
+                            // 失焦输入框
+                            (e.target as HTMLInputElement).blur();
+                        } else {
+                            handleEnterPress();
+                        }
                     }
                 }}
                 options={options.map(option => ({
