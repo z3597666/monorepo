@@ -10,16 +10,27 @@ interface ActionButtonsProps {
     maxCount: number;
     isMask?: boolean;
     imagesRef: React.MutableRefObject<ImageDetail[]>;
+    customUploadFromPhotoshop?: (isMask?: boolean) => Promise<void>;
+    customUploadFromDisk?: (file: File) => Promise<void>;
+    onClearImages?: () => void;
+    isUploading?: boolean;
+    uploadProgress?: { completed: number; total: number };
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
     images,
     maxCount,
     isMask = false,
-    imagesRef
+    imagesRef,
+    customUploadFromPhotoshop,
+    customUploadFromDisk,
+    onClearImages,
+    isUploading = false,
+    uploadProgress
 }) => {
     const { uploadFromPhotoshop, uploadFromDisk, uploadState, clearImages, setImages, callOnValueChange } = useImageUpload();
     const { t } = useTranslation();
+    
 
     const handleImagesChange = useCallback((newImages: ImageDetail[]) => {
         const finalImages = maxCount > 1 
@@ -35,16 +46,45 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         beforeUpload: () => false,
         onChange: async (info) => {
             const fileList = info.fileList || [];
-            const file = fileList[0];
-            if (file?.originFileObj) {
-                await uploadFromDisk(file.originFileObj);
+            
+            if (maxCount > 1 && fileList.length > 1) {
+                // 多文件模式：先同步处理所有文件的缩略图显示
+                const validFiles = fileList.filter(file => file.originFileObj);
+                
+                if (customUploadFromDisk) {
+                    // 如果有自定义上传函数，让它处理批量预览
+                    const uploadPromises = validFiles.map(file => 
+                        customUploadFromDisk(file.originFileObj!)
+                    );
+                    await Promise.all(uploadPromises);
+                } else {
+                    // 使用默认上传逻辑
+                    const uploadPromises = validFiles.map(file => 
+                        uploadFromDisk(file.originFileObj!)
+                    );
+                    await Promise.all(uploadPromises);
+                }
+            } else {
+                // 单文件模式：只上传第一个文件
+                const file = fileList[0];
+                if (file?.originFileObj) {
+                    if (customUploadFromDisk) {
+                        await customUploadFromDisk(file.originFileObj);
+                    } else {
+                        await uploadFromDisk(file.originFileObj);
+                    }
+                }
             }
         },
     };
 
     const handlePSImageAdd = useCallback(async () => {
-        await uploadFromPhotoshop(isMask);
-    }, [uploadFromPhotoshop, isMask]);
+        if (customUploadFromPhotoshop) {
+            await customUploadFromPhotoshop(isMask);
+        } else {
+            await uploadFromPhotoshop(isMask);
+        }
+    }, [uploadFromPhotoshop, customUploadFromPhotoshop, isMask]);
 
     return (
         <>
@@ -63,18 +103,23 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                         <Button style={{ width: '100%' }} icon={<UploadOutlined />}>{t('image.upload.from_disk')}</Button>
                     </Upload>
                 </Col>
-                {images.length > 0 && (
+                {(images.length > 0 || uploadState.uploading || isUploading) && (
                     <Col flex="0 0 auto">
                         <Tooltip title={t('image.upload.clear')}>
                             <Button
                                 icon={<DeleteOutlined />}
-                                onClick={clearImages}
+                                onClick={() => {
+                                    if (onClearImages) {
+                                        onClearImages();
+                                    }
+                                    clearImages();
+                                }}
                             />
                         </Tooltip>
                     </Col>
                 )}
             </Row>
-            {uploadState.uploading && (
+            {(uploadState.uploading || isUploading) && (
                 <div style={{ marginTop: 8, textAlign: 'center' }}>
                     <Spin 
                         indicator={<LoadingOutlined style={{ fontSize: 16 }} spin />}
@@ -82,6 +127,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                     />
                     <span style={{ marginLeft: 8, fontSize: '12px', color: 'var(--sdppp-host-text-color-secondary)' }}>
                         {t('image.upload.uploading')}
+                        {uploadProgress && uploadProgress.total > 1 && ` (${uploadProgress.completed}/${uploadProgress.total})`}
                     </span>
                 </div>
             )}

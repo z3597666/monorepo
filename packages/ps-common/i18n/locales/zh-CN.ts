@@ -49,7 +49,7 @@ export const zhCN = {
   'runninghub.status.running': '正在运行',
   'runninghub.status.failed': '执行失败',
   'runninghub.status.success': '执行成功',
-  'image.auto_refetch': '自动重新获取',
+  'image.auto_refetch': '自动从PS重新获取',
   'runninghub.error.get_result_failed': '获取结果失败: {{error}}',
   'runninghub.error.task_failed': '任务执行失败: {{error}}',
   'runninghub.error.task_incomplete': '任务未完成，当前状态: {{status}}',
