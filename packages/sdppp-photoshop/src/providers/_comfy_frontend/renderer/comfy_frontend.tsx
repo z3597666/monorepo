@@ -118,7 +118,7 @@ export function ComfyFrontendContent() {
 }
 
 
-function translateHTTPCode(code: number, t: (key: string, params?: any) => string) {
+function translateHTTPCode(code: number, t: any) {
     switch (code) {
         case 200:
             return '';

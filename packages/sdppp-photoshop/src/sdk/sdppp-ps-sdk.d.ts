@@ -37,14 +37,7 @@ export declare const sdpppSDK: {
 			sdkWebviewFocusing: boolean;
 			sdkWebviewConnectStatus: "connecting" | "connected" | "disconnected";
 			isLogin: boolean;
-<<<<<<< HEAD
-<<<<<<< HEAD
 			isGuest: boolean;
-=======
->>>>>>> db8a3fe (i18n)
-=======
-			isGuest: boolean;
->>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 			requestingLogin: boolean;
 			loginMessage: string;
 			token: string;
@@ -122,13 +115,8 @@ export declare const sdpppSDK: {
 				}>;
 				widgetableID: string;
 				widgetablePath: string;
-<<<<<<< HEAD
-				note: string;
-				nodeIndexes: string[];
-=======
 				nodeIndexes: string[];
 				note?: string | undefined;
->>>>>>> db8a3fe (i18n)
 			};
 			widgetableValues: Record<string, any[]>;
 			widgetableErrors: Record<string, string>;
@@ -215,15 +203,7 @@ export declare const sdpppSDK: {
 		};
 		photoshop: {
 			register: (data: {
-<<<<<<< HEAD
-<<<<<<< HEAD
 				passwordPayload: {
-=======
-				passwordPayload?: {
->>>>>>> db8a3fe (i18n)
-=======
-				passwordPayload: {
->>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 					username: string;
 					password: string;
 				} | {
@@ -232,30 +212,17 @@ export declare const sdpppSDK: {
 				} | {
 					password: string;
 					phone: string;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 				} | {
 					password: string;
 					identifier: string;
 				};
 			} | {
 				passcodePayload: {
-<<<<<<< HEAD
-=======
-				} | undefined;
-				passcodePayload?: {
->>>>>>> db8a3fe (i18n)
-=======
->>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 					code: string;
 					phone: string;
 				} | {
 					code: string;
 					email: string;
-<<<<<<< HEAD
-<<<<<<< HEAD
 				};
 			}, signal?: AbortSignal) => Promise<{}>;
 			login: (data: {
@@ -280,53 +247,13 @@ export declare const sdpppSDK: {
 					code: string;
 					email: string;
 				};
-=======
-				} | undefined;
-=======
-				};
->>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
-			}, signal?: AbortSignal) => Promise<{}>;
-			login: (data: {
-				passwordPayload: {
-					username: string;
-					password: string;
-				} | {
-					email: string;
-					password: string;
-				} | {
-					password: string;
-					phone: string;
-				} | {
-					password: string;
-					identifier: string;
-				};
-			} | {
-				passcodePayload: {
-					code: string;
-					phone: string;
-<<<<<<< HEAD
-				} | undefined;
->>>>>>> db8a3fe (i18n)
-=======
-				} | {
-					code: string;
-					email: string;
-				};
->>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 			}, signal?: AbortSignal) => Promise<{}>;
 			sendPassCode: (data: {
 				email?: string | undefined;
 				phone?: string | undefined;
 			}, signal?: AbortSignal) => Promise<{}>;
 			logout: (data: {}, signal?: AbortSignal) => Promise<{}>;
-<<<<<<< HEAD
-<<<<<<< HEAD
 			guestLogin: (data: {}, signal?: AbortSignal) => Promise<{}>;
-=======
->>>>>>> db8a3fe (i18n)
-=======
-			guestLogin: (data: {}, signal?: AbortSignal) => Promise<{}>;
->>>>>>> 4ddf9ea (runninghub fix & list delete & cancel)
 			log: (data: {
 				messages: string[];
 				level: "error" | "info" | "log" | "warn";

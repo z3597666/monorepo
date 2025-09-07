@@ -27,6 +27,7 @@ export const zhCN = {
   'comfy.start_auto_run': '开启自动运行',
   'comfy.run': '运行',
   'comfy.back': '返回',
+  'comfy.uploading': '正在上传...',
   'http.404': 'SDPPP可能未安装或和插件版本不匹配 (404)',
   'http.401': '未授权 (401)',
   'http.403': '禁止访问 (403)',
@@ -147,7 +148,7 @@ export const zhCN = {
   'image.upload.from_ps': '从PS',
   'image.upload.from_disk': '从磁盘',
   'image.upload.clear': '清空',
-  'image.upload.uploading': '上传中...',
+  'image.upload.uploading': '上传中，如果图片过大，可能会卡顿...',
   'image.upload.no_images': '暂无图片',
 
   // 来源渲染组件相关翻译

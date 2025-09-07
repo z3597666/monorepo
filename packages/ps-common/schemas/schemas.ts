@@ -82,7 +82,6 @@ export const WidgetableStructureSchema = z.object({
     widgetableID: z.string(),
     widgetablePath: z.string(),
     nodes: z.record(z.string(), WidgetableNodeSchema),
-    note: z.string(),
     nodeIndexes: z.array(z.string()),
     note: z.string().optional(),
     options: z.record(z.string(), z.any())

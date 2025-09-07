@@ -21,7 +21,7 @@ import { useTranslation } from '@sdppp/common';
 const log = debug('comfy-frontend:workflow-detail')
 const { Text } = Typography;
 
-const WorkflowStatus: React.FC<{ currentWorkflow: string }> = ({ currentWorkflow }) => {
+const WorkflowStatus: React.FC<{ currentWorkflow: string, uploading: boolean }> = ({ currentWorkflow, uploading }) => {
   const { t } = useTranslation()
   const comfyStore = useStore(sdpppSDK.stores.ComfyStore)
   const { lastError, progress, executingNodeTitle, queueSize } = comfyStore;
@@ -131,7 +131,7 @@ async function runAndWaitResult(multi: number, currentWorkflow: string) {
   }
 }
 
-const RunButton = ({ currentWorkflow }: { currentWorkflow: string }) => {
+const RunButton = ({ currentWorkflow, setUploading }: { currentWorkflow: string, setUploading: (uploading: boolean) => void }) => {
   const { t } = useTranslation()
   const { waitAllUploadPasses } = useWidgetable();
 

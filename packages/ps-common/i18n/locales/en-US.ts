@@ -27,6 +27,7 @@ export const enUS = {
   'comfy.start_auto_run': 'Start auto run',
   'comfy.run': 'Run',
   'comfy.back': 'Back',
+  'comfy.uploading': 'Uploading...',
   'http.404': 'SDPPP may not be installed or version mismatch (404)',
   'http.401': 'Unauthorized (401)',
   'http.403': 'Forbidden (403)',
@@ -147,7 +148,7 @@ export const enUS = {
   'image.upload.from_ps': 'From PS',
   'image.upload.from_disk': 'From Disk',
   'image.upload.clear': 'Clear',
-  'image.upload.uploading': 'Uploading...',
+  'image.upload.uploading': 'Uploading, if the image too large, may be stuck...',
   'image.upload.no_images': 'No images',
 
   // Source render component related translations
