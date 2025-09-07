@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createWriteStream } from 'fs';
-import { readdir, stat, readFile, mkdir, unlink } from 'fs/promises';
+import { readdir, stat, readFile, mkdir, unlink, copyFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import archiver from 'archiver';
@@ -60,14 +60,13 @@ async function packagePSCCX() {
     output.on('close', async () => {
       console.log(`压缩完成，文件大小: ${(archive.pointer() / 1024 / 1024).toFixed(2)} MB`);
       
-      // 重命名 .zip 为 .ccx
+      // 复制 .zip 为 .ccx
       try {
-        const { rename } = await import('fs/promises');
-        await rename(zipPath, ccxPath);
-        console.log('重命名完成: sd-ppp2_PS.zip -> sd-ppp2_PS.ccx');
+        await copyFile(zipPath, ccxPath);
+        console.log('复制完成: sd-ppp2_PS.zip -> sd-ppp2_PS.ccx');
         console.log('打包完成！');
       } catch (error) {
-        console.error('重命名文件失败:', error.message);
+        console.error('复制文件失败:', error.message);
         process.exit(1);
       }
     });
