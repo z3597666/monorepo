@@ -31,10 +31,8 @@ export interface UploadContextValue {
     removeMaskUploadPass: (config: PhotoshopMaskParams) => void;
     cancelAllUploads: () => void;
 
-    // Direct upload methods
-    uploadFromPhotoshop: (isMask?: boolean) => Promise<void>;
-    uploadFromDisk: (file: File) => Promise<void>;
 }
+
 
 export interface UploadProviderProps {
     children: React.ReactNode;

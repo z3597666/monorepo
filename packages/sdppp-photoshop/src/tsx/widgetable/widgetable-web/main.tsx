@@ -5,7 +5,6 @@ import { ToggleWidget } from "./widgets/toggle";
 import { StringWidget } from "./widgets/string";
 import { WidgetableComboWidget, WidgetableImagesWidget, WidgetableNode, WidgetableNumberWidget, WidgetableSegmentWidget, WidgetableStringWidget, WidgetableToggleWidget, WidgetableValues, WidgetableWidget } from "@sdppp/common/schemas/schemas";
 import ImageSelect from "./widgets/images";
-import { sdpppSDK } from "../../../sdk/sdppp-ps-sdk";
 import { SegmentWidget } from "./widgets/segment";
 
 interface UseWidgetableRendererProps {
@@ -127,20 +126,8 @@ export const useWidgetableRenderer = ({
         );
     };
 
-    const renderImageWidget = (fieldInfo: WidgetableNode, widget: WidgetableImagesWidget, widgetIndex: number, tempOldComfyCompat: boolean = false): React.ReactElement => {
+    const renderImageWidget = (fieldInfo: WidgetableNode, widget: WidgetableImagesWidget, widgetIndex: number): React.ReactElement => {
         let value = widgetableValues[fieldInfo.id]?.[widgetIndex]
-        if (tempOldComfyCompat && value) {
-            const [subfolder, ...rest] = value.split('/')
-            const url = sdpppSDK.stores.PhotoshopStore.getState().comfyURL.endsWith('/') ?
-                sdpppSDK.stores.PhotoshopStore.getState().comfyURL + 'api/view?type=input&filename=' + rest.join('/') + '&subfolder=' + subfolder :
-                sdpppSDK.stores.PhotoshopStore.getState().comfyURL + '/api/view?type=input&filename=' + rest.join('/') + '&subfolder=' + subfolder;
-            value = {
-                url: value,
-                thumbnail: url,
-                source: 'comfyUI'
-            }
-
-        }
         if (widget.options?.maxCount && widget.options.maxCount > 1) {
             return (
                 <ImageSelect

@@ -7,17 +7,50 @@ export const MainStore = create<{
     provider: (keyof typeof Providers) | ''
     previewImageList: {
         url: string,
+        thumbnail_url: string,
+        nativePath: string,
         source: string,
     }[]
     showingPreview: boolean
-    setPreviewImageList: (list: { url: string, source: string }[]) => void
+    previewError: string
+    downloadAndAppendImage: (image: { url: string, source: string }) => Promise<void>
+    deletePreviewImages: (nativePaths: string[]) => Promise<void>
     setShowingPreview: (showing: boolean) => void
 }>()(persist((set) => ({
     provider: '',
     previewImageList: [
     ],
-    setPreviewImageList: (list: { url: string, source: string }[]) => set({ previewImageList: list }),
+    downloadAndAppendImage: async ({ url, source }: { url: string, source: string }) => {
+        const res = await sdpppSDK.plugins.photoshop.downloadImage({ url: url })
+        if ('error' in res) {
+            set({
+                previewError: res.error
+            })
+            return
+
+        } else {
+            set({
+                previewError: '',
+                previewImageList: [
+                    ...MainStore.getState().previewImageList, { url, source, thumbnail_url: res.thumbnail_url, nativePath: res.nativePath }
+                ]
+            })
+        }
+    },
+    deletePreviewImages: async (nativePaths: string[]) => {
+        const currentList = MainStore.getState().previewImageList
+        
+        for (const nativePath of nativePaths) {
+            await sdpppSDK.plugins.photoshop.deleteDownloadedImage({ nativePath })
+        }
+        
+        set({
+            previewImageList: currentList.filter(item => !nativePaths.includes(item.nativePath))
+        })
+    },
     showingPreview: false,
+    previewError: '',
+    setPreviewError: (error: string) => set({ previewError: error }),
     setShowingPreview: (showing: boolean) => set({ showingPreview: showing })
 }), {
     name: 'main-store',

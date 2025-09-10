@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useRef, useState } from 'react';
 import { useWidgetable } from '../../../../context';
 import { ImageDetail, UploadState, UploadContextValue, UploadProviderProps } from './types';
 import { useUploadPasses } from './upload-passes';
-import { useDirectUpload } from './direct-upload';
+import { v4 as uuidv4 } from 'uuid';
 
 export const UploadContext = createContext<UploadContextValue | undefined>(undefined);
 
@@ -62,18 +62,6 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         removeUploadPass
     );
 
-    // 使用直接上传的钩子
-    const { uploadFromPhotoshop, uploadFromDisk } = useDirectUpload(
-        originalImagesRef,
-        incrementUploadCount,
-        decrementUploadCount,
-        setUploadState,
-        onSetImages,
-        onCallOnValueChange,
-        runUploadPassOnce,
-        handleImagesChange,
-        maxCount
-    );
 
     // 提供给子组件使用的集中化函数
     const setImages = useCallback((images: ImageDetail[]) => {
@@ -121,9 +109,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         removeImageUploadPass,
         createMaskUploadPass,
         removeMaskUploadPass,
-        cancelAllUploads,
-        uploadFromPhotoshop,
-        uploadFromDisk
+        cancelAllUploads
     };
 
     return (

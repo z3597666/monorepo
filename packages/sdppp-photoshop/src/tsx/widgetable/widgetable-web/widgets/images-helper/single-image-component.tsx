@@ -2,14 +2,7 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { ActionButtons, EmptyState } from './lib/common-components';
 import { SingleImagePreview } from './lib/single-image-preview';
 import { ImageDetail, useAutoImageUpload, useImageUpload } from './upload-context';
-import { sdpppSDK } from '../../../../../sdk/sdppp-ps-sdk';
-import { v4 } from 'uuid';
-import { useWidgetable } from '../../../context';
-import { Spin } from 'antd';
-import { LoadingOutlined } from '@ant-design/icons';
-import { useTranslation } from '@sdppp/common/i18n/react';
 
-const log = sdpppSDK.logger.extend('images.tsx')
 
 interface SingleImageProps {
     images: ImageDetail[];
@@ -50,9 +43,21 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
     }, []);
 
     const handleImageUpdate = useCallback((updatedImage: ImageDetail) => {
-        const newImages = [updatedImage];
-        callOnValueChange(newImages);
-    }, [callOnValueChange]);
+        // If we have actual images, update the real image, not the display image
+        if (images.length > 0) {
+            const realImage = images[0];
+            const newRealImage = {
+                ...realImage,
+                auto: updatedImage.auto
+            };
+            const newImages = [newRealImage];
+            callOnValueChange(newImages);
+        } else {
+            // Fallback: use the updated image as is
+            const newImages = [updatedImage];
+            callOnValueChange(newImages);
+        }
+    }, [callOnValueChange, images]);
 
     const setThumbnailImage = useCallback((thumbnailUrl: string) => {
         if (onThumbnailChange) {
@@ -70,111 +75,6 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
         }
     }, [onThumbnailChange]);
 
-    const { runUploadPassOnce } = useWidgetable();
-
-    const [uploadingSource, setUploadingSource] = useState<string>('');
-    const [isUploading, setIsUploading] = useState<boolean>(false);
-    const { t } = useTranslation();
-
-    const customUploadFromPhotoshop = useCallback(async (isMask = false) => {
-        try {
-            const { thumbnail_url, file_token, source } = isMask
-                ? await sdpppSDK.plugins.photoshop.requestMaskGet({ isMask: true })
-                : await sdpppSDK.plugins.photoshop.requestImageGet({});
-
-            if (!thumbnail_url || !source) {
-                return;
-            }
-
-            // 设置缩略图和上传中的source
-            setThumbnailImage(thumbnail_url);
-            setUploadingSource(source);
-            setIsUploading(true);
-
-            // 开始上传
-            await runUploadPassOnce({
-                getUploadFile: async (signal?: AbortSignal) => {
-                    if (signal?.aborted) {
-                        throw new DOMException('Upload aborted', 'AbortError');
-                    }
-                    return { type: 'token', tokenOrBuffer: file_token, fileName: `${v4()}.png` };
-                },
-                onUploaded: async (url, signal?: AbortSignal) => {
-                    if (signal?.aborted) {
-                        return;
-                    }
-                    // 上传成功，清除缩略图和上传状态并设置真实图片
-                    clearThumbnail();
-                    setUploadingSource('');
-                    setIsUploading(false);
-                    const newImage: ImageDetail = { url, source, thumbnail: thumbnail_url };
-                    callOnValueChange([newImage]);
-                },
-                onUploadError: (error: Error) => {
-                    // 上传失败，清除缩略图和上传状态
-                    if (error.name !== 'AbortError') {
-                        clearThumbnail();
-                        setUploadingSource('');
-                        setIsUploading(false);
-                    }
-                }
-            });
-        } catch (error: any) {
-            clearThumbnail();
-            setUploadingSource('');
-            setIsUploading(false);
-        }
-    }, [setThumbnailImage, clearThumbnail, callOnValueChange, runUploadPassOnce, setUploadingSource]);
-
-    const customUploadFromDisk = useCallback(async (file: File) => {
-        const isImage = file.type.startsWith('image/');
-        if (!isImage) {
-            return;
-        }
-
-        try {
-            const thumbnailURL = URL.createObjectURL(file);
-            
-            // 设置缩略图和上传中的source
-            setThumbnailImage(thumbnailURL);
-            setUploadingSource('disk');
-            setIsUploading(true);
-
-            // 开始上传
-            await runUploadPassOnce({
-                getUploadFile: async (signal?: AbortSignal) => {
-                    if (signal?.aborted) {
-                        throw new DOMException('Upload aborted', 'AbortError');
-                    }
-                    const buffer = await file.arrayBuffer();
-                    return { type: 'buffer', tokenOrBuffer: Buffer.from(buffer), fileName: file.name };
-                },
-                onUploaded: async (url, signal?: AbortSignal) => {
-                    if (signal?.aborted) {
-                        return;
-                    }
-                    // 上传成功，清除缩略图和上传状态并设置真实图片
-                    clearThumbnail();
-                    setUploadingSource('');
-                    setIsUploading(false);
-                    const newImage: ImageDetail = { url, source: 'disk', thumbnail: thumbnailURL };
-                    callOnValueChange([newImage]);
-                },
-                onUploadError: (error: Error) => {
-                    // 上传失败，清除缩略图和上传状态
-                    if (error.name !== 'AbortError') {
-                        clearThumbnail();
-                        setUploadingSource('');
-                        setIsUploading(false);
-                    }
-                }
-            });
-        } catch (error: any) {
-            clearThumbnail();
-            setUploadingSource('');
-            setIsUploading(false);
-        }
-    }, [setThumbnailImage, clearThumbnail, callOnValueChange, runUploadPassOnce, setUploadingSource]);
 
     const renderPreviewImages = () => {
         if (images.length === 0 && !thumbnail) {
@@ -184,8 +84,9 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
         // Show thumbnail when uploading, otherwise show the actual image
         const displayImage = thumbnail ? {
             url: thumbnail,
-            source: uploadingSource,
-            thumbnail: thumbnail
+            source: 'uploading',
+            thumbnail: thumbnail,
+            auto: images[0]?.auto || false // Preserve auto state from original image
         } : images[0];
 
         // 确保在有缩略图或有图片时都显示预览组件
@@ -208,7 +109,7 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
 
     const renderedImages = useMemo(() => {
         return renderPreviewImages();
-    }, [images, previewVisible, previewCurrent, thumbnail, uploadingSource]);
+    }, [images, previewVisible, previewCurrent, thumbnail]);
 
     const shouldHideActionButtons = images.length > 0 && images[0].auto;
 
@@ -225,9 +126,6 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
                     images={images}
                     maxCount={maxCount}
                     imagesRef={imagesRef}
-                    customUploadFromPhotoshop={customUploadFromPhotoshop}
-                    customUploadFromDisk={customUploadFromDisk}
-                    isUploading={isUploading}
                 />
             )}
         </div>

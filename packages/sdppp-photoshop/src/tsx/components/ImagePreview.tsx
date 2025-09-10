@@ -3,7 +3,7 @@ import { Image, Spin } from 'antd';
 import './ImagePreview.less';
 
 interface ImagePreviewProps {
-  images: Array<{ url: string; source: string }>;
+  images: Array<{ url: string; source: string; thumbnail_url: string, nativePath?: string }>;
   currentIndex: number;
   onIndexChange?: (index: number) => void;
 }
@@ -39,10 +39,12 @@ export default function ImagePreview({ images, currentIndex, onIndexChange }: Im
       )}
 
       <Image
-        src={images[currentIndex].url}
+        src={images[currentIndex].thumbnail_url}
         alt={`Preview ${currentIndex + 1}`}
         className="image-preview__image"
-        preview={true}
+        preview={{
+          src: images[currentIndex].nativePath ? 'file://' + images[currentIndex].nativePath : images[currentIndex].url
+        }}
         width={'100%'}
         height={'100%'}
         style={{

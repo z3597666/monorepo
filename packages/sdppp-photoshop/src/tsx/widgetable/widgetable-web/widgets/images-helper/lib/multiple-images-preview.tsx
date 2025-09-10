@@ -2,6 +2,11 @@ import React from 'react';
 import { Image, Row, Col } from 'antd';
 import { EllipsisOutlined } from '@ant-design/icons';
 
+// Get display URL with priority: thumbnail > url
+const getDisplayUrl = (image: ImageDetail): string => {
+    return image.thumbnail || image.url;
+};
+
 interface ImageDetail {
     url: string;
     source: string;
@@ -44,7 +49,7 @@ export const MultipleImagesPreview: React.FC<MultipleImagesPreviewProps> = ({
                 onChange: onPreviewChange,
             }}
             items={images.map(image => ({
-                src: image.thumbnail || image.url,
+                src: getDisplayUrl(image),
             }))}
         >
             <Row gutter={[8, 8]} className="image-preview-row">
@@ -63,7 +68,7 @@ export const MultipleImagesPreview: React.FC<MultipleImagesPreviewProps> = ({
                             style={{ cursor: 'pointer' }}
                         > 
                             <Image
-                                src={image.thumbnail || image.url}
+                                src={getDisplayUrl(image)}
                                 alt={`preview-${index}`}
                                 className="preview-image"
                                 width="100%"

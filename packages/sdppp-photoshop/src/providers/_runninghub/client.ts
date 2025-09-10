@@ -2,11 +2,13 @@ import { WidgetableNode, WidgetableWidget } from '@sdppp/common/schemas/schemas'
 import { sdpppSDK } from '../../sdk/sdppp-ps-sdk';
 import { Client } from '../base/Client';
 import { Task } from '../base/Task';
-import { t } from '@sdppp/common';
+import { t, getCurrentLanguage } from '@sdppp/common';
 
 const log = sdpppSDK.logger.extend('runninghub')
 
+// Register both domains for proxy
 sdpppSDK.plugins.fetchProxy.registerProxyDomains('runninghub.cn');
+sdpppSDK.plugins.fetchProxy.registerProxyDomains('runninghub.ai');
 
 export class SDPPPRunningHub extends Client<{
   apiKey: string
@@ -15,12 +17,17 @@ export class SDPPPRunningHub extends Client<{
     super(config);
   }
 
+  private getBaseHost(): string {
+    const locale = getCurrentLanguage();
+    return locale === 'en-US' ? 'www.runninghub.cn' : 'www.runninghub.cn';
+  }
+
   async getAccountStatus(): Promise<{
     remainCoins: number;
     currentTaskCounts: number;
   }> {
     try {
-      const response = await fetch('https://www.runninghub.cn/uc/openapi/accountStatus', {
+      const response = await fetch(`https://${this.getBaseHost()}/uc/openapi/accountStatus`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,7 +60,11 @@ export class SDPPPRunningHub extends Client<{
     rawData: any
   }> {
     try {
-      const response = await fetch(`https://www.runninghub.cn/api/webapp/apiCallDemo?apiKey=${this.config.apiKey}&webappId=${webappId}`);
+      const response = await fetch(`https://${this.getBaseHost()}/api/webapp/apiCallDemo?apiKey=${this.config.apiKey}&webappId=${webappId}`, {
+        headers: {
+          'Host': this.getBaseHost(),
+        }
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -119,9 +130,20 @@ export class SDPPPRunningHub extends Client<{
       }
 
       const mergedNodeInfoList = this.mergeInputWithNodeInfoList(currentNodeInfoList, input);
+      
+      // Add a fixed virtual node with random value
+      // const virtualNode = {
+      //   nodeId: "virtual_node",
+      //   nodeName: "VirtualNode",
+      //   fieldName: "random_value",
+      //   fieldValue: Math.random().toString(),
+      //   fieldType: "STRING",
+      //   description: "Virtual node with random value"
+      // };
+      // mergedNodeInfoList.push(virtualNode);
 
       // Submit task to RunningHub
-      const response = await fetch(`https://www.runninghub.cn/task/openapi/ai-app/run`, {
+      const response = await fetch(`https://${this.getBaseHost()}/task/openapi/ai-app/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,7 +176,7 @@ export class SDPPPRunningHub extends Client<{
             throw new DOMException('Status check aborted', 'AbortError');
           }
 
-          const statusResponse = await fetch(`https://www.runninghub.cn/task/openapi/status`, {
+          const statusResponse = await fetch(`https://${this.getBaseHost()}/task/openapi/status`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -208,7 +230,7 @@ export class SDPPPRunningHub extends Client<{
 
           if (lastStatusResult.rawData.data === 'SUCCESS') {
             // 调用outputs接口获取结果
-            const outputsResponse = await fetch(`https://www.runninghub.cn/task/openapi/outputs`, {
+            const outputsResponse = await fetch(`https://${this.getBaseHost()}/task/openapi/outputs`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -243,7 +265,7 @@ export class SDPPPRunningHub extends Client<{
           }
         },
         canceler: async (id: string) => {
-          await fetch(`https://www.runninghub.cn/task/openapi/cancel`, {
+          await fetch(`https://${this.getBaseHost()}/task/openapi/cancel`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -279,7 +301,7 @@ export class SDPPPRunningHub extends Client<{
       formData.append('fileType', 'image');
       formData.append('apiKey', this.config.apiKey);
 
-      const response = await fetch('https://www.runninghub.cn/task/openapi/upload', {
+      const response = await fetch(`https://${this.getBaseHost()}/task/openapi/upload`, {
         method: 'POST',
         body: formData,
         signal: signal

@@ -5,6 +5,7 @@ import { Select } from "antd";
 import { useEffect, useMemo } from "react";
 import { sdpppSDK } from "../../sdk/sdppp-ps-sdk";
 import { useTranslation } from '@sdppp/common';
+import { ProviderCardSelector } from "../components/ProviderCardSelector";
 
 export function SDPPPGateway() {
     const { t } = useTranslation()
@@ -24,18 +25,28 @@ export function SDPPPGateway() {
     
     return <>
         {
-            !showingPreview && !forceProvider ? <Select
-                className='app-select'
-                showSearch={true}
-                value={provider}
-                onChange={value => MainStore.setState({ provider: value as (keyof typeof Providers) | '' })}
-            >
-                <Select.Option value="">{t('gateway.select_ai_service')}</Select.Option>
-                {
-                    Object.keys(Providers)
-                        .map(key => <Select.Option key={key} value={key}>{key}</Select.Option>)
-                }
-            </Select> : null
+            !showingPreview && !forceProvider ? (
+                !provider ? (
+                    <ProviderCardSelector
+                        selectedProvider={provider}
+                        onProviderSelect={(providerId) => MainStore.setState({ provider: providerId as (keyof typeof Providers) | '' })}
+                        availableProviders={Object.keys(Providers)}
+                    />
+                ) : (
+                    <Select
+                        className='app-select'
+                        showSearch={true}
+                        value={provider}
+                        onChange={value => MainStore.setState({ provider: value as (keyof typeof Providers) | '' })}
+                    >
+                        <Select.Option value="">{t('gateway.select_ai_service')}</Select.Option>
+                        {
+                            Object.keys(Providers)
+                                .map(key => <Select.Option key={key} value={key}>{key}</Select.Option>)
+                        }
+                    </Select>
+                )
+            ) : null
         }
         {Renderer && <Renderer showingPreview={showingPreview} />}
     </>

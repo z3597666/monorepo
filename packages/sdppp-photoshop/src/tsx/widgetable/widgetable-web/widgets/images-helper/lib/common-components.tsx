@@ -1,7 +1,5 @@
-import React, { useCallback, useRef, useMemo } from 'react';
-import { Button, Upload, Row, Col, Tooltip, Alert, Spin } from 'antd';
-import { PlusOutlined, DeleteOutlined, UploadOutlined, LoadingOutlined } from '@ant-design/icons';
-import type { UploadProps } from 'antd';
+import React, { useCallback } from 'react';
+import { useWidgetable } from '../../../../context';
 import { useImageUpload, ImageDetail } from '../upload-context';
 import { useTranslation } from '@sdppp/common/i18n/react';
 
@@ -10,138 +8,90 @@ interface ActionButtonsProps {
     maxCount: number;
     isMask?: boolean;
     imagesRef: React.MutableRefObject<ImageDetail[]>;
-    customUploadFromPhotoshop?: (isMask?: boolean) => Promise<void>;
-    customUploadFromDisk?: (file: File) => Promise<void>;
     onClearImages?: () => void;
     isUploading?: boolean;
     uploadProgress?: { completed: number; total: number };
 }
 
-export const ActionButtons: React.FC<ActionButtonsProps> = ({
-    images,
-    maxCount,
-    isMask = false,
-    imagesRef,
-    customUploadFromPhotoshop,
-    customUploadFromDisk,
-    onClearImages,
-    isUploading = false,
-    uploadProgress
-}) => {
-    const { uploadFromPhotoshop, uploadFromDisk, uploadState, clearImages, setImages, callOnValueChange } = useImageUpload();
-    const { t } = useTranslation();
+export const ActionButtons: React.FC<ActionButtonsProps> = (props) => {
+    const { renderActionButtons, runUploadPassOnce } = useWidgetable();
+    const { uploadState, clearImages, setImages, callOnValueChange } = useImageUpload();
+    const [uploadError, setUploadError] = React.useState<string>('');
+    const abortControllerRef = React.useRef<AbortController>(new AbortController());
     
-
-    const handleImagesChange = useCallback((newImages: ImageDetail[]) => {
-        const finalImages = maxCount > 1 
-            ? [...imagesRef.current, ...newImages]
-            : newImages;
-        callOnValueChange(finalImages);
-    }, [maxCount, imagesRef, callOnValueChange]);
-
-    const uploadProps: UploadProps = {
-        multiple: maxCount > 1,
-        showUploadList: false,
-        fileList: [],
-        beforeUpload: () => false,
-        onChange: async (info) => {
-            const fileList = info.fileList || [];
-            
-            if (maxCount > 1 && fileList.length > 1) {
-                // 多文件模式：先同步处理所有文件的缩略图显示
-                const validFiles = fileList.filter(file => file.originFileObj);
-                
-                if (customUploadFromDisk) {
-                    // 如果有自定义上传函数，让它处理批量预览
-                    const uploadPromises = validFiles.map(file => 
-                        customUploadFromDisk(file.originFileObj!)
-                    );
-                    await Promise.all(uploadPromises);
-                } else {
-                    // 使用默认上传逻辑
-                    const uploadPromises = validFiles.map(file => 
-                        uploadFromDisk(file.originFileObj!)
-                    );
-                    await Promise.all(uploadPromises);
-                }
-            } else {
-                // 单文件模式：只上传第一个文件
-                const file = fileList[0];
-                if (file?.originFileObj) {
-                    if (customUploadFromDisk) {
-                        await customUploadFromDisk(file.originFileObj);
-                    } else {
-                        await uploadFromDisk(file.originFileObj);
-                    }
-                }
-            }
-        },
-    };
-
-    const handlePSImageAdd = useCallback(async () => {
-        if (customUploadFromPhotoshop) {
-            await customUploadFromPhotoshop(isMask);
+    // Callbacks to bridge between renderActionButtons and existing upload system
+    const onPushThumbnail = useCallback((thumbnail: string, source: string) => {
+        // Push thumbnail through existing system
+        const tempImage: ImageDetail = {
+            url: thumbnail,
+            source: source,
+            thumbnail: thumbnail
+        };
+        
+        if (props.maxCount > 1) {
+            setImages([...props.imagesRef.current, tempImage]);
         } else {
-            await uploadFromPhotoshop(isMask);
+            setImages([tempImage]);
         }
-    }, [uploadFromPhotoshop, customUploadFromPhotoshop, isMask]);
-
-    return (
-        <>
-            <Row gutter={[8, 8]} className="button-group-row">
-                <Col flex="1 1 0">
-                    <Button
-                        style={{ width: '100%' }}
-                        icon={<PlusOutlined />}
-                        onClick={handlePSImageAdd}
-                    >
-                        {t('image.upload.from_ps')}
-                    </Button>
-                </Col>
-                <Col flex="1 1 0">
-                    <Upload style={{ width: '100%' }} {...uploadProps}>
-                        <Button style={{ width: '100%' }} icon={<UploadOutlined />}>{t('image.upload.from_disk')}</Button>
-                    </Upload>
-                </Col>
-                {(images.length > 0 || uploadState.uploading || isUploading) && (
-                    <Col flex="0 0 auto">
-                        <Tooltip title={t('image.upload.clear')}>
-                            <Button
-                                icon={<DeleteOutlined />}
-                                onClick={() => {
-                                    if (onClearImages) {
-                                        onClearImages();
-                                    }
-                                    clearImages();
-                                }}
-                            />
-                        </Tooltip>
-                    </Col>
-                )}
-            </Row>
-            {(uploadState.uploading || isUploading) && (
-                <div style={{ marginTop: 8, textAlign: 'center' }}>
-                    <Spin 
-                        indicator={<LoadingOutlined style={{ fontSize: 16 }} spin />}
-                        size="small"
-                    />
-                    <span style={{ marginLeft: 8, fontSize: '12px', color: 'var(--sdppp-host-text-color-secondary)' }}>
-                        {t('image.upload.uploading')}
-                        {uploadProgress && uploadProgress.total > 1 && ` (${uploadProgress.completed}/${uploadProgress.total})`}
-                    </span>
-                </div>
-            )}
-            {uploadState.uploadError && (
-                <Alert
-                    message={uploadState.uploadError}
-                    type="error"
-                    showIcon
-                    closable
-                    style={{ marginTop: 8 }}
-                />
-            )}
-        </>
-    );
+    }, [props.maxCount, props.imagesRef, setImages]);
+    
+    const onPushFinalResult = useCallback((url: string, source: string) => {
+        // Update the image with final URL
+        const finalImage: ImageDetail = {
+            url: url,
+            source: source
+        };
+        
+        if (props.maxCount > 1) {
+            // Replace the last thumbnail with final image
+            const newImages = [...props.imagesRef.current];
+            if (newImages.length > 0) {
+                newImages[newImages.length - 1] = finalImage;
+            }
+            callOnValueChange(newImages);
+        } else {
+            callOnValueChange([finalImage]);
+        }
+    }, [props.maxCount, props.imagesRef, callOnValueChange]);
+    
+    const onPushError = useCallback((error: string) => {
+        setUploadError(error);
+    }, []);
+    
+    const onClearImages = useCallback(() => {
+        if (props.onClearImages) {
+            props.onClearImages();
+        }
+        clearImages();
+        setUploadError('');
+    }, [props.onClearImages, clearImages]);
+    
+    const onCreateUploadPass = useCallback((passConfig: any) => {
+        // Run the upload pass through context
+        const pass = passConfig.config;
+        runUploadPassOnce(pass).catch(console.error);
+    }, [runUploadPassOnce]);
+    
+    const onRemoveUploadPass = useCallback(() => {
+        // Not needed for now
+    }, []);
+    
+    // Use the render function from context with callbacks
+    return <>{renderActionButtons({
+        images: props.images,
+        maxCount: props.maxCount,
+        isMask: props.isMask,
+        onPushThumbnail,
+        onPushFinalResult,
+        onPushError,
+        onClearImages,
+        onCreateUploadPass,
+        onRemoveUploadPass,
+        isUploading: uploadState.uploading || props.isUploading || false,
+        uploadProgress: props.uploadProgress,
+        uploadError: uploadError || uploadState.uploadError,
+        abortController: abortControllerRef.current
+    })}</>;
 };
 
 interface EmptyStateProps {

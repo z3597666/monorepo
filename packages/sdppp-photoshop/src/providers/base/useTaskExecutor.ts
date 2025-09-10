@@ -24,7 +24,7 @@ export function useTaskExecutor({
     const [currentTask, setCurrentTask] = useState<any>(null);
     const [isRunning, setIsRunning] = useState<boolean>(false);
     const { waitAllUploadPasses } = useWidgetable();
-    const setPreviewImageList = MainStore((state) => state.setPreviewImageList);
+    const downloadAndAppendImage = MainStore((state) => state.downloadAndAppendImage);
 
     // 进度跟踪逻辑
     useEffect(() => {
@@ -67,13 +67,11 @@ export function useTaskExecutor({
             if (task) {
                 try {
                     const result = await task.promise;
-                    setPreviewImageList([
-                        ...MainStore.getState().previewImageList,
-                        ...result.map((output: any) => ({
-                            url: output.url,
-                            source: 'remote'
-                        }))
-                    ]);
+                    Promise.all(result.map((output: any) => downloadAndAppendImage({
+                        url: output.url,
+                        source: 'remote'
+                    })))
+                    
                 } catch (error: any) {
                     setProgressMessage('');
                     setRunError(error.message || error.toString());

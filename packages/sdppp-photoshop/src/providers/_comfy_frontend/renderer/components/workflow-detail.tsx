@@ -122,10 +122,10 @@ async function runAndWaitResult(multi: number, currentWorkflow: string) {
   for await (const item of result) {
     if (item.images) {
       item.images.forEach(image => {
-        MainStore.getState().setPreviewImageList([...MainStore.getState().previewImageList, {
+        MainStore.getState().downloadAndAppendImage({
           url: image.url,
           source: currentWorkflow
-        }])
+        })
       })
     }
   }

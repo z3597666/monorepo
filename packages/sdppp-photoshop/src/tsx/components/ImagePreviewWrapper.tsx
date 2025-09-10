@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button, Divider } from 'antd';
-import { CloseOutlined, DeleteOutlined, StepForwardOutlined, SendOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { Button, Divider, Dropdown, Space } from 'antd';
+import { CloseOutlined, DeleteOutlined, StepForwardOutlined, SendOutlined, LeftOutlined, RightOutlined, MoreOutlined, SaveOutlined } from '@ant-design/icons';
 import { MainStore } from '../App.store';
 import { sdpppSDK } from '../../sdk/sdppp-ps-sdk';
 import { useTranslation } from '@sdppp/common';
@@ -23,19 +23,62 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
-  const handleSendToPS = () => {
-    sdpppSDK.plugins.photoshop.requestImageSend({ 
-      url: images[currentIndex].url, 
-      source: images[currentIndex].source 
+  const handleSendToPS = async () => {
+    const res = await sdpppSDK.plugins.photoshop.requestImageSend({
+      url: images[currentIndex].url,
+      source: images[currentIndex].source
     });
+    if ('sendImageParams' in res && res.sendImageParams) {
+      await sdpppSDK.plugins.photoshop.doSendImage({
+        ...res.sendImageParams,
+        url: images[currentIndex].nativePath ? 'file://' + images[currentIndex].nativePath : images[currentIndex].url
+      });
+    } else {
+      throw new Error(res.error || 'Failed to send image to Photoshop');
+    }
   };
 
   const handleClose = () => {
     MainStore.setState({ showingPreview: false });
   };
 
+  const handleDeleteCurrent = () => {
+    const newImages = images.filter((_, index) => index !== currentIndex);
+    MainStore.setState({ previewImageList: newImages });
+    if (currentIndex >= newImages.length && newImages.length > 0) {
+      setCurrentIndex(newImages.length - 1);
+    }
+  };
+
   const handleClearAll = () => {
     MainStore.setState({ previewImageList: [] });
+  };
+
+  const handleSendAll = async () => {
+    const res = await sdpppSDK.plugins.photoshop.requestImageSend({
+      url: images[currentIndex].url,
+      source: images[currentIndex].source
+    });
+    if ('sendImageParams' in res && res.sendImageParams) {
+      const promises = [];
+      for (const image of images) {
+        promises.push(sdpppSDK.plugins.photoshop.doSendImage({
+          ...res.sendImageParams,
+          url: image.nativePath ? 'file://' + image.nativePath : image.url,
+          source: image.source
+        }))
+      }
+      await Promise.all(promises)
+      
+    } else {
+      throw new Error(res.error || 'Failed to send image to Photoshop');
+    }
+  };
+
+  const handleSaveAll = () => {
+    sdpppSDK.plugins.photoshop.requestAndDoSaveImage({
+      nativePaths: images.map(image => image.nativePath)
+    });
   };
 
   const handleJumpToLast = () => {
@@ -94,15 +137,52 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         title={t('image.jump_to_last')}
       />
     ) : null,
-    clearAll: (
+    deleteCurrent: (
       <Button
-        className="image-preview__floating-btn--clear"
+        className="image-preview__floating-btn--delete"
         icon={<DeleteOutlined />}
-        onClick={handleClearAll}
+        onClick={handleDeleteCurrent}
         shape="circle"
         size="middle"
-        title={t('image.clear_all')}
+        title={t('image.delete_current')}
       />
+    ),
+    moreActions: (
+      <Dropdown
+        menu={{
+          items: [
+            {
+              key: 'sendAll',
+              label: t('image.send_all'),
+              icon: <SendOutlined />,
+              onClick: handleSendAll
+            },
+            {
+              key: 'saveAll',
+              label: t('image.save_all'),
+              icon: <SaveOutlined />,
+              onClick: handleSaveAll
+            },
+            {
+              key: 'clearAll',
+              label: t('image.clear_all'),
+              icon: <DeleteOutlined />,
+              onClick: handleClearAll
+            }
+          ]
+        }}
+        placement="topLeft"
+        trigger={['hover']}
+        overlayStyle={{ minWidth: 'auto', width: 'max-content' }}
+      >
+        <Button
+          className="image-preview__floating-btn--more"
+          icon={<MoreOutlined />}
+          shape="circle"
+          size="middle"
+          title={t('image.more_actions')}
+        />
+      </Dropdown>
     ),
     sendToPS: (
       <Button
@@ -125,16 +205,16 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
     <>
       <div className="image-preview">
         {actionButtons.close}
-        
+
         <div className="image-preview__container">
-          <ImagePreview 
+          <ImagePreview
             images={images}
             currentIndex={currentIndex}
             onIndexChange={setCurrentIndex}
           />
-          
+
           {actionButtons.prev}
-          
+
           <div className="image-preview__right-buttons">
             {actionButtons.next}
             {actionButtons.jumpToLast}
@@ -142,7 +222,10 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         </div>
 
         <div className="image-preview__floating-buttons">
-          {actionButtons.clearAll}
+          <Space>
+            {actionButtons.moreActions}
+            {actionButtons.deleteCurrent}
+          </Space>
         </div>
 
         {actionButtons.sendToPS}

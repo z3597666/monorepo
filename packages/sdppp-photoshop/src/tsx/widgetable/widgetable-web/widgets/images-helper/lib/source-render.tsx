@@ -110,7 +110,7 @@ export const SourceRender: React.FC<SourceRenderProps> = ({ source }) => {
             const contentText = params?.content ? `${t('source.content')}：${contentMap[params.content] || params.content}` : '';
 
             // 添加额外的信息如果存在
-            const extras = [];
+            const extras: string[] = [];
             if (params?.imageSize) extras.push(`${params.imageSize}px`);
             if (params?.imageQuality && params.imageQuality !== 1) extras.push(t('source.quality_percent', { percent: Math.round(params.imageQuality * 100) }));
             if (params?.cropBySelection && params.cropBySelection !== 'no') {
@@ -136,7 +136,7 @@ export const SourceRender: React.FC<SourceRenderProps> = ({ source }) => {
             const contentText = maskParams?.content ? `${t('source.mask')}：${contentMap[maskParams.content] || maskParams.content}` : '';
 
             // 添加额外的信息如果存在
-            const extras = [];
+            const extras: string[] = [];
             if (maskParams?.imageSize) extras.push(`${maskParams.imageSize}px`);
             if (maskParams?.reverse !== undefined) extras.push(maskParams.reverse ? t('source.reverse') : '');
 
