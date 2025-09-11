@@ -3,14 +3,15 @@ import { Input, Alert, Flex, Select, Spin, Card, Button, AutoComplete } from 'an
 import { useEffect, useMemo, useState } from 'react';
 import { liblibStore, changeSelectedModel, createTask } from './liblib.store';
 import { availableModels } from '../client';
-import { WorkflowEditApiFormat } from '../../../tsx/widgetable';
+import { WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
 import Link from 'antd/es/typography/Link';
 import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
 import { WidgetableNode } from '@sdppp/common/schemas/schemas';
-import { useWidgetable, WidgetableProvider } from '../../../tsx/widgetable/context';
+import { useWidgetable, WidgetableProvider } from '@sdppp/widgetable-ui';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { useTranslation } from '@sdppp/common';
 import { createPhotoshopRenderers } from '../../base/RenderersFactory';
+import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
 
 const { Password } = Input;
 
@@ -96,6 +97,7 @@ function LiblibRendererModels() {
                 const fileToken = await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg');
                 return fileToken;
             }}
+            widgetRegistry={createBaseWidgetRegistry()}
             renderActionButtons={renderers.renderActionButtons}
             renderImageMetadata={renderers.renderImageMetadata}
         >

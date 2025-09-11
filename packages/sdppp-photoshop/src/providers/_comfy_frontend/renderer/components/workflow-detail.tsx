@@ -11,8 +11,8 @@ import {
 } from '@ant-design/icons';
 import { sdpppSDK } from '../../../../sdk/sdppp-ps-sdk';
 import { useStore } from 'zustand';
-import WorkflowEdit from '../../../../tsx/widgetable';
-import { useWidgetable } from '../../../../tsx/widgetable/context';
+import { WidgetableRenderer as WorkflowEdit } from '@sdppp/widgetable-ui';
+import { useWidgetable } from '@sdppp/widgetable-ui';
 import './workflow-detail.less';
 import { MainStore } from '../../../../tsx/App.store';
 import { comfyWorkflowStore } from '../comfy_frontend';

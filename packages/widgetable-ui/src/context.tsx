@@ -1,9 +1,11 @@
-import React, { createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { createStore } from 'zustand';
-import { UploadPassManager } from '../../providers/base/upload-passes/UploadPassManager';
-import { UploadPassResolver } from '../../providers/base/upload-passes/UploadPassResolver';
+import { debug } from 'debug';
+import { WidgetRegistry, WidgetRenderer, WidgetRegistryContextType, createDefaultWidgetRegistry } from './widget-registry';
+
+const log = debug('widgetable:context');
 
 const uploadImageInputSchama = z.object({
     type: z.literal('buffer').or(z.literal('token')),
@@ -15,90 +17,18 @@ export type UploadPassInput = z.infer<typeof uploadImageInputSchama>
 // 定义hook函数的类型
 export type UploadPass = {
     getUploadFile: (signal?: AbortSignal) => Promise<UploadPassInput>,
-    onUploaded?: (fileURL: string, signal?: AbortSignal) => Promise<void>,
+    onUploaded?: (fileURL: string) => Promise<void>,
     onUploadError?: (error: any) => void,
 };
 
-// Image detail interface
-export interface ImageDetail {
-    url: string;
-    source: string;
-    thumbnail?: string;
-    
-    // 新的抽象：是否维持上传通道（替代 auto）
-    maintainUploadPass?: boolean;
-    uploadPassId?: string;  // 上传通道标识
-}
-
-// Push options for image upload
-export interface PushOptions {
-    replaceAll?: boolean;  // Whether to replace all images
-    appendMode?: boolean;   // Whether to append to existing images
-}
-
-// Upload pass config
-export interface UploadPassConfig {
-    type: 'image' | 'mask';
-    source: string;
-    config: any; // PhotoshopParams | PhotoshopMaskParams
-}
-
-// ActionButton render function parameters
-export interface RenderActionButtonsParams {
-    // Basic state
-    name?: string;
-    widget?: any;
-    value?: any;
-    onValueChange?: (value: any) => void;
-    
-    // UI state
-    isUploading?: boolean;
-    onUploadStart?: () => void;
-    onUploadComplete?: () => void;
-    onUploadError?: (error: Error) => void;
-    
-    // Cancel control
-    abortController?: AbortController;
-}
-
-// ActionButton render function type
-export type RenderActionButtonsFunction = (params: RenderActionButtonsParams) => React.ReactNode;
-
-// ImageMetadata render function parameters
-export interface RenderImageMetadataParams {
-    // Image data
-    image: ImageDetail;
-    
-    // Image update callback
-    onImageUpdate?: (updatedImage: ImageDetail) => void;
-    
-    // Display mode
-    displayMode?: 'single' | 'multiple';
-    
-    // UI state
-    isUploading?: boolean;
-}
-
-// ImageMetadata render function type
-export type RenderImageMetadataFunction = (params: RenderImageMetadataParams) => React.ReactNode;
-
-
 // 定义Context的类型
-interface WidgetableContextType {
+interface WidgetableContextType extends WidgetRegistryContextType {
     runUploadPassOnce: (pass: UploadPass) => Promise<string>;
     addUploadPass: (pass: UploadPass) => string;
     removeUploadPass: (pass: UploadPass) => void;
     cancelAllUploads: () => void;
+
     waitAllUploadPasses: () => Promise<void>;
-    
-    // New: unified ActionButton render function
-    renderActionButtons: RenderActionButtonsFunction;
-    
-    // New: unified ImageMetadata render function
-    renderImageMetadata: RenderImageMetadataFunction;
-    
-    // New: intelligent upload pass management
-    onImageStateChange: (images: ImageDetail[]) => void;
 }
 
 // 创建Context
@@ -108,8 +38,7 @@ const WidgetableContext = createContext<WidgetableContextType | undefined>(undef
 interface WidgetableProviderProps {
     children: ReactNode;
     uploader: (uploadInput: UploadPassInput, signal?: AbortSignal) => Promise<string>;
-    renderActionButtons?: RenderActionButtonsFunction;
-    renderImageMetadata?: RenderImageMetadataFunction;
+    widgetRegistry?: WidgetRegistry;
 }
 
 const uploadPassesStore = createStore<{
@@ -120,61 +49,37 @@ const uploadPassesStore = createStore<{
     abortControllers: {
         [id: string]: AbortController
     }
-}>(() => ({
+}>((set) => ({
     uploadPasses: [],
     runningUploadPasses: {},
     abortControllers: {},
 }))
 
 // Provider组件
-export function WidgetableProvider({ 
-    children, 
-    uploader, 
-    renderActionButtons,
-    renderImageMetadata
-}: WidgetableProviderProps) {
-    // 创建上传通道管理器
-    const uploadPassManager = useMemo(() => new UploadPassManager(), []);
-    
-    // 智能图片状态管理
-    const onImageStateChange = useCallback((images: ImageDetail[]) => {
-        images.forEach(image => {
-            const passId = image.uploadPassId || UploadPassResolver.generateUploadPassId(image.source);
-            
-            if (image.maintainUploadPass && UploadPassResolver.canCreateUploadPass(image.source)) {
-                // 需要维持上传通道且源支持
-                if (!uploadPassManager.hasPass(passId)) {
-                    try {
-                        const uploadPass = UploadPassResolver.createUploadPassFromSource(
-                            image.source,
-                            (updatedImage) => {
-                                // 这里需要回调来更新图片状态
-                                // 具体的更新逻辑需要由使用方提供
-                                console.log('Image updated:', updatedImage);
-                            },
-                            image
-                        );
-                        uploadPassManager.registerPass(passId, uploadPass);
-                        
-                        // 自动执行上传通道
-                        uploadPassManager.executePass(passId, uploader).catch(error => {
-                            console.error('Upload pass execution failed:', error);
-                        });
-                    } catch (error) {
-                        console.error('Failed to create upload pass:', error);
-                    }
-                }
-            } else if (!image.maintainUploadPass && uploadPassManager.hasPass(passId)) {
-                // 不需要维持上传通道，移除现有通道
-                uploadPassManager.unregisterPass(passId);
-            }
-        });
-    }, [uploadPassManager, uploader]);
+export function WidgetableProvider({ children, uploader, widgetRegistry: initialRegistry }: WidgetableProviderProps) {
+    const [registry, setRegistry] = useState<WidgetRegistry>(() => ({
+        ...createDefaultWidgetRegistry(),
+        ...initialRegistry
+    }));
 
     const value: WidgetableContextType = {
-        renderActionButtons: renderActionButtons || (() => null),
-        renderImageMetadata: renderImageMetadata || (() => null),
-        onImageStateChange,
+        registry,
+        registerWidget: (widgetType: string, renderer: WidgetRenderer) => {
+            setRegistry(prev => ({
+                ...prev,
+                [widgetType]: renderer
+            }));
+        },
+        unregisterWidget: (widgetType: string) => {
+            setRegistry(prev => {
+                const newRegistry = { ...prev };
+                delete newRegistry[widgetType];
+                return newRegistry;
+            });
+        },
+        getWidgetRenderer: (widgetType: string) => {
+            return registry[widgetType] || null;
+        },
         runUploadPassOnce: async (pass: UploadPass) => {
             if (!uploader) {
                 throw new Error('Uploader not set, please call setUploader first');
@@ -187,7 +92,7 @@ export function WidgetableProvider({
                     const uploadInput = await pass.getUploadFile(abortController.signal);
                     const fileURL = await uploader(uploadInput, abortController.signal);
                     if (pass.onUploaded && !abortController.signal.aborted) {
-                        await pass.onUploaded(fileURL, abortController.signal);
+                        await pass.onUploaded(fileURL);
                     }
                     resolve(fileURL);
                 } catch (error) {

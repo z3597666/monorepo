@@ -1,9 +1,15 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Button, Image, Row, Col, Tooltip, Segmented, Switch } from 'antd';
 import { ThunderboltFilled, ThunderboltOutlined } from '@ant-design/icons';
 import { useTranslation } from '@sdppp/common/i18n/react';
-import { useWidgetable } from '../../../../context';
-import type { ImageDetail } from '../../../../context';
+import { SourceRender, useSourceInfo } from './source-render';
+
+interface ImageDetail {
+    url: string;
+    source: string;
+    thumbnail?: string;
+    auto?: boolean;
+}
 
 interface SingleImagePreviewProps {
     image: ImageDetail;
@@ -15,58 +21,27 @@ interface SingleImagePreviewProps {
     onImageUpdate?: (updatedImage: ImageDetail) => void;
 }
 
-export const SingleImagePreview: React.FC<SingleImagePreviewProps> = (props) => {
-    const {
-        image,
-        previewVisible,
-        previewCurrent,
-        onPreviewVisibleChange,
-        onPreviewCurrentChange,
-        onPreviewChange,
-        onImageUpdate
-    } = props;
+export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
+    image,
+    previewVisible,
+    previewCurrent,
+    onPreviewVisibleChange,
+    onPreviewCurrentChange,
+    onPreviewChange,
+    onImageUpdate
+}) => {
     const { t } = useTranslation();
-    const { renderImageMetadata } = useWidgetable();
-    
-    // Check if URL is valid for image display
-    const isValidImageUrl = (url: string): boolean => {
-        if (!url) return false;
-        
-        // Check for HTTP/HTTPS URLs
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-            try {
-                new URL(url);
-                return true;
-            } catch {
-                return false;
-            }
+    const handleAutoToggle = (checked: boolean) => {
+        if (onImageUpdate) {
+            onImageUpdate({
+                ...image,
+                auto: checked
+            });
         }
-        
-        // Check for base64 data URLs
-        if (url.startsWith('data:image/')) {
-            return true;
-        }
-        
-        // Check for blob URLs
-        if (url.startsWith('blob:')) {
-            return true;
-        }
-        
-        return false;
     };
-    
-    // Calculate display URL with priority: valid url > thumbnail > invalid url
-    const displayUrl = useMemo(() => {
-        const urlIsValid = isValidImageUrl(image.url);
-        
-        if (urlIsValid) {
-            return image.url; // Priority 1: valid URL
-        } else if (image.thumbnail) {
-            return image.thumbnail; // Priority 2: thumbnail
-        } else {
-            return image.url; // Priority 3: invalid URL (will show broken image)
-        }
-    }, [image.url, image.thumbnail]);
+
+    const sourceInfo = useSourceInfo(image.source);
+    const isPSSource = sourceInfo.type === 'photoshop_image' || sourceInfo.type === 'photoshop_mask';
     return (
         <Image.PreviewGroup
             preview={{
@@ -78,16 +53,31 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = (props) => 
                 onChange: onPreviewChange,
             }}
             items={[{
-                src: displayUrl,
+                src: image.thumbnail || image.url,
             }]}
         >
             <Row gutter={[8, 8]} className="image-preview-row single-image">
                 <Col span={8} className="image-info-col">
-                    {renderImageMetadata({
-                        image,
-                        onImageUpdate,
-                        displayMode: 'single'
-                    })}
+                    <div className="image-info-panel">
+                        <div className="info-details">
+                            <SourceRender
+                                source={image.source}
+                            />
+                        </div>
+                        {isPSSource && (
+                            <div className="info-actions">
+                                <Tooltip title={t('image.auto_refetch')}>
+                                    <Switch
+                                        style={{ width: '100%' }}
+                                        checked={image.auto || false}
+                                        onChange={handleAutoToggle}
+                                        checkedChildren={<ThunderboltFilled />}
+                                        unCheckedChildren={<ThunderboltOutlined />}
+                                    />
+                                </Tooltip>
+                            </div>
+                        )}
+                    </div>
                 </Col>
                 <Col span={16} className="preview-image-col">
                     <div
@@ -99,7 +89,7 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = (props) => 
                         style={{ cursor: 'pointer' }}
                     >
                         <Image
-                            src={displayUrl}
+                            src={image.thumbnail || image.url}
                             alt="preview-0"
                             className="preview-image"
                             width="100%"

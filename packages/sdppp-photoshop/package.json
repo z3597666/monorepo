@@ -13,6 +13,7 @@
   "description": "",
   "dependencies": {
     "@sdppp/vite-remote-config-loader": "workspace:*",
+    "@sdppp/widgetable-ui": "workspace:*",
     "@ant-design/icons": "^6.0.0",
     "@sdppp/common": "workspace:*",
     "@tanstack/react-query": "^5.80.2",

@@ -1,19 +1,84 @@
 import React, { useMemo } from 'react';
-import { Switch, Tooltip } from 'antd';
-import { ThunderboltFilled, ThunderboltOutlined } from '@ant-design/icons';
 import { useTranslation } from '@sdppp/common/i18n/react';
-import type { 
-    RenderImageMetadataFunction, 
-    RenderImageMetadataParams
-} from '../../../tsx/widgetable/context';
-import type { SourceInfo } from '../types';
-import { UploadPassResolver } from '../upload-passes/UploadPassResolver';
 
-export const photoshopRenderImageMetadata: RenderImageMetadataFunction = ({
-    image, onImageUpdate, displayMode = 'single'
-}: RenderImageMetadataParams) => {
+interface SourceRenderProps {
+    source: string;
+}
+
+export interface PhotoshopParams {
+    content?: 'canvas' | 'curlayer' | 'selection';
+    boundary?: 'canvas' | 'curlayer' | 'selection';
+    imageSize?: number;
+    imageQuality?: number;
+    cropBySelection?: 'no' | 'positive' | 'negative';
+}
+
+export interface PhotoshopMaskParams {
+    content?: 'canvas' | 'curlayer' | 'selection';
+    reverse?: boolean;
+    imageSize?: number;
+}
+
+interface SourceInfo {
+    type: 'remote' | 'disk' | 'photoshop_image' | 'photoshop_mask' | 'unknown';
+    params?: PhotoshopParams;
+    maskParams?: PhotoshopMaskParams;
+}
+
+export function useSourceInfo(source: string): SourceInfo {
+    return useMemo(() => {
+        // 尝试解析 JSON 格式的 doGetImage 参数
+        try {
+            const parsed = JSON.parse(source);
+            if (parsed && typeof parsed === 'object' && parsed.content && parsed.boundary) {
+                return {
+                    type: 'photoshop_image',
+                    params: {
+                        content: parsed.content,
+                        boundary: parsed.boundary,
+                        imageSize: parsed.imageSize,
+                        imageQuality: parsed.imageQuality,
+                        cropBySelection: parsed.cropBySelection
+                    }
+                };
+            }
+            if (parsed && typeof parsed === 'object' && parsed.content && parsed.reverse !== undefined) { // mask
+                return {
+                    type: 'photoshop_mask',
+                    maskParams: {
+                        content: parsed.content,
+                        reverse: parsed.reverse,
+                        imageSize: parsed.imageSize
+                    }
+                };
+            }
+        } catch (e) {
+            // JSON 解析失败，继续使用原有逻辑
+        }
+
+        // 处理简单的 source 值
+        if (source === 'disk') {
+            return {
+                type: 'disk'
+            };
+        }
+
+        if (source === 'remote') {
+            return {
+                type: 'remote'
+            };
+        }
+
+        // 默认返回
+        return {
+            type: 'unknown'
+        };
+    }, [source]);
+}
+
+export const SourceRender: React.FC<SourceRenderProps> = ({ source }) => {
+    const sourceInfo = useSourceInfo(source);
     const { t } = useTranslation();
-    const sourceInfo = useMemo(() => UploadPassResolver.getSourceInfo(image.source), [image.source]);
 
     const displayText = useMemo(() => {
         if (sourceInfo.type === 'disk') {
@@ -45,7 +110,7 @@ export const photoshopRenderImageMetadata: RenderImageMetadataFunction = ({
             const contentText = params?.content ? `${t('source.content')}：${contentMap[params.content] || params.content}` : '';
 
             // 添加额外的信息如果存在
-            const extras: string[] = [];
+            const extras = [];
             if (params?.imageSize) extras.push(`${params.imageSize}px`);
             if (params?.imageQuality && params.imageQuality !== 1) extras.push(t('source.quality_percent', { percent: Math.round(params.imageQuality * 100) }));
             if (params?.cropBySelection && params.cropBySelection !== 'no') {
@@ -71,7 +136,7 @@ export const photoshopRenderImageMetadata: RenderImageMetadataFunction = ({
             const contentText = maskParams?.content ? `${t('source.mask')}：${contentMap[maskParams.content] || maskParams.content}` : '';
 
             // 添加额外的信息如果存在
-            const extras: string[] = [];
+            const extras = [];
             if (maskParams?.imageSize) extras.push(`${maskParams.imageSize}px`);
             if (maskParams?.reverse !== undefined) extras.push(maskParams.reverse ? t('source.reverse') : '');
 
@@ -79,46 +144,16 @@ export const photoshopRenderImageMetadata: RenderImageMetadataFunction = ({
             return extras.length > 0 ? `${baseText}\n(${extras.join(', ')})` : baseText;
         }
 
-        return image.source;
-    }, [sourceInfo, image.source, t]);
-
-    const handleAutoToggle = (checked: boolean) => {
-        if (onImageUpdate) {
-            const updatedImage = {
-                ...image,
-                maintainUploadPass: checked,
-                uploadPassId: image.uploadPassId || UploadPassResolver.generateUploadPassId(image.source)
-            };
-            onImageUpdate(updatedImage);
-        }
-    };
-
-    const isPSSource = sourceInfo.type === 'photoshop_image' || sourceInfo.type === 'photoshop_mask';
+        return source;
+    }, [sourceInfo, source, t]);
 
     return (
-        <div className="image-info-panel">
-            <div className="info-details">
-                <span style={{
-                    fontSize: '10px',
-                    color: 'var(--sdppp-host-text-color-secondary)',
-                    whiteSpace: 'pre-line'
-                }}>
-                    {displayText}
-                </span>
-            </div>
-            {isPSSource && displayMode === 'single' && (
-                <div className="info-actions">
-                    <Tooltip title={t('image.auto_refetch')}>
-                        <Switch
-                            style={{ width: '100%' }}
-                            checked={image.maintainUploadPass || false}
-                            onChange={handleAutoToggle}
-                            checkedChildren={<ThunderboltFilled />}
-                            unCheckedChildren={<ThunderboltOutlined />}
-                        />
-                    </Tooltip>
-                </div>
-            )}
-        </div>
+        <span style={{
+            fontSize: '10px',
+            color: 'var(--sdppp-host-text-color-secondary)',
+            whiteSpace: 'pre-line'
+        }}>
+            {displayText}
+        </span>
     );
 };

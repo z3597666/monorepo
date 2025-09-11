@@ -1,4 +1,6 @@
-import type { RenderActionButtonsFunction, RenderImageMetadataFunction } from '../../tsx/widgetable/context';
+// Note: These types need to be defined locally as they're not part of the core widgetable system
+type RenderActionButtonsFunction = any; // TODO: Define proper type
+type RenderImageMetadataFunction = any; // TODO: Define proper type
 import { photoshopRenderActionButtons } from './renderers/PhotoshopActionButtonRenderer';
 import { photoshopRenderImageMetadata } from './renderers/PhotoshopImageMetaRenderer';
 

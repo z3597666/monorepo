@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useWidgetable } from '../../tsx/widgetable/context';
+import { useWidgetable } from '@sdppp/widgetable-ui';
 import { MainStore } from '../../tsx/App.store';
 import { t } from '@sdppp/common';
 

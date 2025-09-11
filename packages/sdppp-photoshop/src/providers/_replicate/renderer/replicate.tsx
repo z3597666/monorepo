@@ -2,16 +2,17 @@ import './replicate.less';
 import { Input, Alert, Flex, Button, Tooltip } from 'antd';
 import { useState, useEffect } from 'react';
 import { replicateStore, changeSelectedModel, createTask } from './replicate.store';
-import { WorkflowEditApiFormat } from '../../../tsx/widgetable';
+import { WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
 import Link from 'antd/es/typography/Link';
 import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
 import { WidgetableNode } from '@sdppp/common/schemas/schemas';
-import { WidgetableProvider } from '../../../tsx/widgetable/context';
+import { WidgetableProvider } from '@sdppp/widgetable-ui';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { ModelSelector } from '../../base/ModelSelector';
 import { useTranslation } from '@sdppp/common';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { createPhotoshopRenderers } from '../../base/RenderersFactory';
+import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
 
 const { Password } = Input;
 
@@ -98,6 +99,7 @@ function ReplicateRendererModels() {
             uploader={async (uploadInput, signal) => {
                 return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg', signal);
             }}
+            widgetRegistry={createBaseWidgetRegistry()}
             renderActionButtons={renderers.renderActionButtons}
             renderImageMetadata={renderers.renderImageMetadata}
         >

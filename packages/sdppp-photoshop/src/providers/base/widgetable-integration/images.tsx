@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import './images.less';
-import { BaseWidgetProps } from './_base';
-import { useUIWeightCSS } from '../../utils';
-import { MultiImageComponent, SingleImageComponent, MaskComponent } from './images-helper';
-import type { ImageDetail } from '../../context';
+// Note: CSS import moved to consuming package
+import { BaseWidgetProps } from '@sdppp/widgetable-ui';
+import { useUIWeightCSS } from '@sdppp/widgetable-ui';
+import { MultiImageComponent, SingleImageComponent, MaskComponent, ImageDetail, UploadProvider } from './images-helper';
 
 interface ImageSelectProps extends BaseWidgetProps {
     value?: ImageDetail[];
@@ -56,32 +55,33 @@ export const ImageSelect: React.FC<ImageSelectProps> = ({ maxCount = 1, uiWeight
     }, [onValueChange]);
 
 
-    // 路由到对应的子组件，使用新的 widgetable context
+    // 路由到对应的子组件，并用 UploadProvider 包裹
     return (
-        <>
+        <UploadProvider
+            onCallOnValueChange={callOnValueChange}
+            onSetImages={handleImagesSet}
+            maxCount={maxCount}
+        >
             {isMask ? (
                 <MaskComponent
                     images={images}
                     maxCount={maxCount}
                     uiWeightCSS={uiWeightCSS}
-                    onImagesChange={callOnValueChange}
                 />
             ) : maxCount === 1 ? (
                 <SingleImageComponent
                     images={images}
                     maxCount={maxCount}
                     uiWeightCSS={uiWeightCSS}
-                    onImagesChange={callOnValueChange}
                 />
             ) : (
                 <MultiImageComponent
                     images={images}
                     maxCount={maxCount}
                     uiWeightCSS={uiWeightCSS}
-                    onImagesChange={callOnValueChange}
                 />
             )}
-        </>
+        </UploadProvider>
     );
 
 };

@@ -2,7 +2,7 @@ import { Alert, Button, Flex, Input, Tooltip } from 'antd';
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
-import { WidgetableProvider } from '../../../tsx/widgetable/context';
+import { WidgetableProvider } from '@sdppp/widgetable-ui';
 import './comfy_frontend.less';
 import { ComfyFrontendRendererContent } from './components';
 import { WorkflowListProvider } from './comfy_frontend';
@@ -10,6 +10,7 @@ import { ComfyCloudRecommendBanner } from './cloud_recommend';
 import { useTranslation } from '@sdppp/common';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { createPhotoshopRenderers } from '../../base/RenderersFactory';
+import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
 
 const log = sdpppSDK.logger.extend("comfy-frontend")
 
@@ -125,6 +126,7 @@ export function ComfyFrontendContent() {
                 const { name } = await sdpppSDK.plugins.photoshop.uploadComfyImage({ uploadInput, overwrite: true });
                 return name;
             }}
+            widgetRegistry={createBaseWidgetRegistry()}
             renderActionButtons={renderers.renderActionButtons}
             renderImageMetadata={renderers.renderImageMetadata}
         >

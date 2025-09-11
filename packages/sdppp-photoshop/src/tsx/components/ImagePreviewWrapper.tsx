@@ -14,6 +14,8 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
   const { t } = useTranslation();
   const images = MainStore(state => state.previewImageList);
   const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [sending, setSending] = React.useState(false);
+  const [sendingAll, setSendingAll] = React.useState(false);
 
   const handlePrev = () => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -24,17 +26,22 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
   };
 
   const handleSendToPS = async () => {
-    const res = await sdpppSDK.plugins.photoshop.requestImageSend({
-      url: images[currentIndex].url,
-      source: images[currentIndex].source
-    });
-    if ('sendImageParams' in res && res.sendImageParams) {
-      await sdpppSDK.plugins.photoshop.doSendImage({
-        ...res.sendImageParams,
-        url: images[currentIndex].nativePath ? 'file://' + images[currentIndex].nativePath : images[currentIndex].url
+    setSending(true);
+    try {
+      const res = await sdpppSDK.plugins.photoshop.requestImageSend({
+        url: images[currentIndex].url,
+        source: images[currentIndex].source
       });
-    } else {
-      throw new Error(res.error || 'Failed to send image to Photoshop');
+      if ('sendImageParams' in res && res.sendImageParams) {
+        await sdpppSDK.plugins.photoshop.doSendImage({
+          ...res.sendImageParams,
+          url: images[currentIndex].nativePath ? 'file://' + images[currentIndex].nativePath : images[currentIndex].url
+        });
+      } else {
+        throw new Error(res.error || 'Failed to send image to Photoshop');
+      }
+    } finally {
+      setSending(false);
     }
   };
 
@@ -55,23 +62,28 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
   };
 
   const handleSendAll = async () => {
-    const res = await sdpppSDK.plugins.photoshop.requestImageSend({
-      url: images[currentIndex].url,
-      source: images[currentIndex].source
-    });
-    if ('sendImageParams' in res && res.sendImageParams) {
-      const promises = [];
-      for (const image of images) {
-        promises.push(sdpppSDK.plugins.photoshop.doSendImage({
-          ...res.sendImageParams,
-          url: image.nativePath ? 'file://' + image.nativePath : image.url,
-          source: image.source
-        }))
+    setSendingAll(true);
+    try {
+      const res = await sdpppSDK.plugins.photoshop.requestImageSend({
+        url: images[currentIndex].url,
+        source: images[currentIndex].source
+      });
+      if ('sendImageParams' in res && res.sendImageParams) {
+        const promises = [];
+        for (const image of images) {
+          promises.push(sdpppSDK.plugins.photoshop.doSendImage({
+            ...res.sendImageParams,
+            url: image.nativePath ? 'file://' + image.nativePath : image.url,
+            source: image.source
+          }))
+        }
+        await Promise.all(promises)
+        
+      } else {
+        throw new Error(res.error || 'Failed to send image to Photoshop');
       }
-      await Promise.all(promises)
-      
-    } else {
-      throw new Error(res.error || 'Failed to send image to Photoshop');
+    } finally {
+      setSendingAll(false);
     }
   };
 
@@ -153,9 +165,10 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
           items: [
             {
               key: 'sendAll',
-              label: t('image.send_all'),
+              label: sendingAll ? t('image.sending_all') : t('image.send_all'),
               icon: <SendOutlined />,
-              onClick: handleSendAll
+              onClick: handleSendAll,
+              disabled: sending || sendingAll
             },
             {
               key: 'saveAll',
@@ -190,8 +203,10 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         type="primary"
         onClick={handleSendToPS}
         size="large"
+        loading={sending}
+        disabled={sending || sendingAll}
       >
-        <SendOutlined style={{ fontSize: '14px' }} />
+        {sending ? t('image.sending') : <SendOutlined style={{ fontSize: '14px' }} />}
       </Button>
     ),
     indicator: images.length > 1 ? (

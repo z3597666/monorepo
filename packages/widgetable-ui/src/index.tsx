@@ -1,12 +1,12 @@
 import React, { ReactNode, useMemo, useState } from "react";
 
 import type { WidgetableNode, WidgetableStructure, WidgetableValues, WidgetableWidget } from "@sdppp/common/schemas/schemas";
-import { computeUIWeightCSS } from "./utils.js";
+import { computeUIWeightCSS } from "./utils";
 
 import './index.less'
-import { useWidgetableRenderer } from "./widgetable-web/main.jsx";
-import { useWidgetable } from "./context.jsx";
-import { Alert } from "antd";
+import { useWidgetableRenderer } from "./widgetable-web/main";
+import { useWidgetable } from "./context";
+// Note: antd dependency removed - Alert component should be provided by consumer
 
 interface WorkflowEditApiFormatProps {
     modelName: string;
@@ -195,7 +195,9 @@ class WidgetRenderErrorBoundary extends React.Component<{
 
     render() {
         if (this.state.hasError) {
-            return <Alert message={this.state.error?.stack || this.state.error?.message || this.state.error?.toString()} type="error" />
+            return <div style={{ color: 'red', border: '1px solid red', padding: '8px', margin: '4px' }}>
+                {this.state.error?.stack || this.state.error?.message || this.state.error?.toString()}
+            </div>
         }
         return this.props.children;
     }
