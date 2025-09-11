@@ -2,14 +2,8 @@ import React, { useMemo } from 'react';
 import { Button, Image, Row, Col, Tooltip, Segmented, Switch } from 'antd';
 import { ThunderboltFilled, ThunderboltOutlined } from '@ant-design/icons';
 import { useTranslation } from '@sdppp/common/i18n/react';
-import { useWidgetable } from '../../../context';
-
-interface ImageDetail {
-    url: string;
-    source: string;
-    thumbnail?: string;
-    auto?: boolean;
-}
+import { useWidgetable } from '../../../../context';
+import type { ImageDetail } from '../../../../context';
 
 interface SingleImagePreviewProps {
     image: ImageDetail;

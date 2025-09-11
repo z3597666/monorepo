@@ -1,34 +1,32 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { ActionButtons, EmptyState } from './lib/common-components';
 import { SingleImagePreview } from './lib/single-image-preview';
-import { ImageDetail, useAutoImageUpload, useImageUpload } from './upload-context';
+import { useWidgetable } from '../../../context';
+import type { ImageDetail } from '../../../context';
 
 interface MaskProps {
     images: ImageDetail[];
     maxCount: number;
     uiWeightCSS: React.CSSProperties;
+    onImagesChange?: (images: ImageDetail[]) => void;
 }
 
 export const MaskComponent: React.FC<MaskProps> = ({
     images,
     maxCount,
-    uiWeightCSS
+    uiWeightCSS,
+    onImagesChange
 }) => {
-    const { setImages, callOnValueChange } = useImageUpload();
+    const { onImageStateChange } = useWidgetable();
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewCurrent, setPreviewCurrent] = useState(0);
     const imagesRef = useRef(images);
     imagesRef.current = images;
 
-    // Auto upload logic for images with auto=true (取第一个image的auto)
-    const hasAutoImage = images.length > 0 && images[0].auto;
-    const autoImageSource = hasAutoImage ? images[0].source : '';
-
-    // Use auto upload when image has auto=true
-    useAutoImageUpload(
-        autoImageSource,
-        hasAutoImage
-    );
+    // Notify widgetable context when images change for automatic upload pass management
+    useEffect(() => {
+        onImageStateChange(images);
+    }, [images, onImageStateChange]);
 
     const handlePreviewChange = useCallback((current: number) => {
         setPreviewCurrent(current);
@@ -36,8 +34,9 @@ export const MaskComponent: React.FC<MaskProps> = ({
 
     const handleImageUpdate = useCallback((updatedImage: ImageDetail) => {
         const newImages = [updatedImage];
-        callOnValueChange(newImages);
-    }, [callOnValueChange]);
+        onImagesChange?.(newImages);
+        onImageStateChange(newImages);
+    }, [onImagesChange, onImageStateChange]);
 
     const renderPreviewImages = () => {
         if (images.length === 0) {
@@ -61,7 +60,7 @@ export const MaskComponent: React.FC<MaskProps> = ({
         return renderPreviewImages();
     }, [images, previewVisible, previewCurrent]);
 
-    const shouldHideActionButtons = images.length > 0 && images[0].auto;
+    const shouldHideActionButtons = images.length > 0 && images[0].maintainUploadPass;
 
     return (
         <div
@@ -77,6 +76,7 @@ export const MaskComponent: React.FC<MaskProps> = ({
                     maxCount={maxCount}
                     isMask={true}
                     imagesRef={imagesRef}
+                    onImagesChange={onImagesChange}
                 />
             )}
         </div>

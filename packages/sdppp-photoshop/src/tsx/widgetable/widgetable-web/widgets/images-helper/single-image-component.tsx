@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { ActionButtons, EmptyState } from './lib/common-components';
 import { SingleImagePreview } from './lib/single-image-preview';
-import { ImageDetail, useAutoImageUpload, useImageUpload } from './upload-context';
+import { useWidgetable } from '../../../context';
+import type { ImageDetail } from '../../../context';
 
 
 interface SingleImageProps {
@@ -10,6 +11,7 @@ interface SingleImageProps {
     uiWeightCSS: React.CSSProperties;
     thumbnail?: string;
     onThumbnailChange?: (thumbnail: string) => void;
+    onImagesChange?: (images: ImageDetail[]) => void;
 }
 
 export const SingleImageComponent: React.FC<SingleImageProps> = ({
@@ -17,10 +19,10 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
     maxCount,
     uiWeightCSS,
     thumbnail: externalThumbnail = '',
-    onThumbnailChange
+    onThumbnailChange,
+    onImagesChange
 }) => {
-    // log(images)
-    const { callOnValueChange } = useImageUpload();
+    const { onImageStateChange } = useWidgetable();
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewCurrent, setPreviewCurrent] = useState(0);
     const [internalThumbnail, setInternalThumbnail] = useState<string>('');
@@ -28,15 +30,10 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
     const imagesRef = useRef(images);
     imagesRef.current = images;
 
-    // Auto upload logic for images with auto=true
-    const hasAutoImage = images.length > 0 && images[0].auto;
-    const autoImageSource = hasAutoImage ? images[0].source : '';
-
-    // Use auto upload when image has auto=true
-    useAutoImageUpload(
-        autoImageSource,
-        hasAutoImage
-    );
+    // Notify widgetable context when images change for automatic upload pass management
+    useEffect(() => {
+        onImageStateChange(images);
+    }, [images, onImageStateChange]);
 
     const handlePreviewChange = useCallback((current: number) => {
         setPreviewCurrent(current);
@@ -48,16 +45,19 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
             const realImage = images[0];
             const newRealImage = {
                 ...realImage,
-                auto: updatedImage.auto
+                maintainUploadPass: updatedImage.maintainUploadPass,
+                uploadPassId: updatedImage.uploadPassId
             };
             const newImages = [newRealImage];
-            callOnValueChange(newImages);
+            onImagesChange?.(newImages);
+            onImageStateChange(newImages);
         } else {
             // Fallback: use the updated image as is
             const newImages = [updatedImage];
-            callOnValueChange(newImages);
+            onImagesChange?.(newImages);
+            onImageStateChange(newImages);
         }
-    }, [callOnValueChange, images]);
+    }, [onImagesChange, onImageStateChange, images]);
 
     const setThumbnailImage = useCallback((thumbnailUrl: string) => {
         if (onThumbnailChange) {
@@ -86,7 +86,8 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
             url: thumbnail,
             source: 'uploading',
             thumbnail: thumbnail,
-            auto: images[0]?.auto || false // Preserve auto state from original image
+            maintainUploadPass: images[0]?.maintainUploadPass || false, // Preserve maintainUploadPass state from original image
+            uploadPassId: images[0]?.uploadPassId
         } : images[0];
 
         // 确保在有缩略图或有图片时都显示预览组件
@@ -111,7 +112,7 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
         return renderPreviewImages();
     }, [images, previewVisible, previewCurrent, thumbnail]);
 
-    const shouldHideActionButtons = images.length > 0 && images[0].auto;
+    const shouldHideActionButtons = images.length > 0 && images[0].maintainUploadPass;
 
     return (
         <div
@@ -126,6 +127,7 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
                     images={images}
                     maxCount={maxCount}
                     imagesRef={imagesRef}
+                    onImagesChange={onImagesChange}
                 />
             )}
         </div>

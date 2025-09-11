@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useWidgetable } from '../../../../context';
-import { useImageUpload, ImageDetail } from '../upload-context';
+import type { ImageDetail } from '../../../../context';
 import { useTranslation } from '@sdppp/common/i18n/react';
 
 interface ActionButtonsProps {
@@ -11,29 +11,32 @@ interface ActionButtonsProps {
     onClearImages?: () => void;
     isUploading?: boolean;
     uploadProgress?: { completed: number; total: number };
+    onImagesChange?: (images: ImageDetail[]) => void;
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = (props) => {
-    const { renderActionButtons, runUploadPassOnce } = useWidgetable();
-    const { uploadState, clearImages, setImages, callOnValueChange } = useImageUpload();
+    const { renderActionButtons, runUploadPassOnce, onImageStateChange } = useWidgetable();
     const [uploadError, setUploadError] = React.useState<string>('');
     const abortControllerRef = React.useRef<AbortController>(new AbortController());
     
-    // Callbacks to bridge between renderActionButtons and existing upload system
+    // Callbacks to bridge between renderActionButtons and new widgetable system
     const onPushThumbnail = useCallback((thumbnail: string, source: string) => {
-        // Push thumbnail through existing system
         const tempImage: ImageDetail = {
             url: thumbnail,
             source: source,
             thumbnail: thumbnail
         };
         
+        let newImages: ImageDetail[];
         if (props.maxCount > 1) {
-            setImages([...props.imagesRef.current, tempImage]);
+            newImages = [...props.imagesRef.current, tempImage];
         } else {
-            setImages([tempImage]);
+            newImages = [tempImage];
         }
-    }, [props.maxCount, props.imagesRef, setImages]);
+        
+        props.onImagesChange?.(newImages);
+        onImageStateChange(newImages);
+    }, [props.maxCount, props.imagesRef, props.onImagesChange, onImageStateChange]);
     
     const onPushFinalResult = useCallback((url: string, source: string) => {
         // Update the image with final URL
@@ -42,17 +45,20 @@ export const ActionButtons: React.FC<ActionButtonsProps> = (props) => {
             source: source
         };
         
+        let newImages: ImageDetail[];
         if (props.maxCount > 1) {
             // Replace the last thumbnail with final image
-            const newImages = [...props.imagesRef.current];
+            newImages = [...props.imagesRef.current];
             if (newImages.length > 0) {
                 newImages[newImages.length - 1] = finalImage;
             }
-            callOnValueChange(newImages);
         } else {
-            callOnValueChange([finalImage]);
+            newImages = [finalImage];
         }
-    }, [props.maxCount, props.imagesRef, callOnValueChange]);
+        
+        props.onImagesChange?.(newImages);
+        onImageStateChange(newImages);
+    }, [props.maxCount, props.imagesRef, props.onImagesChange, onImageStateChange]);
     
     const onPushError = useCallback((error: string) => {
         setUploadError(error);
@@ -62,9 +68,11 @@ export const ActionButtons: React.FC<ActionButtonsProps> = (props) => {
         if (props.onClearImages) {
             props.onClearImages();
         }
-        clearImages();
+        const emptyImages: ImageDetail[] = [];
+        props.onImagesChange?.(emptyImages);
+        onImageStateChange(emptyImages);
         setUploadError('');
-    }, [props.onClearImages, clearImages]);
+    }, [props.onClearImages, props.onImagesChange, onImageStateChange]);
     
     const onCreateUploadPass = useCallback((passConfig: any) => {
         // Run the upload pass through context
@@ -78,18 +86,11 @@ export const ActionButtons: React.FC<ActionButtonsProps> = (props) => {
     
     // Use the render function from context with callbacks
     return <>{renderActionButtons({
-        images: props.images,
-        maxCount: props.maxCount,
-        isMask: props.isMask,
-        onPushThumbnail,
-        onPushFinalResult,
-        onPushError,
-        onClearImages,
-        onCreateUploadPass,
-        onRemoveUploadPass,
-        isUploading: uploadState.uploading || props.isUploading || false,
-        uploadProgress: props.uploadProgress,
-        uploadError: uploadError || uploadState.uploadError,
+        name: 'images', // Add a name for the ActionButton
+        isUploading: props.isUploading || false,
+        onUploadStart: () => {},
+        onUploadComplete: () => {},
+        onUploadError: (error: Error) => setUploadError(error.message),
         abortController: abortControllerRef.current
     })}</>;
 };

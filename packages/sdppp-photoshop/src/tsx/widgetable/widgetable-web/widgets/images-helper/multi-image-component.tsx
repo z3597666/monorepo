@@ -2,7 +2,8 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { ActionButtons, EmptyState } from './lib/common-components';
 import { MultipleImagesPreview } from './lib/multiple-images-preview';
 import { SingleImagePreview } from './lib/single-image-preview';
-import { ImageDetail, useImageUpload } from './upload-context';
+import { useWidgetable } from '../../../context';
+import type { ImageDetail } from '../../../context';
 import { useTranslation } from '@sdppp/common/i18n/react';
 
 
@@ -10,12 +11,14 @@ interface MultiImageProps {
     images: ImageDetail[];
     maxCount: number;
     uiWeightCSS: React.CSSProperties;
+    onImagesChange?: (images: ImageDetail[]) => void;
 }
 
 export const MultiImageComponent: React.FC<MultiImageProps> = ({
     images,
     maxCount,
-    uiWeightCSS
+    uiWeightCSS,
+    onImagesChange
 }) => {
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewCurrent, setPreviewCurrent] = useState(0);
@@ -88,8 +91,13 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
         }
     }, []);
 
-    const { callOnValueChange, clearImages: contextClearImages } = useImageUpload();
+    const { onImageStateChange } = useWidgetable();
     const { t } = useTranslation();
+    
+    // Notify widgetable context when images change for automatic upload pass management
+    useEffect(() => {
+        onImageStateChange(images);
+    }, [images, onImageStateChange]);
     
     // 取消所有上传任务
     const cancelAllUploads = useCallback(() => {
@@ -164,7 +172,8 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
                                         url: item.thumbnail,
                                         source: item.data.source,
                                         thumbnail: item.thumbnail,
-                                        auto: (item.data as ImageDetail).auto || false // Preserve auto state
+                                        maintainUploadPass: (item.data as ImageDetail).maintainUploadPass || false, // Preserve maintainUploadPass state
+                                        uploadPassId: (item.data as ImageDetail).uploadPassId
                                     } : item.data as ImageDetail}
                                     previewVisible={previewVisible && previewCurrent === displayIndex}
                                     previewCurrent={0}
@@ -177,9 +186,11 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
                                         if (updatedImages[displayIndex]) {
                                             updatedImages[displayIndex] = {
                                                 ...updatedImages[displayIndex],
-                                                auto: updatedImage.auto
+                                                maintainUploadPass: updatedImage.maintainUploadPass,
+                                                uploadPassId: updatedImage.uploadPassId
                                             };
-                                            callOnValueChange(updatedImages);
+                                            onImagesChange?.(updatedImages);
+                                            onImageStateChange(updatedImages);
                                         }
                                     }}
                                 />
