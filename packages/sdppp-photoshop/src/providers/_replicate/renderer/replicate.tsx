@@ -1,5 +1,5 @@
 import './replicate.less';
-import { Input, Alert, Flex, Button } from 'antd';
+import { Input, Alert, Flex, Button, Tooltip } from 'antd';
 import { useState, useEffect } from 'react';
 import { replicateStore, changeSelectedModel, createTask } from './replicate.store';
 import { WorkflowEditApiFormat } from '../../../tsx/widgetable';
@@ -10,6 +10,8 @@ import { WidgetableProvider } from '../../../tsx/widgetable/context';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { ModelSelector } from '../../base/ModelSelector';
 import { useTranslation } from '@sdppp/common';
+import { QuestionCircleOutlined } from '@ant-design/icons';
+import { createPhotoshopRenderers } from '../../base/RenderersFactory';
 
 const { Password } = Input;
 
@@ -89,21 +91,40 @@ function ReplicateRendererModels() {
         deletable: model !== selectedModel
     }));
 
+    const renderers = createPhotoshopRenderers();
+    
     return (
         <WidgetableProvider
             uploader={async (uploadInput, signal) => {
                 return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg', signal);
             }}
+            renderActionButtons={renderers.renderActionButtons}
+            renderImageMetadata={renderers.renderImageMetadata}
         >
-            <ModelSelector
-                value={selectedModel}
-                placeholder={t('replicate.model_placeholder')}
-                loading={loading}
-                loadError={loadError}
-                options={modelOptions}
-                onChange={handleModelChange}
-                onDelete={removeModel}
-            />
+            <Flex gap={4} align="center">
+                <Tooltip title={t('replicate.help_tooltip', 'Visit Replicate official website')}>
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<QuestionCircleOutlined />}
+                        onClick={() => {
+                            const banners = loadRemoteConfig('banners');
+                            const replicateURL = banners.find((banner: any) => banner.type === 'replicate_tutorial' && banner.locale == language)?.link;
+                            sdpppSDK.plugins.photoshop.openExternalLink({ url: replicateURL })
+                        }}
+                        style={{ color: 'var(--sdppp-host-text-color-secondary)' }}
+                    />
+                </Tooltip>
+                <ModelSelector
+                    value={selectedModel}
+                    placeholder={t('replicate.model_placeholder')}
+                    loading={loading}
+                    loadError={loadError}
+                    options={modelOptions}
+                    onChange={handleModelChange}
+                    onDelete={removeModel}
+                />
+            </Flex>
             {selectedModel && !loading && !loadError && <ReplicateRendererForm />}
         </WidgetableProvider>
     )

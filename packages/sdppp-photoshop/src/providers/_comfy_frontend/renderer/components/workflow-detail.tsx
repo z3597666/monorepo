@@ -6,7 +6,8 @@ import {
   CloseCircleOutlined,
   ArrowLeftOutlined,
   PlayCircleFilled,
-  ForwardOutlined
+  ForwardOutlined,
+  StopOutlined
 } from '@ant-design/icons';
 import { sdpppSDK } from '../../../../sdk/sdppp-ps-sdk';
 import { useStore } from 'zustand';
@@ -17,6 +18,7 @@ import { MainStore } from '../../../../tsx/App.store';
 import { comfyWorkflowStore } from '../comfy_frontend';
 import { debug } from 'debug';
 import { useTranslation } from '@sdppp/common';
+import { ComfyTask } from '../../ComfyTask';
 
 const log = debug('comfy-frontend:workflow-detail')
 const { Text } = Typography;
@@ -117,33 +119,51 @@ const AutoRunButton = () => {
 //     </Tooltip>
 //   );
 // };
-async function runAndWaitResult(multi: number, currentWorkflow: string) {
-  const result = await sdpppSDK.plugins.ComfyCaller.run({ size: multi })
-  for await (const item of result) {
-    if (item.images) {
-      item.images.forEach(image => {
-        MainStore.getState().downloadAndAppendImage({
-          url: image.url,
-          source: currentWorkflow
-        })
-      })
-    }
-  }
+async function runAndWaitResult(multi: number, currentWorkflow: string): Promise<ComfyTask> {
+  const task = new ComfyTask({ size: multi }, currentWorkflow);
+  
+  // 返回 task 以便外部可以跟踪状态
+  task.promise.catch(error => {
+    console.error('ComfyUI task failed:', error);
+  });
+  
+  return task;
 }
 
 const RunButton = ({ currentWorkflow, setUploading }: { currentWorkflow: string, setUploading: (uploading: boolean) => void }) => {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
   const { waitAllUploadPasses } = useWidgetable();
+  const [currentTask, setCurrentTask] = useState<ComfyTask | null>(null);
 
   const doRun = useCallback(async () => {
-    setUploading(true)
+    setUploading(true);
     await waitAllUploadPasses();
-    setUploading(false)
-    runAndWaitResult(1, currentWorkflow)
-  }, [waitAllUploadPasses, setUploading])
+    setUploading(false);
+
+    const task = await runAndWaitResult(1, currentWorkflow);
+    setCurrentTask(task);
+
+    // 任务完成后清理
+    task.promise.finally(() => {
+      setCurrentTask(null);
+    });
+  }, [waitAllUploadPasses, setUploading, currentWorkflow]);
+
+  const handleCancel = useCallback(async () => {
+    if (currentTask) {
+      await currentTask.cancel();
+      setCurrentTask(null);
+    }
+  }, [currentTask]);
+
   return (
-    <Tooltip title={t('comfy.run')}>
-      <Button type="primary" icon={<PlayCircleFilled />} onClick={doRun} />
+    <Tooltip title={currentTask ? t('comfy.cancel') : t('comfy.run')}>
+      <Button
+        type="primary"
+        icon={currentTask ? <StopOutlined /> : <PlayCircleFilled />}
+        onClick={currentTask ? handleCancel : doRun}
+        loading={!!currentTask}
+      />
     </Tooltip>
   );
 };
@@ -152,11 +172,16 @@ const RunMultiButtons = ({ currentWorkflow, setUploading }: { currentWorkflow: s
   const { waitAllUploadPasses } = useWidgetable();
 
   const doRun = useCallback(async (multi: number) => {
-    setUploading(true)
+    setUploading(true);
     await waitAllUploadPasses();
-    setUploading(false)
-    runAndWaitResult(multi, currentWorkflow)
-  }, [waitAllUploadPasses])
+    setUploading(false);
+    const task = await runAndWaitResult(multi, currentWorkflow);
+    // 任务完成后清理
+    task.promise.finally(() => {
+      // 多任务不需要特殊状态跟踪，直接执行即可
+    });
+  }, [waitAllUploadPasses, currentWorkflow]);
+  
   return (
     <>
       <Button size="small" onClick={() => doRun(2)}>x2</Button>

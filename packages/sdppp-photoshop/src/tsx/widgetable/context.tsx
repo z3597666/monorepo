@@ -1,9 +1,9 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { createStore } from 'zustand';
-import { Button, Upload, Row, Col, Tooltip, Alert, Spin } from 'antd';
-import { PlusOutlined, DeleteOutlined, UploadOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Button, Upload, Row, Col, Tooltip, Alert, Spin, Switch } from 'antd';
+import { PlusOutlined, DeleteOutlined, UploadOutlined, LoadingOutlined, ThunderboltFilled, ThunderboltOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { useTranslation } from '@sdppp/common/i18n/react';
 import { sdpppSDK } from '../../sdk/sdppp-ps-sdk';
@@ -74,6 +74,97 @@ export interface RenderActionButtonsParams {
 // ActionButton render function type
 export type RenderActionButtonsFunction = (params: RenderActionButtonsParams) => React.ReactNode;
 
+// ImageMetadata render function parameters
+export interface RenderImageMetadataParams {
+    // Image data
+    image: ImageDetail;
+    
+    // Image update callback
+    onImageUpdate?: (updatedImage: ImageDetail) => void;
+    
+    // Display mode
+    displayMode?: 'single' | 'multiple';
+    
+    // UI state
+    isUploading?: boolean;
+}
+
+// ImageMetadata render function type
+export type RenderImageMetadataFunction = (params: RenderImageMetadataParams) => React.ReactNode;
+
+// Photoshop parameters interfaces (from source-render.tsx)
+export interface PhotoshopParams {
+    content?: 'canvas' | 'curlayer' | 'selection';
+    boundary?: 'canvas' | 'curlayer' | 'selection';
+    imageSize?: number;
+    imageQuality?: number;
+    cropBySelection?: 'no' | 'positive' | 'negative';
+}
+
+export interface PhotoshopMaskParams {
+    content?: 'canvas' | 'curlayer' | 'selection';
+    reverse?: boolean;
+    imageSize?: number;
+}
+
+interface SourceInfo {
+    type: 'remote' | 'disk' | 'photoshop_image' | 'photoshop_mask' | 'unknown';
+    params?: PhotoshopParams;
+    maskParams?: PhotoshopMaskParams;
+}
+
+// Hook to parse source information (from source-render.tsx)
+export function useSourceInfo(source: string): SourceInfo {
+    return useMemo(() => {
+        // 尝试解析 JSON 格式的 doGetImage 参数
+        try {
+            const parsed = JSON.parse(source);
+            if (parsed && typeof parsed === 'object' && parsed.content && parsed.boundary) {
+                return {
+                    type: 'photoshop_image',
+                    params: {
+                        content: parsed.content,
+                        boundary: parsed.boundary,
+                        imageSize: parsed.imageSize,
+                        imageQuality: parsed.imageQuality,
+                        cropBySelection: parsed.cropBySelection
+                    }
+                };
+            }
+            if (parsed && typeof parsed === 'object' && parsed.content && parsed.reverse !== undefined) { // mask
+                return {
+                    type: 'photoshop_mask',
+                    maskParams: {
+                        content: parsed.content,
+                        reverse: parsed.reverse,
+                        imageSize: parsed.imageSize
+                    }
+                };
+            }
+        } catch (e) {
+            // JSON 解析失败，继续使用原有逻辑
+        }
+
+        // 处理简单的 source 值
+        if (source === 'disk') {
+            return {
+                type: 'disk'
+            };
+        }
+
+        if (source === 'remote') {
+            return {
+                type: 'remote'
+            };
+        }
+
+        // 默认返回
+        return {
+            type: 'unknown'
+        };
+    }, [source]);
+}
+
 // 定义Context的类型
 interface WidgetableContextType {
     runUploadPassOnce: (pass: UploadPass) => Promise<string>;
@@ -85,6 +176,9 @@ interface WidgetableContextType {
     
     // New: unified ActionButton render function
     renderActionButtons: RenderActionButtonsFunction;
+    
+    // New: unified ImageMetadata render function
+    renderImageMetadata: RenderImageMetadataFunction;
 }
 
 // 创建Context
@@ -95,6 +189,7 @@ interface WidgetableProviderProps {
     children: ReactNode;
     uploader: (uploadInput: UploadPassInput, signal?: AbortSignal) => Promise<string>;
     renderActionButtons?: RenderActionButtonsFunction;
+    renderImageMetadata?: RenderImageMetadataFunction;
 }
 
 const uploadPassesStore = createStore<{
@@ -315,10 +410,125 @@ const defaultRenderActionButtons: RenderActionButtonsFunction = ({
     );
 };
 
+// Default renderImageMetadata implementation
+const defaultRenderImageMetadata: RenderImageMetadataFunction = ({
+    image, onImageUpdate, displayMode = 'single'
+}) => {
+    const { t } = useTranslation();
+    const sourceInfo = useSourceInfo(image.source);
+
+    const displayText = useMemo(() => {
+        if (sourceInfo.type === 'disk') {
+            return `${t('source.source')}：${t('source.disk')}`;
+        }
+
+        if (sourceInfo.type === 'remote') {
+            return `${t('source.source')}：${t('source.remote')}`;
+        }
+
+        if (sourceInfo.type === 'unknown') {
+            return `${t('source.source')}：${t('source.unknown')}`;
+        }
+
+        if (sourceInfo.type === 'photoshop_image') {
+            const params = sourceInfo.params;
+            const contentMap: Record<string, string> = {
+                'canvas': t('source.canvas'),
+                'curlayer': t('source.current_layer'),
+                'selection': t('source.selection')
+            };
+            const boundaryMap: Record<string, string> = {
+                'canvas': t('source.canvas'),
+                'curlayer': t('source.current_layer'),
+                'selection': t('source.selection')
+            };
+
+            const boundaryText = params?.boundary ? `${t('source.boundary')}：${boundaryMap[params.boundary] || params.boundary}` : '';
+            const contentText = params?.content ? `${t('source.content')}：${contentMap[params.content] || params.content}` : '';
+
+            // 添加额外的信息如果存在
+            const extras: string[] = [];
+            if (params?.imageSize) extras.push(`${params.imageSize}px`);
+            if (params?.imageQuality && params.imageQuality !== 1) extras.push(t('source.quality_percent', { percent: Math.round(params.imageQuality * 100) }));
+            if (params?.cropBySelection && params.cropBySelection !== 'no') {
+                const cropMap: Record<string, string> = {
+                    'positive': t('source.crop.positive'),
+                    'negative': t('source.crop.negative')
+                };
+                extras.push(cropMap[params.cropBySelection] || params.cropBySelection);
+            }
+
+            const baseText = `${t('source.source')}：${t('source.ps_image')}\n${contentText}\n${boundaryText}`;
+            return extras.length > 0 ? `${baseText}\n(${extras.join(', ')})` : baseText;
+        }
+
+        if (sourceInfo.type === 'photoshop_mask') {
+            const maskParams = sourceInfo.maskParams;
+            const contentMap: Record<string, string> = {
+                'canvas': t('source.canvas'),
+                'curlayer': t('source.current_layer'),
+                'selection': t('source.selection')
+            };
+
+            const contentText = maskParams?.content ? `${t('source.mask')}：${contentMap[maskParams.content] || maskParams.content}` : '';
+
+            // 添加额外的信息如果存在
+            const extras: string[] = [];
+            if (maskParams?.imageSize) extras.push(`${maskParams.imageSize}px`);
+            if (maskParams?.reverse !== undefined) extras.push(maskParams.reverse ? t('source.reverse') : '');
+
+            const baseText = `${t('source.source')}：${t('source.ps_mask')}\n${contentText}`;
+            return extras.length > 0 ? `${baseText}\n(${extras.join(', ')})` : baseText;
+        }
+
+        return image.source;
+    }, [sourceInfo, image.source, t]);
+
+    const handleAutoToggle = (checked: boolean) => {
+        if (onImageUpdate) {
+            const updatedImage = {
+                ...image,
+                auto: checked
+            };
+            onImageUpdate(updatedImage);
+        }
+    };
+
+    const isPSSource = sourceInfo.type === 'photoshop_image' || sourceInfo.type === 'photoshop_mask';
+
+    return (
+        <div className="image-info-panel">
+            <div className="info-details">
+                <span style={{
+                    fontSize: '10px',
+                    color: 'var(--sdppp-host-text-color-secondary)',
+                    whiteSpace: 'pre-line'
+                }}>
+                    {displayText}
+                </span>
+            </div>
+            {isPSSource && displayMode === 'single' && (
+                <div className="info-actions">
+                    <Tooltip title={t('image.auto_refetch')}>
+                        <Switch
+                            style={{ width: '100%' }}
+                            checked={image.auto || false}
+                            onChange={handleAutoToggle}
+                            checkedChildren={<ThunderboltFilled />}
+                            unCheckedChildren={<ThunderboltOutlined />}
+                        />
+                    </Tooltip>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // Provider组件
-export function WidgetableProvider({ children, uploader, renderActionButtons = defaultRenderActionButtons }: WidgetableProviderProps) {
+export function WidgetableProvider({ children, uploader, renderActionButtons = defaultRenderActionButtons, renderImageMetadata = defaultRenderImageMetadata }: WidgetableProviderProps) {
     const value: WidgetableContextType = {
         renderActionButtons,
+        renderImageMetadata,
         runUploadPassOnce: async (pass: UploadPass) => {
             if (!uploader) {
                 throw new Error('Uploader not set, please call setUploader first');

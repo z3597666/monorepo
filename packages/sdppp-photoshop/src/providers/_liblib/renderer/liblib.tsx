@@ -10,6 +10,7 @@ import { WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { useWidgetable, WidgetableProvider } from '../../../tsx/widgetable/context';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { useTranslation } from '@sdppp/common';
+import { createPhotoshopRenderers } from '../../base/RenderersFactory';
 
 const { Password } = Input;
 
@@ -87,12 +88,16 @@ function LiblibRendererModels() {
         handleModelChange(selectedModel);
     }, [selectedModel]);
 
+    const renderers = createPhotoshopRenderers();
+    
     return (
         <WidgetableProvider
             uploader={async (uploadInput) => {
                 const fileToken = await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg');
                 return fileToken;
             }}
+            renderActionButtons={renderers.renderActionButtons}
+            renderImageMetadata={renderers.renderImageMetadata}
         >
             <AutoComplete
                 options={availableModels.map((model) => ({ label: model, value: model }))}

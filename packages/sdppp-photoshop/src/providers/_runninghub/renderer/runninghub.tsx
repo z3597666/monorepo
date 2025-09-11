@@ -11,6 +11,8 @@ import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
 import { useTranslation } from '@sdppp/common';
 import { ModelSelector } from '../../base/ModelSelector';
+import { QuestionCircleOutlined } from '@ant-design/icons';
+import { createPhotoshopRenderers } from '../../base/RenderersFactory';
 
 const log = sdpppSDK.logger.extend('runninghub')
 
@@ -149,22 +151,40 @@ function RunningHubRendererModels() {
     }));
 
     const { t } = useTranslation();
+    const renderers = createPhotoshopRenderers();
 
     return (
         <WidgetableProvider
             uploader={async (uploadInput, signal) => {
                 return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg', signal);
             }}
+            renderActionButtons={renderers.renderActionButtons}
+            renderImageMetadata={renderers.renderImageMetadata}
         >
-            <ModelSelector
-                value={appName || webappId}
-                placeholder={t('runninghub.webapp_id_placeholder')}
-                loading={loading}
-                loadError={loadError}
-                options={selectOptions}
-                onChange={handleWebappIdChange}
-                onDelete={removeWebappHistory}
-            />
+            <Flex gap={4} align="center">
+                <Tooltip title={t('runninghub.help_tooltip', 'How to use?')}>
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<QuestionCircleOutlined />}
+                        onClick={async () => {
+                            const banners = loadRemoteConfig('banners');
+                            const runninghubURL = banners.find((banner: any) => banner.type === 'runninghub_tutorial' && banner.locale == language)?.link;
+                            sdpppSDK.plugins.photoshop.openExternalLink({ url: runninghubURL })
+                        }}
+                        style={{ color: 'var(--sdppp-host-text-color-secondary)' }}
+                    />
+                </Tooltip>
+                <ModelSelector
+                    value={appName || webappId}
+                    placeholder={t('runninghub.webapp_id_placeholder')}
+                    loading={loading}
+                    loadError={loadError}
+                    options={selectOptions}
+                    onChange={handleWebappIdChange}
+                    onDelete={removeWebappHistory}
+                />
+            </Flex>
             {webappId && !loading && !loadError && <RunningHubRendererForm />}
         </WidgetableProvider>
     )

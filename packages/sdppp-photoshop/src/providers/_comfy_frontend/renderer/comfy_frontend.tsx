@@ -1,4 +1,4 @@
-import { Alert, Button, Flex, Input } from 'antd';
+import { Alert, Button, Flex, Input, Tooltip } from 'antd';
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
@@ -8,6 +8,8 @@ import { ComfyFrontendRendererContent } from './components';
 import { WorkflowListProvider } from './comfy_frontend';
 import { ComfyCloudRecommendBanner } from './cloud_recommend';
 import { useTranslation } from '@sdppp/common';
+import { QuestionCircleOutlined } from '@ant-design/icons';
+import { createPhotoshopRenderers } from '../../base/RenderersFactory';
 
 const log = sdpppSDK.logger.extend("comfy-frontend")
 
@@ -28,6 +30,19 @@ export function ComfyFrontendRenderer() {
     return (
         <>
             <Flex gap={8}>
+                <Tooltip title={t('comfy.help_tooltip', 'Visit ComfyUI official website')}>
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<QuestionCircleOutlined />}
+                        onClick={() => {
+                            const banners = loadRemoteConfig('banners');
+                            const comfyURL = banners.find((banner: any) => banner.type === 'comfy_tutorial' && banner.locale == language)?.link;
+                            sdpppSDK.plugins.photoshop.openExternalLink({ url: comfyURL })
+                        }}
+                        style={{ color: 'var(--sdppp-host-text-color-secondary)' }}
+                    />
+                </Tooltip>
                 <Input
                     value={currentInputURL}
                     onChange={(e) => setCurrentInputURL(e.target.value)}
@@ -94,6 +109,7 @@ export function ComfyConnectStatusText() {
 export function ComfyFrontendContent() {
     const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
     const { statusText, statusTextType, showRenderer } = ComfyConnectStatusText();
+    const renderers = createPhotoshopRenderers();
 
     if (!comfyURL) return null;
 
@@ -109,6 +125,8 @@ export function ComfyFrontendContent() {
                 const { name } = await sdpppSDK.plugins.photoshop.uploadComfyImage({ uploadInput, overwrite: true });
                 return name;
             }}
+            renderActionButtons={renderers.renderActionButtons}
+            renderImageMetadata={renderers.renderImageMetadata}
         >
             {statusTextType === 'empty' ? null :
                 <Alert message={statusText} type={statusTextType} />}

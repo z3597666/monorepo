@@ -76,6 +76,17 @@ export function useTaskExecutor({
                     setProgressMessage('');
                     setRunError(error.message || error.toString());
                 } finally {
+                    // 任务完成后从 Photoshop 面板移除
+                    if (task && task.taskId) {
+                        try {
+                            const { sdpppSDK } = await import('../../sdk/sdppp-ps-sdk');
+                            await sdpppSDK.plugins.photoshop.taskRemove({
+                                taskId: task.taskId
+                            });
+                        } catch (error) {
+                            console.warn('Failed to remove task from Photoshop panel:', error);
+                        }
+                    }
                     setLastStartTime(0);
                     setCurrentTask(null);
                     setIsRunning(false);
@@ -103,6 +114,17 @@ export function useTaskExecutor({
             } catch (error: any) {
                 setRunError(t('task.cancel_failed', { error: error.message || error.toString() }));
             } finally {
+                // 取消后从面板移除
+                if (currentTask && currentTask.taskId) {
+                    try {
+                        const { sdpppSDK } = await import('../../sdk/sdppp-ps-sdk');
+                        await sdpppSDK.plugins.photoshop.taskRemove({
+                            taskId: currentTask.taskId
+                        });
+                    } catch (error) {
+                        console.warn('Failed to remove cancelled task:', error);
+                    }
+                }
                 setLastStartTime(0);
                 setCurrentTask(null);
                 setIsRunning(false);

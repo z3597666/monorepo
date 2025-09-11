@@ -169,7 +169,7 @@ export class SDPPPRunningHub extends Client<{
 
       const taskId = result.data.taskId;
 
-      return new Task(taskId, {
+      const task = new Task(taskId, {
         statusGetter: async (id: string) => {
           // Check if aborted before making status request
           if (signal?.aborted) {
@@ -277,6 +277,17 @@ export class SDPPPRunningHub extends Client<{
           });
         }
       });
+
+      // 设置任务信息
+      task.taskName = `RunningHub - ${webappId}`;
+      task.metadata = {
+        provider: 'runninghub',
+        webappId: webappId,
+        nodeCount: mergedNodeInfoList.length,
+        apiKey: this.config.apiKey.substring(0, 8) + '...'
+      };
+
+      return task;
     } catch (error) {
       console.error('Error running task:', error);
       throw error;

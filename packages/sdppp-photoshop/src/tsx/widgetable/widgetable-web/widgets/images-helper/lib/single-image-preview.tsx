@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Button, Image, Row, Col, Tooltip, Segmented, Switch } from 'antd';
 import { ThunderboltFilled, ThunderboltOutlined } from '@ant-design/icons';
 import { useTranslation } from '@sdppp/common/i18n/react';
-import { SourceRender, useSourceInfo } from './source-render';
+import { useWidgetable } from '../../../context';
 
 interface ImageDetail {
     url: string;
@@ -32,6 +32,7 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = (props) => 
         onImageUpdate
     } = props;
     const { t } = useTranslation();
+    const { renderImageMetadata } = useWidgetable();
     
     // Check if URL is valid for image display
     const isValidImageUrl = (url: string): boolean => {
@@ -72,19 +73,6 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = (props) => 
             return image.url; // Priority 3: invalid URL (will show broken image)
         }
     }, [image.url, image.thumbnail]);
-    
-    const handleAutoToggle = (checked: boolean) => {
-        if (onImageUpdate) {
-            const updatedImage = {
-                ...image,
-                auto: checked
-            };
-            onImageUpdate(updatedImage);
-        }
-    };
-
-    const sourceInfo = useSourceInfo(image.source);
-    const isPSSource = sourceInfo.type === 'photoshop_image' || sourceInfo.type === 'photoshop_mask';
     return (
         <Image.PreviewGroup
             preview={{
@@ -101,26 +89,11 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = (props) => 
         >
             <Row gutter={[8, 8]} className="image-preview-row single-image">
                 <Col span={8} className="image-info-col">
-                    <div className="image-info-panel">
-                        <div className="info-details">
-                            <SourceRender
-                                source={image.source}
-                            />
-                        </div>
-                        {isPSSource && (
-                            <div className="info-actions">
-                                <Tooltip title={t('image.auto_refetch')}>
-                                    <Switch
-                                        style={{ width: '100%' }}
-                                        checked={image.auto || false}
-                                        onChange={handleAutoToggle}
-                                        checkedChildren={<ThunderboltFilled />}
-                                        unCheckedChildren={<ThunderboltOutlined />}
-                                    />
-                                </Tooltip>
-                            </div>
-                        )}
-                    </div>
+                    {renderImageMetadata({
+                        image,
+                        onImageUpdate,
+                        displayMode: 'single'
+                    })}
                 </Col>
                 <Col span={16} className="preview-image-col">
                     <div
