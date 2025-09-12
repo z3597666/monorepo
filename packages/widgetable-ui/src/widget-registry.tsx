@@ -1,5 +1,13 @@
 import React from 'react';
 import { WidgetableNode, WidgetableWidget } from "@sdppp/common/schemas/schemas";
+import { 
+    renderToggleWidget, 
+    renderNumberWidget, 
+    renderComboWidget, 
+    renderSegmentWidget, 
+    renderStringWidget, 
+    renderErrorWidget
+} from './widgetable-web/default-widgets';
 
 export interface WidgetRendererProps {
     fieldInfo: WidgetableNode;
@@ -24,16 +32,6 @@ export interface WidgetRegistryContextType {
 }
 
 export const createDefaultWidgetRegistry = (): WidgetRegistry => {
-    // Import default widgets lazily to avoid circular dependencies
-    const { 
-        renderToggleWidget, 
-        renderNumberWidget, 
-        renderComboWidget, 
-        renderSegmentWidget, 
-        renderStringWidget, 
-        renderErrorWidget
-    } = require('./widgetable-web/default-widgets');
-    
     return {
         'number': renderNumberWidget,
         'combo': renderComboWidget,

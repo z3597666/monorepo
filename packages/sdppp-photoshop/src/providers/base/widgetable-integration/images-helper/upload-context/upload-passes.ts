@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import { sdpppSDK } from '../../../../../../sdk/sdppp-ps-sdk';
 import { v4 } from 'uuid';
 import { PhotoshopParams, PhotoshopMaskParams } from '../lib/source-render';
 import { ImageDetail, UploadState } from './types';
+import { sdpppSDK } from '../../../../../sdk/sdppp-ps-sdk';
 
 const log = sdpppSDK.logger.extend('UploadPasses');
 

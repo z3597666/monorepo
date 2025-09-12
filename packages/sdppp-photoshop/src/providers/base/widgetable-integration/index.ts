@@ -9,7 +9,6 @@ export * from './images-helper';
 export * from '../BaseStore';
 export * from '../Client';  
 export * from '../ModelSelector';
-export * from '../RenderersFactory';
 export * from '../Task';
 export * from '../types';
 export * from '../useTaskExecutor';

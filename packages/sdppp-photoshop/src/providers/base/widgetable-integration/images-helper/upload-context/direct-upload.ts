@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { sdpppSDK } from '../../../../../../sdk/sdppp-ps-sdk';
 import { v4 } from 'uuid';
 import { ImageDetail, UploadState } from './types';
+import { sdpppSDK } from '../../../../../sdk/sdppp-ps-sdk';
 
 export const useDirectUpload = (
     originalImagesRef: React.MutableRefObject<ImageDetail[]>,
@@ -21,9 +21,15 @@ export const useDirectUpload = (
         try {
             setUploadState(prev => ({ ...prev, uploadError: '' }));
             
-            const { thumbnail_url, file_token, source } = isMask
+            // 先获取参数，然后用参数调用实际的获取方法
+            const paramsResult = isMask
                 ? await sdpppSDK.plugins.photoshop.requestMaskGet({ isMask: true })
                 : await sdpppSDK.plugins.photoshop.requestImageGet({});
+            
+            // 使用获取到的参数调用实际的获取方法
+            const { thumbnail_url, file_token, source } = isMask
+                ? await sdpppSDK.plugins.photoshop.doGetMask((paramsResult as any).getMaskParams)
+                : await sdpppSDK.plugins.photoshop.doGetImage((paramsResult as any).getImageParams);
 
             if (!thumbnail_url || !source) {
                 return; // 可能是取消 

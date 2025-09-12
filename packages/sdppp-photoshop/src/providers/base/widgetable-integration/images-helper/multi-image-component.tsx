@@ -3,14 +3,12 @@ import { ActionButtons, EmptyState } from './lib/common-components';
 import { MultipleImagesPreview } from './lib/multiple-images-preview';
 import { SingleImagePreview } from './lib/single-image-preview';
 import { ImageDetail, useImageUpload } from './upload-context';
-import { sdpppSDK } from '../../../../../sdk/sdppp-ps-sdk';
 import { v4 } from 'uuid';
-import { useWidgetable } from '../../../context';
 import { Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { useTranslation } from '@sdppp/common/i18n/react';
-
-const log = sdpppSDK.logger.extend('MultiImageComponent');
+import { sdpppSDK } from '../../../../sdk/sdppp-ps-sdk';
+import { useWidgetable } from '@sdppp/widgetable-ui';
 
 interface MultiImageProps {
     images: ImageDetail[];
@@ -115,9 +113,15 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
 
     const customUploadFromPhotoshop = useCallback(async (isMask = false) => {
         try {
-            const { thumbnail_url, file_token, source } = isMask
+            // 先获取参数，然后用参数调用实际的获取方法
+            const paramsResult = isMask
                 ? await sdpppSDK.plugins.photoshop.requestMaskGet({ isMask: true })
                 : await sdpppSDK.plugins.photoshop.requestImageGet({});
+            
+            // 使用获取到的参数调用实际的获取方法
+            const { thumbnail_url, file_token, source } = isMask
+                ? await sdpppSDK.plugins.photoshop.doGetMask((paramsResult as any).getMaskParams)
+                : await sdpppSDK.plugins.photoshop.doGetImage((paramsResult as any).getImageParams);
 
             if (!thumbnail_url || !source) {
                 return;

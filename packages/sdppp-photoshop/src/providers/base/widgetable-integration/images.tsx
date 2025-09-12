@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-// Note: CSS import moved to consuming package
+import './images.less';
 import { BaseWidgetProps } from '@sdppp/widgetable-ui';
 import { useUIWeightCSS } from '@sdppp/widgetable-ui';
 import { MultiImageComponent, SingleImageComponent, MaskComponent, ImageDetail, UploadProvider } from './images-helper';

@@ -12,7 +12,6 @@ import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
 import { useTranslation } from '@sdppp/common';
 import { ModelSelector } from '../../base/ModelSelector';
 import { QuestionCircleOutlined } from '@ant-design/icons';
-import { createPhotoshopRenderers } from '../../base/RenderersFactory';
 import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
 
 const log = sdpppSDK.logger.extend('runninghub')
@@ -152,7 +151,6 @@ function RunningHubRendererModels() {
     }));
 
     const { t } = useTranslation();
-    const renderers = createPhotoshopRenderers();
 
     return (
         <WidgetableProvider
@@ -160,8 +158,6 @@ function RunningHubRendererModels() {
                 return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg', signal);
             }}
             widgetRegistry={createBaseWidgetRegistry()}
-            renderActionButtons={renderers.renderActionButtons}
-            renderImageMetadata={renderers.renderImageMetadata}
         >
             <Flex gap={4} align="center">
                 <Tooltip title={t('runninghub.help_tooltip', 'How to use?')}>

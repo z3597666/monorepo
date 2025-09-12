@@ -2,7 +2,7 @@ import React from 'react';
 import { WidgetRenderer } from '@sdppp/widgetable-ui';
 import ImageSelect from './images';
 import { WidgetableImagesWidget } from "@sdppp/common/schemas/schemas";
-import { sdpppSDK } from '../../tsx/sdk/sdppp-ps-sdk';
+import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
 
 export const imagesWidgetRenderer: WidgetRenderer = ({ fieldInfo, widget, widgetIndex, value, onValueChange, extraOptions }) => {
     const imageWidget = widget as WidgetableImagesWidget;

@@ -1,8 +1,8 @@
 import React, { createContext, useCallback, useRef, useState } from 'react';
-import { useWidgetable } from '../../../../context';
 import { ImageDetail, UploadState, UploadContextValue, UploadProviderProps } from './types';
 import { useUploadPasses } from './upload-passes';
 import { useDirectUpload } from './direct-upload';
+import { useWidgetable } from '@sdppp/widgetable-ui';
 
 export const UploadContext = createContext<UploadContextValue | undefined>(undefined);
 

@@ -4,6 +4,7 @@ import { CloseOutlined, DeleteOutlined, StepForwardOutlined, SendOutlined, LeftO
 import { MainStore } from '../App.store';
 import { sdpppSDK } from '../../sdk/sdppp-ps-sdk';
 import { useTranslation } from '@sdppp/common';
+import { isImage } from '../../utils/fileType';
 import ImagePreview from './ImagePreview';
 
 interface ImagePreviewWrapperProps {
@@ -17,6 +18,9 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
   const [sending, setSending] = React.useState(false);
   const [sendingAll, setSendingAll] = React.useState(false);
 
+  const currentItem = images[currentIndex];
+  const isCurrentItemImage = currentItem ? isImage(currentItem.url) : false;
+
   const handlePrev = () => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
@@ -26,13 +30,13 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
   };
 
   const handleSendToPS = async () => {
-    setSending(true);
     try {
       const res = await sdpppSDK.plugins.photoshop.requestImageSend({
         url: images[currentIndex].url,
         source: images[currentIndex].source
       });
       if ('sendImageParams' in res && res.sendImageParams) {
+        setSending(true);
         await sdpppSDK.plugins.photoshop.doSendImage({
           ...res.sendImageParams,
           url: images[currentIndex].nativePath ? 'file://' + images[currentIndex].nativePath : images[currentIndex].url
@@ -64,13 +68,18 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
   const handleSendAll = async () => {
     setSendingAll(true);
     try {
+      const imageItems = images.filter(image => isImage(image.url));
+      if (imageItems.length === 0) {
+        return;
+      }
+      
       const res = await sdpppSDK.plugins.photoshop.requestImageSend({
-        url: images[currentIndex].url,
-        source: images[currentIndex].source
+        url: imageItems[0].url,
+        source: imageItems[0].source
       });
       if ('sendImageParams' in res && res.sendImageParams) {
         const promises = [];
-        for (const image of images) {
+        for (const image of imageItems) {
           promises.push(sdpppSDK.plugins.photoshop.doSendImage({
             ...res.sendImageParams,
             url: image.nativePath ? 'file://' + image.nativePath : image.url,
@@ -90,6 +99,12 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
   const handleSaveAll = () => {
     sdpppSDK.plugins.photoshop.requestAndDoSaveImage({
       nativePaths: images.map(image => image.nativePath)
+    });
+  };
+
+  const handleSaveCurrent = async () => {
+    await sdpppSDK.plugins.photoshop.requestAndDoSaveImage({
+      nativePaths: [currentItem.nativePath]
     });
   };
 
@@ -163,13 +178,13 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
       <Dropdown
         menu={{
           items: [
-            {
+            ...(images.some(image => isImage(image.url)) ? [{
               key: 'sendAll',
               label: sendingAll ? t('image.sending_all') : t('image.send_all'),
               icon: <SendOutlined />,
               onClick: handleSendAll,
               disabled: sending || sendingAll
-            },
+            }] : []),
             {
               key: 'saveAll',
               label: t('image.save_all'),
@@ -197,7 +212,7 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         />
       </Dropdown>
     ),
-    sendToPS: (
+    sendToPS: isCurrentItemImage ? (
       <Button
         className="image-preview__send-btn"
         type="primary"
@@ -207,6 +222,15 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         disabled={sending || sendingAll}
       >
         {sending ? t('image.sending') : <SendOutlined style={{ fontSize: '14px' }} />}
+      </Button>
+    ) : (
+      <Button
+        className="image-preview__send-btn"
+        type="primary"
+        onClick={handleSaveCurrent}
+        size="large"
+      >
+        <SaveOutlined style={{ fontSize: '14px' }} />
       </Button>
     ),
     indicator: images.length > 1 ? (

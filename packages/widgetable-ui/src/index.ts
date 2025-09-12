@@ -1,5 +1,5 @@
 // Main exports
-export { default as WidgetableRenderer } from './index';
+export { default as WidgetableRenderer, WorkflowEditApiFormat } from './index.tsx';
 
 // Context and providers
 export { WidgetableProvider, useWidgetable } from './context';

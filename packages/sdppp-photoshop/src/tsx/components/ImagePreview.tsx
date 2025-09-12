@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Image, Spin } from 'antd';
+import { isVideo } from '../../utils/fileType';
 import './ImagePreview.less';
 
 interface ImagePreviewProps {
@@ -11,10 +12,6 @@ interface ImagePreviewProps {
 export default function ImagePreview({ images, currentIndex, onIndexChange }: ImagePreviewProps) {
   const [imageLoading, setImageLoading] = useState(false);
 
-  const isVideo = (url: string) => {
-    const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.wmv', '.flv', '.mkv'];
-    return videoExtensions.some(ext => url.toLowerCase().includes(ext));
-  };
 
   useEffect(() => {
     setImageLoading(true);
@@ -43,40 +40,64 @@ export default function ImagePreview({ images, currentIndex, onIndexChange }: Im
         </div>
       )}
 
-      <Image
-        src={images[currentIndex].thumbnail_url}
-        alt={`Preview ${currentIndex + 1}`}
-        className="image-preview__image"
-        preview={{
-          src: images[currentIndex].nativePath ? 'file://' + images[currentIndex].nativePath : images[currentIndex].url,
-          render: (originalNode, info) => {
-            const previewUrl = info.src || '';
-            if (isVideo(previewUrl)) {
-              return (
-                <video
-                  src={previewUrl}
-                  controls
-                  autoPlay
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain'
-                  }}
-                />
-              );
+      {isVideo(images[currentIndex].url) ? (
+        <video
+          src={images[currentIndex].url}
+          className="image-preview__image"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            transition: 'opacity 0.2s ease',
+            cursor: 'pointer'
+          }}
+          onLoadedData={() => setImageLoading(false)}
+          onError={() => setImageLoading(false)}
+          onClick={(e) => {
+            const video = e.target as HTMLVideoElement;
+            if (video.paused) {
+              video.play();
+            } else {
+              video.pause();
             }
-            return originalNode;
-          }
-        }}
-        width={'100%'}
-        height={'100%'}
-        style={{
-          objectFit: 'contain',
-          transition: 'opacity 0.2s ease'
-        }}
-        onLoad={() => setImageLoading(false)}
-        onError={() => setImageLoading(false)}
-      />
+          }}
+        />
+      ) : (
+        <Image
+          src={images[currentIndex].thumbnail_url}
+          alt={`Preview ${currentIndex + 1}`}
+          className="image-preview__image"
+          preview={{
+            src: images[currentIndex].url,
+            render: (originalNode, info) => {
+              const previewUrl = info.src || '';
+              if (isVideo(previewUrl)) {
+                return (
+                  <video
+                    src={previewUrl}
+                    controls
+                    autoPlay
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain'
+                    }}
+                  />
+                );
+              }
+              return originalNode;
+            }
+          }}
+          width={'100%'}
+          height={'100%'}
+          style={{
+            objectFit: 'contain',
+            transition: 'opacity 0.2s ease'
+          }}
+          onLoad={() => setImageLoading(false)}
+          onError={() => setImageLoading(false)}
+        />
+      )}
     </div>
   );
 }

@@ -9,8 +9,8 @@ import { WorkflowListProvider } from './comfy_frontend';
 import { ComfyCloudRecommendBanner } from './cloud_recommend';
 import { useTranslation } from '@sdppp/common';
 import { QuestionCircleOutlined } from '@ant-design/icons';
-import { createPhotoshopRenderers } from '../../base/RenderersFactory';
 import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
+import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
 
 const log = sdpppSDK.logger.extend("comfy-frontend")
 
@@ -110,7 +110,6 @@ export function ComfyConnectStatusText() {
 export function ComfyFrontendContent() {
     const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
     const { statusText, statusTextType, showRenderer } = ComfyConnectStatusText();
-    const renderers = createPhotoshopRenderers();
 
     if (!comfyURL) return null;
 
@@ -127,8 +126,6 @@ export function ComfyFrontendContent() {
                 return name;
             }}
             widgetRegistry={createBaseWidgetRegistry()}
-            renderActionButtons={renderers.renderActionButtons}
-            renderImageMetadata={renderers.renderImageMetadata}
         >
             {statusTextType === 'empty' ? null :
                 <Alert message={statusText} type={statusTextType} />}

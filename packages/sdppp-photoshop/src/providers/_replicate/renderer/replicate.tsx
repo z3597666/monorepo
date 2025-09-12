@@ -11,8 +11,8 @@ import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { ModelSelector } from '../../base/ModelSelector';
 import { useTranslation } from '@sdppp/common';
 import { QuestionCircleOutlined } from '@ant-design/icons';
-import { createPhotoshopRenderers } from '../../base/RenderersFactory';
 import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
+import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
 
 const { Password } = Input;
 
@@ -92,16 +92,12 @@ function ReplicateRendererModels() {
         deletable: model !== selectedModel
     }));
 
-    const renderers = createPhotoshopRenderers();
-    
     return (
         <WidgetableProvider
             uploader={async (uploadInput, signal) => {
                 return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg', signal);
             }}
             widgetRegistry={createBaseWidgetRegistry()}
-            renderActionButtons={renderers.renderActionButtons}
-            renderImageMetadata={renderers.renderImageMetadata}
         >
             <Flex gap={4} align="center">
                 <Tooltip title={t('replicate.help_tooltip', 'Visit Replicate official website')}>
