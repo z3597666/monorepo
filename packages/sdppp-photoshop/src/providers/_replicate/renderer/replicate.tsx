@@ -42,7 +42,7 @@ export default function ReplicateRenderer({ showingPreview }: { showingPreview: 
 }
 
 function ReplicateRendererModels() {
-    const { t } = useTranslation();
+    const { t, language } = useTranslation();
     const { selectedModel, availableModels, removeModel, addModel } = replicateStore();
     const client = replicateStore((state) => state.client);
     const [loading, setLoading] = useState(false);
@@ -100,12 +100,12 @@ function ReplicateRendererModels() {
             widgetRegistry={createBaseWidgetRegistry()}
         >
             <Flex gap={4} align="center">
-                <Tooltip title={t('replicate.help_tooltip', 'Visit Replicate official website')}>
+                <Tooltip title={t('replicate.help_tooltip', 'How to use?')} placement="left">
                     <Button
                         type="text"
                         size="small"
                         icon={<QuestionCircleOutlined />}
-                        onClick={() => {
+                        onClick={async () => {
                             const banners = loadRemoteConfig('banners');
                             const replicateURL = banners.find((banner: any) => banner.type === 'replicate_tutorial' && banner.locale == language)?.link;
                             sdpppSDK.plugins.photoshop.openExternalLink({ url: replicateURL })
