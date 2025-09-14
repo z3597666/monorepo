@@ -1,6 +1,6 @@
 import { useTranslation } from '@sdppp/common';
 import { ProviderCard } from './ProviderCard';
-import { PROVIDER_METADATA } from '../../providers/metadata';
+import { PROVIDER_METADATA } from '../../providers';
 
 interface ProviderCardSelectorProps {
     selectedProvider?: string;

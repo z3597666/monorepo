@@ -1,5 +1,5 @@
 import react from '@vitejs/plugin-react';
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
+import { copyFileSync, existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import { remoteConfigLoader } from '@sdppp/vite-remote-config-loader/vite';
@@ -85,21 +85,21 @@ function sdkPlugin() {
     name: 'sdk-plugin',
     writeBundle(options) {
       const outDir = options.dir || './plugin/webview';
-      const sdkChunkPath = resolve(import.meta.dirname, './src/sdk/sdppp-ps-sdk-chunk.js');
-      const targetPath = resolve(import.meta.dirname, outDir, 'sdppp-ps-sdk-chunk.js');
-      
-      // 复制 SDK chunk 文件到输出目录
-      if (existsSync(sdkChunkPath)) {
+      // const sdkChunkPath = resolve(import.meta.dirname, './src/sdk/sdppp-ps-sdk-chunk.js');
+      // const targetPath = resolve(import.meta.dirname, outDir, 'sdppp-ps-sdk-chunk.js');
+
+      // // 复制 SDK chunk 文件到输出目录
+      // if (existsSync(sdkChunkPath)) {
         try {
-          copyFileSync(sdkChunkPath, targetPath);
+          // copyFileSync(sdkChunkPath, targetPath);
           console.log('✅ Copied sdppp-ps-sdk-chunk.js to output directory');
-          
+
           // 更新 HTML 文件中的引用路径
           const htmlPath = resolve(import.meta.dirname, outDir, 'content.html');
           if (existsSync(htmlPath)) {
             let htmlContent = readFileSync(htmlPath, 'utf-8');
             htmlContent = htmlContent.replace(
-              './src/sdk/sdppp-ps-sdk-chunk.js',
+              './plugin/webview/sdppp-ps-sdk-chunk.js',
               './sdppp-ps-sdk-chunk.js'
             );
             writeFileSync(htmlPath, htmlContent, 'utf-8');
@@ -108,15 +108,59 @@ function sdkPlugin() {
         } catch (error) {
           console.error('❌ Error processing SDK chunk:', error);
         }
-      } else {
-        console.warn('⚠️  SDK chunk file not found:', sdkChunkPath);
+      // } else {
+      //   console.warn('⚠️  SDK chunk file not found:', sdkChunkPath);
+      // }
+    }
+  };
+}
+
+function copyPublicAssetsPlugin() {
+  return {
+    name: 'copy-public-assets',
+    writeBundle(options) {
+      const outDir = options.dir || './plugin/webview';
+      const publicDir = resolve(import.meta.dirname, './public');
+      const targetDir = resolve(import.meta.dirname, outDir);
+
+      try {
+        // 复制 assets 目录
+        const assetsSourceDir = resolve(publicDir, 'assets');
+        const assetsTargetDir = resolve(targetDir, 'assets');
+
+        if (existsSync(assetsSourceDir)) {
+          // 创建目标目录
+          mkdirSync(assetsTargetDir, { recursive: true });
+
+          // 复制 provider-logos 目录
+          const logosSourceDir = resolve(assetsSourceDir, 'provider-logos');
+          const logosTargetDir = resolve(assetsTargetDir, 'provider-logos');
+
+          if (existsSync(logosSourceDir)) {
+            mkdirSync(logosTargetDir, { recursive: true });
+
+            // 复制所有 logo 文件
+            const fs = require('fs');
+            const logoFiles = fs.readdirSync(logosSourceDir);
+            logoFiles.forEach(file => {
+              copyFileSync(
+                resolve(logosSourceDir, file),
+                resolve(logosTargetDir, file)
+              );
+            });
+
+            console.log('✅ Copied provider logos to output directory');
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error copying public assets:', error);
       }
     }
   };
 }
 
 export default defineConfig({
-  plugins: [react(), sdpppXPlugin(), moveScriptToBodyPlugin(), sdkPlugin(),
+  plugins: [react(), sdpppXPlugin(), moveScriptToBodyPlugin(), sdkPlugin(), copyPublicAssetsPlugin(),
     remoteConfigLoader({
       configs: [
         {
@@ -134,6 +178,7 @@ export default defineConfig({
   base: './',
   build: {
     // minify: false,
+    emptyOutDir: false, // 构建前不清理目标目录
     outDir: resolve(import.meta.dirname, './plugin/webview'),
     rollupOptions: {
       input: {
