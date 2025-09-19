@@ -387,6 +387,7 @@ export class SDPPPRunningHub extends Client<{
       case 'list':
       case 'select':
       case 'dropdown':
+      case 'switch':
         return 'combo';
       case 'image':
       case 'file':
@@ -420,7 +421,7 @@ export class SDPPPRunningHub extends Client<{
       }
     }
 
-    if (node.fieldType === 'LIST' || node.fieldType === 'select' || node.fieldType === 'dropdown') {
+    if (node.fieldType === 'LIST' || node.fieldType === 'select' || node.fieldType === 'dropdown' || node.fieldType === 'SWITCH') {
       if (fieldData[0] && Array.isArray(fieldData[0])) {
         options.values = fieldData[0];
       } else if (Array.isArray(fieldData)) {
