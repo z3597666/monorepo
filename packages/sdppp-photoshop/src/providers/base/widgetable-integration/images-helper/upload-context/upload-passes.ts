@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { v4 } from 'uuid';
 import { PhotoshopParams, PhotoshopMaskParams } from '../lib/source-render';
 import { ImageDetail, UploadState } from './types';
-import { sdpppSDK } from '../../../../../sdk/sdppp-ps-sdk';
+import { sdpppSDK } from '@sdppp/common';
 
 const log = sdpppSDK.logger.extend('UploadPasses');
 
@@ -42,9 +42,26 @@ export const useUploadPasses = (
                     }
 
                     const content = config.content || layerIdentifyRef.current;
+
+                    // Use WorkBoundary when no boundary is specified in config
+                    let boundaryParam = config.boundary;
+                    if (!boundaryParam || boundaryParam === 'canvas') {
+                        // Get boundary from WorkBoundary component
+                        const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
+                        const workBoundaries = sdpppSDK.stores.WebviewStore.getState().workBoundaries;
+                        const boundary = workBoundaries[activeDocumentID];
+
+                        if (!boundary || (boundary.width >= 999999 && boundary.height >= 999999)) {
+                            boundaryParam = 'canvas';
+                        } else {
+                            // BoundaryRect format is already correct
+                            boundaryParam = boundary;
+                        }
+                    }
+
                     const { thumbnail_url, file_token, source } = await sdpppSDK.plugins.photoshop.doGetImage({
                         content,
-                        boundary: config.boundary || 'canvas',
+                        boundary: boundaryParam,
                         imageSize: config.imageSize || 0,
                         imageQuality: config.imageQuality || 1,
                         cropBySelection: config.cropBySelection || 'no'

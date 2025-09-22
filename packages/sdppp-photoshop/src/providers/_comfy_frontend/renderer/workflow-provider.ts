@@ -13,19 +13,85 @@ export interface WorkflowDataSource {
     getWorkflowJSON(workflowPath: string): Promise<any>;
 }
 
+export interface TreeNodeData {
+    key: string;
+    title: string;
+    isLeaf: boolean;
+    children?: TreeNodeData[];
+    workflow?: Workflow;
+}
+
 function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource) {
     const [allWorkflowList, setAllWorkflowList] = useState<Record<string, Workflow>>({});
-    const [currentViewingDirectory, setCurrentViewingDirectory] = useState<string>('');
+    const [treeData, setTreeData] = useState<TreeNodeData[]>([]);
+    const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Build tree structure from flat workflow list
+    const buildTreeData = useCallback((workflows: Record<string, Workflow>): TreeNodeData[] => {
+        const tree: TreeNodeData[] = [];
+        const pathMap: Record<string, TreeNodeData> = {};
+
+        // Sort paths to ensure parent directories are processed before children
+        const sortedPaths = Object.keys(workflows).sort();
+
+        sortedPaths.forEach(path => {
+            const workflow = workflows[path];
+            const pathParts = path.split('/').filter(part => part !== '');
+
+            // Build the path hierarchy
+            let currentPath = '';
+            for (let i = 0; i < pathParts.length; i++) {
+                const part = pathParts[i];
+                const parentPath = currentPath;
+                currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+                if (!pathMap[currentPath]) {
+                    const isLeaf = i === pathParts.length - 1 && !workflow.isDir;
+                    const node: TreeNodeData = {
+                        key: currentPath,
+                        title: part,
+                        isLeaf,
+                        children: isLeaf ? undefined : [],
+                        workflow: isLeaf ? workflow : undefined
+                    };
+
+                    pathMap[currentPath] = node;
+
+                    if (parentPath && pathMap[parentPath]) {
+                        pathMap[parentPath].children!.push(node);
+                    } else {
+                        tree.push(node);
+                    }
+                }
+            }
+        });
+
+        // Sort children in each node: folders first, then files
+        const sortTreeNodes = (nodes: TreeNodeData[]): TreeNodeData[] => {
+            return nodes.sort((a, b) => {
+                // Folders first, then files
+                if (!a.isLeaf && b.isLeaf) return -1;
+                if (a.isLeaf && !b.isLeaf) return 1;
+                // Same type, sort alphabetically
+                return a.title.localeCompare(b.title);
+            }).map(node => ({
+                ...node,
+                children: node.children ? sortTreeNodes(node.children) : undefined
+            }));
+        };
+
+        return sortTreeNodes(tree);
+    }, []);
 
     const doFetchWorkflowList = useCallback(async () => {
         try {
             setError(null);
             setLoading(true);
-            setCurrentViewingDirectory('');
             setAllWorkflowList({});
-            
+            setTreeData([]);
+
             const workflows = await dataSource.listWorkflows();
             const workflowList: Record<string, Workflow> = workflows
                 .reduce((acc: Record<string, Workflow>, workflow: Workflow) => {
@@ -34,6 +100,7 @@ function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource
                 }, {} as Record<string, Workflow>);
 
             setAllWorkflowList(workflowList);
+            setTreeData(buildTreeData(workflowList));
 
         } catch (error: any) {
             setError(error.stack || error.message || error.toString());
@@ -41,7 +108,7 @@ function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource
         } finally {
             setLoading(false);
         }
-    }, [dataSource, setAllWorkflowList, setLoading, setError]);
+    }, [dataSource, buildTreeData]);
 
     const getWorkflowJSON = useCallback(async (workflowPath: string) => {
         return await dataSource.getWorkflowJSON(workflowPath);
@@ -51,34 +118,16 @@ function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource
         doFetchWorkflowList();
     }, [doFetchWorkflowList]);
 
-    let showingList: Workflow[] = [];
-
-    let showingFiles: string[] = [];
-    let showingDirs: string[] = [];
-    Object.keys(allWorkflowList).forEach((path) => {
-        if (path.startsWith(currentViewingDirectory)) {
-            const relativePath = path.slice(currentViewingDirectory.length).split('://').pop();
-
-            if (!relativePath) {
-            } else if (relativePath.indexOf('/') == -1) {
-                showingFiles.push(path)
-            } else {
-                showingDirs.push(path.slice(0, path.lastIndexOf('/') + 1))
-            }
-        }
-    })
-    showingList = [
-        ...showingDirs.sort((a, b) => a.localeCompare(b)).map((path) => ({ path: path, isDir: true, meta: {} })),
-        ...showingFiles.map((path) => ({ path: path, isDir: false, meta: {} }))
-    ].filter(
-        (item, index, self) => self.findIndex((t) => t.path == item.path) === index
-    );
+    // Handle expand/collapse - allow multiple folders to be expanded
+    const handleExpand = useCallback((newExpandedKeys: string[]) => {
+        setExpandedKeys(newExpandedKeys);
+    }, []);
 
     return {
-        // 文件夹式视图会用到
-        showingWorkflowList: showingList,
-        currentViewingDirectory,
-        setCurrentViewingDirectory,
+        // Tree data for DirectoryTree
+        treeData,
+        expandedKeys,
+        onExpand: handleExpand,
 
         loading,
         error,
@@ -88,16 +137,16 @@ function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource
 
         // 全量数据
         allWorkflowList: allWorkflowList,
-        
+
         // 获取工作流JSON内容
         getWorkflowJSON,
     };
 }
 
 interface WorkflowListContextType {
-    showingWorkflowList: Workflow[];
-    currentViewingDirectory: string;
-    setCurrentViewingDirectory: (directory: string) => void;
+    treeData: TreeNodeData[];
+    expandedKeys: string[];
+    onExpand: (expandedKeys: string[]) => void;
     loading: boolean;
     error: string | null;
     refetch: () => void;

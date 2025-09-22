@@ -1,8 +1,8 @@
 import React from 'react';
 import { Button, Image, Row, Col, Tooltip, Segmented, Switch } from 'antd';
-import { ThunderboltFilled, ThunderboltOutlined } from '@ant-design/icons';
 import { useTranslation } from '@sdppp/common/i18n/react';
 import { SourceRender, useSourceInfo } from './source-render';
+import { checkerboardDataUrl } from '../constants';
 
 interface ImageDetail {
     url: string;
@@ -71,8 +71,8 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
                                         style={{ width: '100%' }}
                                         checked={image.auto || false}
                                         onChange={handleAutoToggle}
-                                        checkedChildren={<ThunderboltFilled />}
-                                        unCheckedChildren={<ThunderboltOutlined />}
+                                        checkedChildren={t('image.auto_toggle')}
+                                        unCheckedChildren={t('image.auto_toggle')}
                                     />
                                 </Tooltip>
                             </div>
@@ -94,7 +94,12 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
                             className="preview-image"
                             width="100%"
                             height="100%"
-                            style={{ objectFit: 'contain' }}
+                            style={{
+                                objectFit: 'contain',
+                                backgroundImage: `url("${checkerboardDataUrl}")`,
+                                backgroundSize: '192px 192px',
+                                backgroundRepeat: 'repeat'
+                            }}
                             preview={false}
                         />
                     </div>

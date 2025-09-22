@@ -10,11 +10,12 @@ interface ActionButtonsProps {
     maxCount: number;
     isMask?: boolean;
     imagesRef: React.MutableRefObject<ImageDetail[]>;
-    customUploadFromPhotoshop?: (isMask?: boolean) => Promise<void>;
+    customUploadFromPhotoshop?: (isMask?: boolean, source: 'canvas' | 'curlayer') => Promise<void>;
     customUploadFromDisk?: (file: File) => Promise<void>;
     onClearImages?: () => void;
     isUploading?: boolean;
     uploadProgress?: { completed: number; total: number };
+    enableRemove?: boolean;
 }
 
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
@@ -26,7 +27,8 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     customUploadFromDisk,
     onClearImages,
     isUploading = false,
-    uploadProgress
+    uploadProgress,
+    enableRemove
 }) => {
     const { uploadFromPhotoshop, uploadFromDisk, uploadState, clearImages, setImages, callOnValueChange } = useImageUpload();
     const { t } = useTranslation();
@@ -78,35 +80,62 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
         },
     };
 
-    const handlePSImageAdd = useCallback(async () => {
+    const handleCanvasAdd = useCallback(async () => {
+        // console.log('Canvas button clicked', { isMask, customUploadFromPhotoshop: !!customUploadFromPhotoshop });
         if (customUploadFromPhotoshop) {
-            await customUploadFromPhotoshop(isMask);
+            await customUploadFromPhotoshop(isMask, 'canvas');
         } else {
-            await uploadFromPhotoshop(isMask);
+            await uploadFromPhotoshop(isMask, 'canvas');
         }
     }, [uploadFromPhotoshop, customUploadFromPhotoshop, isMask]);
 
+    const handleCurLayerAdd = useCallback(async () => {
+        console.log('Current Layer button clicked', { isMask, customUploadFromPhotoshop: !!customUploadFromPhotoshop });
+        if (customUploadFromPhotoshop) {
+            await customUploadFromPhotoshop(isMask, 'curlayer');
+        } else {
+            await uploadFromPhotoshop(isMask, 'curlayer');
+        }
+    }, [uploadFromPhotoshop, customUploadFromPhotoshop, isMask]);
+
+    const shouldShowRemove = maxCount > 1 || enableRemove === true;
+
+    // Disable upload buttons when maxCount <= 1 and uploading
+    const shouldDisableUpload = maxCount <= 1 && (uploadState.uploading || isUploading);
+
     return (
         <>
-            <Row gutter={[8, 8]} className="button-group-row">
-                <Col flex="1 1 0">
+            <Row gutter={[4, 8]} className="button-group-row" wrap={false}>
+                <Col flex="1">
                     <Button
                         style={{ width: '100%' }}
                         icon={<PlusOutlined />}
-                        onClick={handlePSImageAdd}
+                        onClick={handleCanvasAdd}
+                        disabled={shouldDisableUpload}
                     >
-                        {t('image.upload.from_ps')}
+                        {t('image.upload.from_canvas', { defaultMessage: 'Canvas' })}
                     </Button>
                 </Col>
-                <Col flex="1 1 0">
-                    <Upload style={{ width: '100%' }} {...uploadProps}>
-                        <Button style={{ width: '100%' }} icon={<UploadOutlined />}>{t('image.upload.from_disk')}</Button>
+                <Col flex="1">
+                    <Button
+                        style={{ width: '100%' }}
+                        icon={<PlusOutlined />}
+                        onClick={handleCurLayerAdd}
+                        disabled={shouldDisableUpload}
+                    >
+                        {t('image.upload.from_curlayer', { defaultMessage: 'Current Layer' })}
+                    </Button>
+                </Col>
+                <Col flex="1">
+                    <Upload style={{ width: '100%' }} {...uploadProps} disabled={shouldDisableUpload}>
+                        <Button style={{ width: '100%' }} icon={<UploadOutlined />} disabled={shouldDisableUpload}>{t('image.upload.from_harddisk', { defaultMessage: 'Hard Disk' })}</Button>
                     </Upload>
                 </Col>
-                {(images.length > 0 || uploadState.uploading || isUploading) && (
+                {shouldShowRemove && (images.length > 0 || uploadState.uploading || isUploading) && (
                     <Col flex="0 0 auto">
                         <Tooltip title={t('image.upload.clear')}>
                             <Button
+                                shape="default"
                                 icon={<DeleteOutlined />}
                                 onClick={() => {
                                     if (onClearImages) {

@@ -6,6 +6,7 @@ export const enUS = {
   'provider.comfyui.description': 'Your powerful node-based workflow engine',
   'provider.replicate.description': 'Cloud-based model service platform',
   'provider.runninghub.description': 'Model with affordable price, abundant community applications',
+  'provider.google.description': 'OpenAI/Google format API',
   'task.waiting_upload': 'Waiting for image upload...',
   'task.creating_task': 'Creating task...',
   'task.running_duration': 'Running for {{duration}} seconds, {{message}}',
@@ -25,11 +26,19 @@ export const enUS = {
   'comfy.refresh': 'Refresh',
   'comfy.stop_cancel_all': 'Stop and cancel all',
   'comfy.stop_auto_run': 'Stop auto run',
-  'comfy.start_auto_run': 'Start auto run',
+  'comfy.start_auto_run': 'Auto run after canvas change',
   'comfy.run': 'Run',
   'comfy.back': 'Back',
   'comfy.uploading': 'Uploading...',
   'comfy.help_tooltip': 'Tutorial',
+  'boundary.title': 'AI Boundary',
+  'boundary.tooltip': 'AI Boundary',
+  'boundary.current_canvas': 'Entire Canvas',
+  'boundary.current_layer': 'Current Layer',
+  'boundary.current_selection': 'Current Selection',
+  'boundary.set_as_canvas': 'Set as Canvas',
+  'boundary.set_as_layer': 'Set as Current Layer',
+  'boundary.set_as_selection': 'Set as Current Selection',
   'http.404': 'SDPPP may not be installed or version mismatch (404)',
   'http.401': 'Unauthorized (401)',
   'http.403': 'Forbidden (403)',
@@ -110,6 +119,7 @@ export const enUS = {
 
   'image.send_all': 'Send all',
   'image.save_all': 'Save all',
+  'image.save_current': 'Save current',
   'image.delete_current': 'Delete current',
   'image.more_actions': 'More actions',
   'image.jump_to_last': 'Jump to last',
@@ -161,8 +171,9 @@ export const enUS = {
   'Failed to reboot ComfyUI': 'Failed to reboot ComfyUI',
 
   // Image upload component related translations
-  'image.upload.from_ps': 'From PS',
-  'image.upload.from_disk': 'From Disk',
+  'image.upload.from_canvas': 'Canvas',
+  'image.upload.from_curlayer': 'Current Layer',
+  'image.upload.from_harddisk': 'Hard Disk',
   'image.upload.clear': 'Clear',
   'image.upload.uploading': 'Uploading, if the image too large, may be stuck...',
   'image.upload.no_images': 'No images',
@@ -187,4 +198,43 @@ export const enUS = {
 
   'send_images.create_document': 'Create document',
   'send_images.create_document_failed': 'Create document failed',
+
+  // Photoshop operations translations
+  'photoshop.no_active_document': 'No active document',
+  'photoshop.rectangle_coordinates_required': 'Rectangle coordinates required for create action',
+  'photoshop.create_guide_frame': 'Create guide frame',
+  'photoshop.clear_guide_frame': 'Clear guide frame',
+  'photoshop.invalid_action': 'Invalid action: {{action}}',
+  'photoshop.file_not_found': 'File not found: {{path}}',
+  'photoshop.failed_to_open_file_as_document': 'Failed to open file as document: {{path}}',
+  'photoshop.invalid_boundary': 'Invalid boundary: left must be less than right, top must be less than bottom',
+  'photoshop.failed_to_open_image_file': 'Failed to open image file: {{error}}',
+  'photoshop.open_images_from_file': 'Open images from file',
+  'photoshop.failed_to_create_document_from_file': 'Failed to create document from file',
+
+  // Google provider translations
+  'google.field.image_input': 'Input Image',
+  'google.field.prompt': 'Prompt',
+  'google.field.batch_count': 'Batch Count',
+  'google.field.images_per_batch': 'Images Per Batch',
+  'google.status.success': 'Success',
+  'google.status.failed': 'Failed',
+  'google.status.generating': 'Generating',
+  'google.apikey_placeholder': 'Enter Google API Key',
+  'google.baseurl_placeholder': 'Base URL (optional)',
+  'google.get_apikey': 'Get API Key',
+  'google.help_tooltip': 'Google Gemini Image Generator',
+  'google.model_name': 'Gemini 2.5 Flash Image',
+  'google.loading': 'Loading...',
+  'google.generating': 'Generating...',
+  'google.generate': 'Generate',
+
+  // Image preview auto toggle
+  'image.auto_toggle': 'AUTO',
+
+  // Import mode related
+  'image.import_as_smartobject': 'Import as Smart Object',
+  'image.import_as_newdoc': 'Import as New Document',
+  'image.boundary': 'Boundary',
+  'image.import_tip': 'Hold Shift key to import as new document',
 } as const

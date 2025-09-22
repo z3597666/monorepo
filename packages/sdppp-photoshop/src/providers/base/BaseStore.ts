@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { WidgetableNode, WidgetableWidget } from "@sdppp/common/schemas/schemas";
-import { sdpppSDK } from "../../sdk/sdppp-ps-sdk";
+import { sdpppSDK } from '@sdppp/common';
 import { Task } from "./Task";
 import { Client } from "./Client";
 

@@ -30,7 +30,7 @@ export const SegmentWidget: React.FC<SegmentWidgetProps> = ({
             align='center'
             gap={5}
         >
-            {name && <span style={{ flex: 1, fontSize: 12 }}>{name}</span>}
+            {name && <span style={{ flex: 1, fontSize: 12, flexShrink: 0, minWidth: '60px' }}>{name}</span>}
             {options.map(option=> {
                 return <Button size="small" type={option == value ? "primary" : "default"} key={option} onClick={()=> handleSelect(option)}>{option}</Button>
             })}

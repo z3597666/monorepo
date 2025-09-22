@@ -32,11 +32,11 @@ export const ComboWidget: React.FC<DropdownWidgetProps> = ({
             style={{ width: '100%', ...uiWeightCSS }}
             align='center'
         >
-            {name && <span style={{ flex: 1, fontSize: 12 }}>{name}</span>}
+            {name && <span style={{ flex: 1, fontSize: 12, flexShrink: 0, minWidth: '60px' }}>{name}</span>}
             <Select
                 value={value}
                 options={options.map((option, index) => ({ value: option, label: useLabel ? labels[index] : option }))}
-                style={{ flex: 2 }}
+                style={{ flex: 2, minWidth: 0 }}
                 onSelect={handleSelect}
                 showSearch
                 filterOption={(input, option) =>

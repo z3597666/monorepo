@@ -1,8 +1,8 @@
 import React from 'react';
-import { Button, Divider, Dropdown, Space } from 'antd';
-import { CloseOutlined, DeleteOutlined, StepForwardOutlined, SendOutlined, LeftOutlined, RightOutlined, MoreOutlined, SaveOutlined } from '@ant-design/icons';
+import { Button, Divider, Dropdown, Space, Tooltip } from 'antd';
+import { CloseOutlined, DeleteOutlined, StepForwardOutlined, SendOutlined, LeftOutlined, RightOutlined, MoreOutlined, SaveOutlined, ShrinkOutlined } from '@ant-design/icons';
 import { MainStore } from '../App.store';
-import { sdpppSDK } from '../../sdk/sdppp-ps-sdk';
+import { sdpppSDK } from '@sdppp/common';
 import { useTranslation } from '@sdppp/common';
 import { isImage } from '../../utils/fileType';
 import ImagePreview from './ImagePreview';
@@ -17,9 +17,18 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [sending, setSending] = React.useState(false);
   const [sendingAll, setSendingAll] = React.useState(false);
+  const [isShiftPressed, setIsShiftPressed] = React.useState(false);
 
   const currentItem = images[currentIndex];
   const isCurrentItemImage = currentItem ? isImage(currentItem.url) : false;
+
+  // Get boundary display text (similar to WorkBoundary.tsx)
+  const getBoundaryText = (boundary: any): string => {
+    if (!boundary || (boundary.width >= 999999 && boundary.height >= 999999)) {
+      return t('boundary.current_canvas', {defaultMessage: 'Entire Canvas'});
+    }
+    return `(${boundary.leftDistance}, ${boundary.topDistance}, ${boundary.width}, ${boundary.height})`;
+  };
 
   const handlePrev = () => {
     setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -29,21 +38,14 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
-  const handleSendToPS = async () => {
+  const handleSendToPS = async (event?: React.MouseEvent) => {
     try {
-      const res = await sdpppSDK.plugins.photoshop.requestImageSend({
-        url: images[currentIndex].url,
-        source: images[currentIndex].source
+      setSending(true);
+      const type = event?.shiftKey ? 'newdoc' : 'smartobject';
+      await sdpppSDK.plugins.photoshop.importImage({
+        nativePath: images[currentIndex].nativePath || images[currentIndex].url,
+        type: type
       });
-      if ('sendImageParams' in res && res.sendImageParams) {
-        setSending(true);
-        await sdpppSDK.plugins.photoshop.doSendImage({
-          ...res.sendImageParams,
-          url: images[currentIndex].nativePath ? 'file://' + images[currentIndex].nativePath : images[currentIndex].url
-        });
-      } else {
-        throw new Error(res.error || 'Failed to send image to Photoshop');
-      }
     } finally {
       setSending(false);
     }
@@ -65,32 +67,22 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
     MainStore.setState({ previewImageList: [] });
   };
 
-  const handleSendAll = async () => {
+  const handleSendAll = async (event?: React.MouseEvent) => {
     setSendingAll(true);
     try {
       const imageItems = images.filter(image => isImage(image.url));
       if (imageItems.length === 0) {
         return;
       }
-      
-      const res = await sdpppSDK.plugins.photoshop.requestImageSend({
-        url: imageItems[0].url,
-        source: imageItems[0].source
-      });
-      if ('sendImageParams' in res && res.sendImageParams) {
-        const promises = [];
-        for (const image of imageItems) {
-          promises.push(sdpppSDK.plugins.photoshop.doSendImage({
-            ...res.sendImageParams,
-            url: image.nativePath ? 'file://' + image.nativePath : image.url,
-            source: image.source
-          }))
-        }
-        await Promise.all(promises)
-        
-      } else {
-        throw new Error(res.error || 'Failed to send image to Photoshop');
-      }
+
+      const type = event?.shiftKey ? 'newdoc' : 'smartobject';
+      const promises = imageItems.map(image =>
+        sdpppSDK.plugins.photoshop.importImage({
+          nativePath: image.nativePath || image.url,
+          type: type
+        })
+      );
+      await Promise.all(promises);
     } finally {
       setSendingAll(false);
     }
@@ -122,6 +114,28 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
     setPrevLength(images.length);
   }, [images.length, currentIndex]);
 
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') {
+        setIsShiftPressed(true);
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') {
+        setIsShiftPressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
   if (!images.length) {
     return null;
   }
@@ -131,7 +145,7 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
       <Button
         className="image-preview__close-btn"
         type="text"
-        icon={<CloseOutlined />}
+        icon={<ShrinkOutlined />}
         onClick={handleClose}
         size="middle"
       />
@@ -161,7 +175,7 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         onClick={handleJumpToLast}
         shape="circle"
         size="middle"
-        title={t('image.jump_to_last')}
+        title={t('image.jump_to_last', 'Jump to Last')}
       />
     ) : null,
     deleteCurrent: (
@@ -171,72 +185,109 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         onClick={handleDeleteCurrent}
         shape="circle"
         size="middle"
-        title={t('image.delete_current')}
+        title={t('image.delete_current', 'Delete Current')}
       />
-    ),
-    moreActions: (
-      <Dropdown
-        menu={{
-          items: [
-            ...(images.some(image => isImage(image.url)) ? [{
-              key: 'sendAll',
-              label: sendingAll ? t('image.sending_all') : t('image.send_all'),
-              icon: <SendOutlined />,
-              onClick: handleSendAll,
-              disabled: sending || sendingAll
-            }] : []),
-            {
-              key: 'saveAll',
-              label: t('image.save_all'),
-              icon: <SaveOutlined />,
-              onClick: handleSaveAll
-            },
-            {
-              key: 'clearAll',
-              label: t('image.clear_all'),
-              icon: <DeleteOutlined />,
-              onClick: handleClearAll
-            }
-          ]
-        }}
-        placement="topLeft"
-        trigger={['hover']}
-        overlayStyle={{ minWidth: 'auto', width: 'max-content' }}
-      >
-        <Button
-          className="image-preview__floating-btn--more"
-          icon={<MoreOutlined />}
-          shape="circle"
-          size="middle"
-          title={t('image.more_actions')}
-        />
-      </Dropdown>
-    ),
-    sendToPS: isCurrentItemImage ? (
-      <Button
-        className="image-preview__send-btn"
-        type="primary"
-        onClick={handleSendToPS}
-        size="large"
-        loading={sending}
-        disabled={sending || sendingAll}
-      >
-        {sending ? t('image.sending') : <SendOutlined style={{ fontSize: '14px' }} />}
-      </Button>
-    ) : (
-      <Button
-        className="image-preview__send-btn"
-        type="primary"
-        onClick={handleSaveCurrent}
-        size="large"
-      >
-        <SaveOutlined style={{ fontSize: '14px' }} />
-      </Button>
     ),
     indicator: images.length > 1 ? (
       <div className="image-preview__indicator">
         {currentIndex + 1} / {images.length}
       </div>
+    ) : null,
+    bottomDeleteAll: (
+      <Button
+        className="image-preview__bottom-delete-all"
+        icon={<DeleteOutlined />}
+        onClick={handleClearAll}
+        shape="circle"
+        size="large"
+        title={t('image.clear_all', 'Clear All')}
+      />
+    ),
+    bottomDeleteCurrent: (
+      <Button
+        className="image-preview__bottom-delete-current"
+        icon={<DeleteOutlined />}
+        onClick={handleDeleteCurrent}
+        size="middle"
+        style={{ width: '64px', height: '32px' }}
+        title={t('image.delete_current', 'Delete Current')}
+      />
+    ),
+    bottomSend: isCurrentItemImage ? (
+      <Tooltip
+        title={
+          <div>
+            <div>{isShiftPressed ? t('image.import_as_newdoc', 'Import as New Document') : t('image.import_as_smartobject', 'Import as Smart Object')}</div>
+            {currentItem?.boundary && (
+              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px' }}>
+                {t('image.boundary', 'Boundary')}: {getBoundaryText(currentItem.boundary)}
+              </div>
+            )}
+            <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px' }}>
+              {t('image.import_tip', 'Shift: New doc; Default: Smart Object')}
+            </div>
+          </div>
+        }
+        placement="top"
+      >
+        <Button
+          className="image-preview__bottom-send"
+          type="primary"
+          onClick={(e) => handleSendToPS(e)}
+          size="middle"
+          loading={sending}
+          disabled={sending || sendingAll}
+          style={{ width: '64px', height: '32px' }}
+        >
+          {sending ? t('image.sending', 'Sending...') : <SendOutlined />}
+        </Button>
+      </Tooltip>
+    ) : (
+      <Button
+        className="image-preview__bottom-save"
+        type="primary"
+        onClick={handleSaveCurrent}
+        size="middle"
+        style={{ width: '64px', height: '32px' }}
+      >
+        <SaveOutlined />
+      </Button>
+    ),
+    bottomIndicator: images.length > 1 ? (
+      <Dropdown
+        menu={{
+          items: [
+            {
+              key: 'saveCurrent',
+              label: t('image.save_current', 'Save Current'),
+              icon: <SaveOutlined />,
+              onClick: handleSaveCurrent
+            },
+            {
+              key: 'saveAll',
+              label: t('image.save_all', 'Save All'),
+              icon: <SaveOutlined />,
+              onClick: handleSaveAll
+            },
+            {
+              type: 'divider'
+            },
+            {
+              key: 'clearAll',
+              label: t('image.clear_all', 'Clear All'),
+              icon: <DeleteOutlined />,
+              onClick: handleClearAll
+            }
+          ]
+        }}
+        placement="topRight"
+        trigger={['hover']}
+        overlayStyle={{ minWidth: 'auto', width: 'max-content' }}
+      >
+        <div className="image-preview__bottom-indicator">
+          {currentIndex + 1} / {images.length}
+        </div>
+      </Dropdown>
     ) : null
   };
 
@@ -260,15 +311,10 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
           </div>
         </div>
 
-        <div className="image-preview__floating-buttons">
-          <Space>
-            {actionButtons.moreActions}
-            {actionButtons.deleteCurrent}
-          </Space>
-        </div>
 
-        {actionButtons.sendToPS}
-        {actionButtons.indicator}
+        {actionButtons.bottomIndicator}
+        {actionButtons.bottomDeleteCurrent}
+        {actionButtons.bottomSend}
       </div>
       <Divider />
     </>

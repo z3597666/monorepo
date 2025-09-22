@@ -4,7 +4,7 @@ import {
   FolderOutlined,
   RightOutlined
 } from "@ant-design/icons";
-import { sdpppSDK } from "../../../../sdk/sdppp-ps-sdk";
+import { sdpppSDK } from '@sdppp/common';
 import './workflow-item.less';
 import { useStore } from "zustand";
 

@@ -84,9 +84,9 @@ export const NumberWidget: React.FC<NumberWidgetProps> = ({
             style={{ width: '100%', ...uiWeightCSS }}
             align='center'
         >
-            {name && <span style={{ flex: 1, fontSize: 12 }}>{name}</span>}
+            {name && <span style={{ flex: 1, fontSize: 12, flexShrink: 0, minWidth: '60px' }}>{name}</span>}
             <InputNumber
-                style={{ width: '100%', flex: 2 }}
+                style={{ width: '100%', flex: 2, minWidth: 0 }}
                 value={localValue}
                 onChange={handleValueChange}
                 onBlur={handleBlur}

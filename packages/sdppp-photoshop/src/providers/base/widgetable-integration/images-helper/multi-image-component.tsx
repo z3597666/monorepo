@@ -7,19 +7,22 @@ import { v4 } from 'uuid';
 import { Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { useTranslation } from '@sdppp/common/i18n/react';
-import { sdpppSDK } from '../../../../sdk/sdppp-ps-sdk';
+import { sdpppSDK } from '@sdppp/common';
 import { useWidgetable } from '@sdppp/widgetable-ui';
+import { getPhotoshopImage } from './upload-context/direct-upload';
 
 interface MultiImageProps {
     images: ImageDetail[];
     maxCount: number;
     uiWeightCSS: React.CSSProperties;
+    enableRemove?: boolean;
 }
 
 export const MultiImageComponent: React.FC<MultiImageProps> = ({
     images,
     maxCount,
-    uiWeightCSS
+    uiWeightCSS,
+    enableRemove = false
 }) => {
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewCurrent, setPreviewCurrent] = useState(0);
@@ -111,19 +114,12 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
         };
     }, [cancelAllUploads]);
 
-    const customUploadFromPhotoshop = useCallback(async (isMask = false) => {
+    const customUploadFromPhotoshop = useCallback(async (isMask = false, source: 'canvas' | 'curlayer' = 'canvas') => {
         try {
-            // 先获取参数，然后用参数调用实际的获取方法
-            const paramsResult = isMask
-                ? await sdpppSDK.plugins.photoshop.requestMaskGet({ isMask: true })
-                : await sdpppSDK.plugins.photoshop.requestImageGet({});
-            
-            // 使用获取到的参数调用实际的获取方法
-            const { thumbnail_url, file_token, source } = isMask
-                ? await sdpppSDK.plugins.photoshop.doGetMask((paramsResult as any).getMaskParams)
-                : await sdpppSDK.plugins.photoshop.doGetImage((paramsResult as any).getImageParams);
+            const { thumbnail_url, file_token, source: imageSource } = await getPhotoshopImage(isMask, source);
 
-            if (!thumbnail_url || !source) {
+            if (!thumbnail_url || !imageSource) {
+                console.log('Missing thumbnail_url or source, aborting upload');
                 return;
             }
 
@@ -131,7 +127,7 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
                 // 多图竖直排列模式：使用ref递增索引
                 const uploadIndex = images.length + nextIndexRef.current;
                 nextIndexRef.current += 1;
-                handleThumbnailChange(uploadIndex, thumbnail_url, source);
+                handleThumbnailChange(uploadIndex, thumbnail_url, imageSource);
                 setActiveUploads(prev => prev + 1);
                 setTotalUploads(prev => prev + 1);
                 
@@ -164,7 +160,7 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
                                 }
                                 return newCount;
                             });
-                            const newImage: ImageDetail = { url, source, thumbnail: thumbnail_url };
+                            const newImage: ImageDetail = { url, source: imageSource, thumbnail: thumbnail_url };
                             
                             // 获取当前最大的上传索引，确定实际应该插入的位置
                             const currentImages = [...imagesRef.current];
@@ -395,6 +391,7 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
                 customUploadFromDisk={useVerticalLayout ? customUploadFromDisk : undefined}
                 isUploading={activeUploads > 0}
                 uploadProgress={activeUploads > 0 ? { completed: totalUploads - activeUploads, total: totalUploads } : undefined}
+                enableRemove={enableRemove}
                 onClearImages={() => {
                     // 先取消所有上传
                     cancelAllUploads();

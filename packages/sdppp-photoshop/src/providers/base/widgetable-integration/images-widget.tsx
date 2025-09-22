@@ -2,12 +2,18 @@ import React from 'react';
 import { WidgetRenderer } from '@sdppp/widgetable-ui';
 import ImageSelect from './images';
 import { WidgetableImagesWidget } from "@sdppp/common/schemas/schemas";
-import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
+import { sdpppSDK } from '@sdppp/common';
 
-export const imagesWidgetRenderer: WidgetRenderer = ({ fieldInfo, widget, widgetIndex, value, onValueChange, extraOptions }) => {
-    const imageWidget = widget as WidgetableImagesWidget;
+// 创建一个真正的React组件来处理hooks
+const ImagesWidgetComponent: React.FC<{
+    widget: WidgetableImagesWidget;
+    value: any;
+    onValueChange: (value: any) => void;
+    extraOptions?: any;
+}> = ({ widget, value, onValueChange, extraOptions }) => {
+    // 处理value，支持ComfyUI兼容模式
     let processedValue = value;
-    
+
     // Temporary ComfyUI compatibility
     const tempOldComfyCompat = false;
     if (tempOldComfyCompat && processedValue) {
@@ -21,13 +27,13 @@ export const imagesWidgetRenderer: WidgetRenderer = ({ fieldInfo, widget, widget
             source: 'comfyUI'
         };
     }
-    
-    if (imageWidget.options?.maxCount && imageWidget.options.maxCount > 1) {
+
+    if (widget.options?.maxCount && widget.options.maxCount > 1) {
         return (
             <ImageSelect
                 value={processedValue || []}
                 onValueChange={onValueChange}
-                maxCount={imageWidget.options?.maxCount}
+                maxCount={widget.options?.maxCount}
                 extraOptions={extraOptions}
             />
         );
@@ -41,4 +47,18 @@ export const imagesWidgetRenderer: WidgetRenderer = ({ fieldInfo, widget, widget
             />
         );
     }
+};
+
+export const imagesWidgetRenderer: WidgetRenderer = ({ fieldInfo, widget, widgetIndex, value, onValueChange, extraOptions }) => {
+    const imageWidget = widget as WidgetableImagesWidget;
+
+    return (
+        <ImagesWidgetComponent
+            widget={imageWidget}
+            value={value}
+            onValueChange={onValueChange}
+            extraOptions={extraOptions}
+        />
+    );
+
 };

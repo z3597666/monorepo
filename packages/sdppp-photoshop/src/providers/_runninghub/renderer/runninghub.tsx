@@ -4,15 +4,16 @@ import { useState, useEffect } from 'react';
 import { runninghubStore, changeSelectedModel, createTask } from './runninghub.store';
 import { WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
 import Link from 'antd/es/typography/Link';
-import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
+import { sdpppSDK } from '@sdppp/common';
 import { WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { WidgetableProvider } from '@sdppp/widgetable-ui';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
 import { useTranslation } from '@sdppp/common';
-import { ModelSelector } from '../../base/ModelSelector';
+import { ModelSelector } from '../../base/components/ModelSelector';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
+import { WorkBoundary } from '../../base/components';
 
 const log = sdpppSDK.logger.extend('runninghub')
 
@@ -25,6 +26,7 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
 
     return (
         <Flex className="runninghub-renderer" vertical gap={8}>
+            <WorkBoundary />
             {!showingPreview ? <Flex gap={8}>
                 <Password
                     placeholder={t('runninghub.apikey_placeholder')}
@@ -42,7 +44,7 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
 
             {error && (
                 <Alert
-                    message="Error"
+                    message={t('common.error')}
                     description={error}
                     type="error"
                     showIcon
@@ -160,7 +162,7 @@ function RunningHubRendererModels() {
             widgetRegistry={createBaseWidgetRegistry()}
         >
             <Flex gap={4} align="center">
-                <Tooltip title={t('runninghub.help_tooltip', 'How to use?')}>
+                <Tooltip title={t('runninghub.help_tooltip', { defaultMessage: 'How to use?' })} placement="left">
                     <Button
                         type="text"
                         size="small"

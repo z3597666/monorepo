@@ -1,4 +1,4 @@
-import { sdpppSDK } from "../../../sdk/sdppp-ps-sdk";
+import { sdpppSDK } from '@sdppp/common';
 import { Workflow, WorkflowDataSource } from "./workflow-provider";
 
 class ComfyWorkflowDataSource implements WorkflowDataSource {

@@ -10,6 +10,7 @@ interface SingleImageProps {
     uiWeightCSS: React.CSSProperties;
     thumbnail?: string;
     onThumbnailChange?: (thumbnail: string) => void;
+    enableRemove?: boolean;
 }
 
 export const SingleImageComponent: React.FC<SingleImageProps> = ({
@@ -17,7 +18,8 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
     maxCount,
     uiWeightCSS,
     thumbnail: externalThumbnail = '',
-    onThumbnailChange
+    onThumbnailChange,
+    enableRemove = false
 }) => {
     // log(images)
     const { callOnValueChange } = useImageUpload();
@@ -68,12 +70,14 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
     const [uploadingSource, setUploadingSource] = useState<string>('');
     const [isUploading, setIsUploading] = useState<boolean>(false);
 
-    const customUploadFromPhotoshop = useCallback(async (isMask = false) => {
+    const customUploadFromPhotoshop = useCallback(async (isMask = false, source: 'canvas' | 'curlayer' = 'canvas') => {
         try {
             setIsUploading(true);
-            await uploadFromPhotoshop(isMask);
+            setUploadingSource(source);
+            await uploadFromPhotoshop(isMask, source);
         } finally {
             setIsUploading(false);
+            setUploadingSource('');
         }
     }, [uploadFromPhotoshop]);
 
@@ -138,6 +142,7 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
                     customUploadFromPhotoshop={customUploadFromPhotoshop}
                     customUploadFromDisk={customUploadFromDisk}
                     isUploading={isUploading}
+                    enableRemove={enableRemove}
                 />
             )}
         </div>

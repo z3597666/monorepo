@@ -1,10 +1,9 @@
 import { useStore } from "zustand";
-import { Providers } from "../../providers";
+import { Providers, PROVIDER_METADATA } from "../../providers";
 import { MainStore } from "../App.store";
 import { Select } from "antd";
 import { useEffect, useMemo } from "react";
-import { sdpppSDK } from "../../sdk/sdppp-ps-sdk";
-import { useTranslation } from '@sdppp/common';
+import { sdpppSDK, useTranslation } from '@sdppp/common';
 import { ProviderCardSelector } from "../components/ProviderCardSelector";
 
 export function SDPPPGateway() {
@@ -13,15 +12,24 @@ export function SDPPPGateway() {
     const sdpppX = useStore(sdpppSDK.stores.PhotoshopStore, state => state.sdpppX)
 
     const Renderer = useMemo(() => {
-        return provider && Providers[provider] ? Providers[provider].Renderer : null
+        // Backward compatibility: map old 'Google' key to 'CustomAPI'
+        const key = provider === 'Google' ? 'CustomAPI' : provider
+        return key && Providers[key as keyof typeof Providers] ? Providers[key as keyof typeof Providers].Renderer : null
     }, [provider])
     const forceProvider = sdpppX?.["settings.forceProvider"]
     const showingPreview = MainStore(state => state.showingPreview)
     useEffect(()=> {
         if (forceProvider && forceProvider !== provider) {
-            MainStore.setState({ provider: forceProvider as (keyof typeof Providers) | '' })
+            const mapped = forceProvider === 'Google' ? 'CustomAPI' : forceProvider
+            MainStore.setState({ provider: mapped as (keyof typeof Providers) | '' })
         }
     }, [forceProvider])
+    // Normalize persisted old key
+    useEffect(()=> {
+        if (provider === 'Google') {
+            MainStore.setState({ provider: 'CustomAPI' })
+        }
+    }, [])
     
     return <>
         {
@@ -39,10 +47,11 @@ export function SDPPPGateway() {
                         value={provider}
                         onChange={value => MainStore.setState({ provider: value as (keyof typeof Providers) | '' })}
                     >
-                        <Select.Option value="">{t('gateway.select_ai_service')}</Select.Option>
+                        <Select.Option value="">{t('gateway.select_ai_service', 'Select AI Service')}</Select.Option>
                         {
-                            Object.keys(Providers)
-                                .map(key => <Select.Option key={key} value={key}>{key}</Select.Option>)
+                            Object.keys(Providers).map(key => (
+                                <Select.Option key={key} value={key}>{PROVIDER_METADATA[key].name}</Select.Option>
+                            ))
                         }
                     </Select>
                 )

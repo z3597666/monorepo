@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { sdpppSDK } from "../../../sdk/sdppp-ps-sdk";
+import { sdpppSDK } from '@sdppp/common';
 import { Button } from "antd";
 import { loadRemoteConfig } from "@sdppp/vite-remote-config-loader";
 import { useTranslation } from '@sdppp/common';

@@ -67,6 +67,9 @@ interface WorkflowEditProps {
     onTitleChange: (nodeID: string, title: string) => void;
 }
 
+// 渲染计数器
+let workflowEditRenderCount = 0;
+
 export default function WorkflowEdit({
     widgetableStructure,
     widgetableValues,
@@ -75,6 +78,15 @@ export default function WorkflowEdit({
     onWidgetChange,
     onTitleChange
 }: WorkflowEditProps) {
+    workflowEditRenderCount++;
+    // console.log(`📝 WorkflowEdit render #${workflowEditRenderCount}`, {
+    //     nodeCount: widgetableStructure?.nodeIndexes?.length || 0,
+    //     valuesKeys: Object.keys(widgetableValues || {}),
+    //     errorsCount: Object.keys(widgetableErrors || {}).length,
+    //     onWidgetChangeIdentity: onWidgetChange?.toString().slice(0, 50) + '...',
+    //     onTitleChangeIdentity: onTitleChange?.toString().slice(0, 50) + '...'
+    // });
+
     useWidgetable();
 
     const { renderWidget, renderTitle } = useWidgetableRenderer({
@@ -85,6 +97,7 @@ export default function WorkflowEdit({
     });
 
     const allRenderedFields = useMemo(() => {
+        // console.log(`🔄 WorkflowEdit: allRenderedFields useMemo recalculating for render #${workflowEditRenderCount}`);
         return widgetableStructure.nodeIndexes.map(nodeID => {
             const fieldInfo = widgetableStructure.nodes[nodeID]
 

@@ -1,4 +1,4 @@
-import { sdpppSDK, StreamActionIterator } from '../../sdk/sdppp-ps-sdk';
+import { sdpppSDK, StreamActionIterator } from '@sdppp/common';
 
 export class ComfyTask {
     public readonly taskId: string;
@@ -7,10 +7,14 @@ export class ComfyTask {
     public progressMessage: string = '';
     public taskName: string;
     private cancelled = false;
+    private docId: number;
+    private boundary: any;
 
-    constructor(runParams: { size: number }, workflowName: string) {
+    constructor(runParams: { size: number }, workflowName: string, docId: number, boundary: any) {
         this.taskId = `comfy_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
         this.taskName = `ComfyUI - ${workflowName}`;
+        this.docId = docId;
+        this.boundary = boundary;
 
         // 注册到 Photoshop
         this.registerWithPhotoshop();
@@ -31,7 +35,9 @@ export class ComfyTask {
                 progressPercentage: 0,
                 metadata: {
                     provider: 'comfyui',
-                    type: 'workflow_execution'
+                    type: 'workflow_execution',
+                    docId: this.docId,
+                    boundary: this.boundary
                 }
             });
         } catch (error) {
@@ -64,7 +70,9 @@ export class ComfyTask {
                     item.images.forEach((image: any) => {
                         MainStore.getState().downloadAndAppendImage({
                             url: image.url,
-                            source: workflowName
+                            source: workflowName,
+                            docId: this.docId,
+                            boundary: this.boundary
                         });
                     });
                 }

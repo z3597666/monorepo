@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Row, Col } from 'antd';
 import { EllipsisOutlined } from '@ant-design/icons';
+import { checkerboardDataUrl } from '../constants';
 
 interface ImageDetail {
     url: string;
@@ -61,14 +62,19 @@ export const MultipleImagesPreview: React.FC<MultipleImagesPreviewProps> = ({
                                 onPreviewVisibleChange(true);
                             }}
                             style={{ cursor: 'pointer' }}
-                        > 
+                        >
                             <Image
                                 src={image.thumbnail || image.url}
                                 alt={`preview-${index}`}
                                 className="preview-image"
                                 width="100%"
                                 height="100%"
-                                style={{ objectFit: 'contain' }}
+                                style={{
+                                    objectFit: 'contain',
+                                    backgroundImage: `url("${checkerboardDataUrl}")`,
+                                    backgroundSize: '192px 192px',
+                                    backgroundRepeat: 'repeat'
+                                }}
                                 preview={false}
                             />
                         </div>

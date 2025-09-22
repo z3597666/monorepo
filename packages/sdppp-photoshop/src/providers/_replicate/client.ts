@@ -2,7 +2,9 @@ import Replicate from "replicate";
 import { getDefaultValues, WidgetableWidget, WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { Task } from "../base/Task";
 import { Client } from "../base/Client";
-import { sdpppSDK } from "../../sdk/sdppp-ps-sdk";
+import { sdpppSDK } from '@sdppp/common';
+
+const log = sdpppSDK.logger.extend('replicate')
 
 sdpppSDK.plugins.fetchProxy.registerProxyDomains('api.replicate.com');
 
@@ -43,98 +45,169 @@ export class SDPPPReplicate extends Client<{
         defaultInput: Record<string, any>,
         rawData: any
     }> {
-        const [modelProvider, modelId] = model.split('/');
-        const modelInfo = await this.replicate.models.get(modelProvider, modelId)
-        if (!modelInfo.latest_version) {
-            throw new Error('No latest version found')
-        }
-        modelIds[model] = modelInfo.latest_version.id;
-        const widgetableNodes = convertInputSchemaToWidgetableNodes(modelInfo.latest_version.openapi_schema['components']?.schemas);
-        const defaultInput = modelInfo.default_example?.input ?? {};
-        widgetableNodes.forEach((node) => {
-            node.widgets.forEach((widget) => {
-                if (!(widget.name in defaultInput)) {
-                    defaultInput[widget.name] = getDefaultValues(widget.outputType, widget.options)
-                }
+        log('getNodes called', { model });
+
+        try {
+            const [modelProvider, modelId] = model.split('/');
+            log('getNodes request', { modelProvider, modelId });
+
+            const modelInfo = await this.replicate.models.get(modelProvider, modelId)
+            if (!modelInfo.latest_version) {
+                const errorMsg = `getNodes API failed - No latest version found for model ${model}`;
+                log('getNodes error', { model, error: 'No latest version found' });
+                throw new Error(errorMsg)
+            }
+            modelIds[model] = modelInfo.latest_version.id;
+            const widgetableNodes = convertInputSchemaToWidgetableNodes(modelInfo.latest_version.openapi_schema['components']?.schemas);
+            const defaultInput = modelInfo.default_example?.input ?? {};
+            widgetableNodes.forEach((node) => {
+                node.widgets.forEach((widget) => {
+                    if (!(widget.name in defaultInput)) {
+                        defaultInput[widget.name] = getDefaultValues(widget.outputType, widget.options)
+                    }
+                })
             })
-        })
-        return {
-            widgetableNodes,
-            defaultInput,
-            rawData: modelInfo
+
+            log('getNodes success', { model, nodesCount: widgetableNodes.length });
+            return {
+                widgetableNodes,
+                defaultInput,
+                rawData: modelInfo
+            }
+        } catch (error: any) {
+            log('getNodes exception', { model, error: error.message });
+            console.error('Error fetching model info:', error);
+            throw error;
         }
     }
     async run(model: string, input: any, signal?: AbortSignal) {
-        // Check if already aborted
-        if (signal?.aborted) {
-            throw new DOMException('Task creation aborted', 'AbortError');
-        }
+        log('run called', { model, input });
 
-        const id = modelIds[model];
-        if (!id) {
-            await this.getNodes(model);
-        }
-        const [modelProvider, modelId] = model.split('/');
-        const result = await this.replicate.predictions.create({
-            model: `${modelProvider}/${modelId}`,
-            version: id,
-            input
-        })
-        return new Task(result.id, {
-            statusGetter: async (id) => {
-                // Check if aborted before making status request
-                if (signal?.aborted) {
-                    throw new DOMException('Status check aborted', 'AbortError');
-                }
-                
-                const r = await this.replicate.predictions.get(id)
-                if (r.status === 'failed') {
-                    throw new Error(String(r.error))
-                }
-                return {
-                    isCompleted: r.status === 'succeeded',
-                    progress: 0,
-                    progressMessage: r.status,
-                    rawData: r
-                }
-            },
-            resultGetter: async (id, lastStatusResult) => {
-                // Check if aborted before getting results
-                if (signal?.aborted) {
-                    throw new DOMException('Result fetch aborted', 'AbortError');
-                }
-                
-                return (lastStatusResult.rawData.output instanceof Array ? lastStatusResult.rawData.output : [lastStatusResult.rawData.output]).map((item: any) => {
-                    return {
-                        url: item
-                    }
-                })
-            },
-            canceler: async (id: string) => {
-                await this.replicate.predictions.cancel(id)
+        try {
+            // Check if already aborted
+            if (signal?.aborted) {
+                throw new DOMException('Task creation aborted', 'AbortError');
             }
-        })
+
+            const id = modelIds[model];
+            if (!id) {
+                log('run - model id not found, calling getNodes', { model });
+                await this.getNodes(model);
+            }
+
+            const [modelProvider, modelId] = model.split('/');
+            const requestData = {
+                model: `${modelProvider}/${modelId}`,
+                version: modelIds[model],
+                input
+            };
+
+            log('run request', { model, requestData });
+            const result = await this.replicate.predictions.create(requestData)
+            log('run success', { model, taskId: result.id });
+
+            return new Task(result.id, {
+                statusGetter: async (id) => {
+                    log('statusGetter called', { taskId: id });
+
+                    // Check if aborted before making status request
+                    if (signal?.aborted) {
+                        throw new DOMException('Status check aborted', 'AbortError');
+                    }
+
+                    try {
+                        const r = await this.replicate.predictions.get(id)
+                        log('statusGetter response', { taskId: id, status: r.status });
+
+                        if (r.status === 'failed') {
+                            const errorMsg = `status API failed - ${String(r.error)}`;
+                            log('statusGetter error', { taskId: id, error: r.error });
+                            throw new Error(errorMsg)
+                        }
+                        return {
+                            isCompleted: r.status === 'succeeded',
+                            progress: 0,
+                            progressMessage: r.status,
+                            rawData: r
+                        }
+                    } catch (error: any) {
+                        log('statusGetter exception', { taskId: id, error: error.message });
+                        throw error;
+                    }
+                },
+                resultGetter: async (id, lastStatusResult) => {
+                    log('resultGetter called', { taskId: id });
+
+                    // Check if aborted before getting results
+                    if (signal?.aborted) {
+                        throw new DOMException('Result fetch aborted', 'AbortError');
+                    }
+
+                    try {
+                        const outputs = lastStatusResult.rawData.output instanceof Array ? lastStatusResult.rawData.output : [lastStatusResult.rawData.output];
+                        const results = outputs.map((item: any) => ({
+                            url: item
+                        }));
+
+                        log('resultGetter success', { taskId: id, resultsCount: results.length });
+                        return results;
+                    } catch (error: any) {
+                        log('resultGetter exception', { taskId: id, error: error.message });
+                        throw error;
+                    }
+                },
+                canceler: async (id: string) => {
+                    log('canceler called', { taskId: id });
+                    try {
+                        await this.replicate.predictions.cancel(id)
+                        log('canceler success', { taskId: id });
+                    } catch (error: any) {
+                        log('canceler exception', { taskId: id, error: error.message });
+                        throw error;
+                    }
+                }
+            })
+        } catch (error: any) {
+            log('run exception', { model, error: error.message });
+            console.error('Error running task:', error);
+            throw error;
+        }
     }
     async uploadImage(type: 'token' | 'buffer', image: ArrayBuffer | string, format: 'png' | 'jpg' | 'jpeg' | 'webp', signal?: AbortSignal): Promise<string> {
-        // Check if already aborted
-        if (signal?.aborted) {
-            throw new DOMException('Upload aborted', 'AbortError');
-        }
+        log('uploadImage called', { type, format });
 
-        if (type === 'token') {
-            // Check if aborted before file upload
+        try {
+            // Check if already aborted
             if (signal?.aborted) {
-                throw new DOMException('File upload aborted', 'AbortError');
+                throw new DOMException('Upload aborted', 'AbortError');
             }
-            
-            const file = await this.replicate.files.create(new Blob([image as string], {
-                type: `image/uxp`
-            }));
-            return file.urls.get;
+
+            if (type === 'token') {
+                // Check if aborted before file upload
+                if (signal?.aborted) {
+                    throw new DOMException('File upload aborted', 'AbortError');
+                }
+
+                log('uploadImage - creating file via Replicate API');
+                const file = await this.replicate.files.create(new Blob([image as string], {
+                    type: `image/uxp`
+                }));
+
+                log('uploadImage success', { type, url: file.urls.get });
+                return file.urls.get;
+            }
+
+            log('uploadImage - converting to base64 data URL');
+            const base64 = Buffer.from(image as ArrayBuffer).toString('base64');
+            const dataUrl = `data:image/${format};base64,${base64}`;
+
+            log('uploadImage success', { type, format });
+            return dataUrl;
+        } catch (error: any) {
+            log('uploadImage exception', { type, format, error: error.message });
+            console.error('Error uploading image:', error);
+            throw error;
         }
-        const base64 = Buffer.from(image as ArrayBuffer).toString('base64');
-        const dataUrl = `data:image/${format};base64,${base64}`;
-        return dataUrl;
     }
 }
 

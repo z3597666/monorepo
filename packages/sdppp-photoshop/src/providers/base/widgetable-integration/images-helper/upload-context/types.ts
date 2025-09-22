@@ -32,7 +32,7 @@ export interface UploadContextValue {
     cancelAllUploads: () => void;
 
     // Direct upload methods
-    uploadFromPhotoshop: (isMask?: boolean) => Promise<void>;
+    uploadFromPhotoshop: (isMask?: boolean, source: 'canvas' | 'curlayer') => Promise<void>;
     uploadFromDisk: (file: File) => Promise<void>;
 }
 

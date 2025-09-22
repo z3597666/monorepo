@@ -1,15 +1,26 @@
-import { Component, useEffect, useState } from "react";
+import React, { Component, useEffect, useState, useMemo } from "react";
 import WorkflowList from "./workflow-list";
 import { WorkflowDetail } from "./workflow-detail";
 import { useStore } from "zustand";
-import { sdpppSDK } from "../../../../sdk/sdppp-ps-sdk";
+import { sdpppSDK } from '@sdppp/common';
 import { Alert } from "antd";
 import ErrorBoundary from "antd/es/alert/ErrorBoundary";
+
 
 export function ComfyFrontendRendererContent() {
     const [view, setView] = useState<'list' | 'detail'>('list');
     const [currentWorkflow, setCurrentWorkflow] = useState<string>('');
-    const widgetablePath = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableStructure.widgetablePath.replace(/^workflows\//, ''));
+
+    // 使用稳定的选择器，确保返回值稳定
+    const rawWidgetablePath = useStore(sdpppSDK.stores.ComfyStore, (state) => {
+        const path = state.widgetableStructure?.widgetablePath;
+        return typeof path === 'string' ? path : '';
+    }, (a, b) => a === b);
+
+    const widgetablePath = useMemo(() => {
+        const processed = rawWidgetablePath.replace(/^workflows\//, '');
+        return processed;
+    }, [rawWidgetablePath]);
 
     useEffect(() => {
         if (widgetablePath === currentWorkflow && currentWorkflow) {

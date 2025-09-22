@@ -1,28 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import { Image, Spin } from 'antd';
 import { isVideo } from '../../utils/fileType';
+import { RectSchema } from '../../../internals/mcp-mesh-photoshop/actions/uxp-photoshop-defs';
+import { z } from 'zod';
 import './ImagePreview.less';
 
+type Rect = z.infer<typeof RectSchema>;
+
 interface ImagePreviewProps {
-  images: Array<{ url: string; source: string; thumbnail_url: string, nativePath?: string }>;
+  images: Array<{
+    url: string;
+    source: string;
+    thumbnail_url: string;
+    nativePath?: string;
+    metadata?: {
+      genByDocument: number;
+      boundary: Rect;
+    };
+  }>;
   currentIndex: number;
   onIndexChange?: (index: number) => void;
 }
 
 export default function ImagePreview({ images, currentIndex, onIndexChange }: ImagePreviewProps) {
   const [imageLoading, setImageLoading] = useState(false);
-
+  const [previousUrl, setPreviousUrl] = useState<string>('');
 
   useEffect(() => {
-    setImageLoading(true);
-  }, [currentIndex]);
+    const currentUrl = images[currentIndex]?.url || '';
+    if (currentUrl !== previousUrl) {
+      setImageLoading(true);
+      setPreviousUrl(currentUrl);
+    } else {
+      setImageLoading(false);
+    }
+  }, [currentIndex, images, previousUrl]);
 
   if (!images.length) {
     return null;
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div style={{ position: 'relative', width: '100%', aspectRatio: '1', maxHeight: '100%' }}>
       {imageLoading && (
         <div style={{
           position: 'absolute',

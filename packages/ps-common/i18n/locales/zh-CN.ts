@@ -6,6 +6,7 @@ export const zhCN = {
   'provider.comfyui.description': '自定义AI工作流引擎',
   'provider.replicate.description': '海量模型，稳定服务',
   'provider.runninghub.description': '模型物美价廉，海量社区应用',
+  'provider.google.description': 'OpenAI/Google 格式API',
   'task.waiting_upload': '正在等待图片上传...',
   'task.creating_task': '正在创建任务...',
   'task.running_duration': '运行了 {{duration}} 秒，{{message}}',
@@ -25,11 +26,19 @@ export const zhCN = {
   'comfy.refresh': '刷新',
   'comfy.stop_cancel_all': '停止并取消全部',
   'comfy.stop_auto_run': '停止自动运行',
-  'comfy.start_auto_run': '开启自动运行',
+  'comfy.start_auto_run': '画布变动后自动运行',
   'comfy.run': '运行',
   'comfy.back': '返回',
   'comfy.uploading': '正在上传...',
   'comfy.help_tooltip': '使用教程',
+  'boundary.title': 'AI处理边界',
+  'boundary.tooltip': 'AI处理边界',
+  'boundary.current_canvas': '整个画布',
+  'boundary.current_layer': '当前图层',
+  'boundary.current_selection': '当前选区',
+  'boundary.set_as_canvas': '设为画布',
+  'boundary.set_as_layer': '设为当前图层',
+  'boundary.set_as_selection': '设为当前选区',
   'http.404': 'SDPPP可能未安装或和插件版本不匹配 (404)',
   'http.401': '未授权 (401)',
   'http.403': '禁止访问 (403)',
@@ -110,6 +119,7 @@ export const zhCN = {
 
   'image.send_all': '发送所有',
   'image.save_all': '保存所有',
+  'image.save_current': '保存当前',
   'image.delete_current': '删除当前',
   'image.more_actions': '更多操作',
   'image.jump_to_last': '跳转到最后一个',
@@ -161,8 +171,9 @@ export const zhCN = {
   'Failed to reboot ComfyUI': '重启ComfyUI失败',
 
   // 图片上传组件相关翻译
-  'image.upload.from_ps': '从PS',
-  'image.upload.from_disk': '从磁盘',
+  'image.upload.from_canvas': '画布',
+  'image.upload.from_curlayer': '当前图层',
+  'image.upload.from_harddisk': '硬盘',
   'image.upload.clear': '清空',
   'image.upload.uploading': '上传中，如果图片过大，可能会卡顿...',
   'image.upload.no_images': '暂无图片',
@@ -187,4 +198,43 @@ export const zhCN = {
 
   'send_images.create_document': '创建文档',
   'send_images.create_document_failed': '创建文档失败',
+
+  // Photoshop 操作翻译
+  'photoshop.no_active_document': '没有活动文档',
+  'photoshop.rectangle_coordinates_required': '创建操作需要矩形坐标',
+  'photoshop.create_guide_frame': '创建参考线框架',
+  'photoshop.clear_guide_frame': '清除参考线框架',
+  'photoshop.invalid_action': '无效操作: {{action}}',
+  'photoshop.file_not_found': '文件未找到: {{path}}',
+  'photoshop.failed_to_open_file_as_document': '无法将文件作为文档打开: {{path}}',
+  'photoshop.invalid_boundary': '无效边界: 左边必须小于右边，上边必须小于下边',
+  'photoshop.failed_to_open_image_file': '无法打开图像文件: {{error}}',
+  'photoshop.open_images_from_file': '从文件打开图像',
+  'photoshop.failed_to_create_document_from_file': '无法从文件创建文档',
+
+  // Google 提供商翻译
+  'google.field.image_input': '输入图像',
+  'google.field.prompt': '提示词',
+  'google.field.batch_count': '批次数量',
+  'google.field.images_per_batch': '每批图像数',
+  'google.status.success': '成功',
+  'google.status.failed': '失败',
+  'google.status.generating': '生成中',
+  'google.apikey_placeholder': '请输入您的 Google API Key',
+  'google.baseurl_placeholder': '基础 URL (可选)',
+  'google.get_apikey': '获取 API Key',
+  'google.help_tooltip': 'Google Gemini 图像生成器',
+  'google.model_name': 'Gemini 2.5 Flash 图像',
+  'google.loading': '加载中...',
+  'google.generating': '生成中...',
+  'google.generate': '生成',
+
+  // 图像预览自动切换
+  'image.auto_toggle': '自动',
+
+  // 导入模式相关
+  'image.import_as_smartobject': '作为智能对象导入',
+  'image.import_as_newdoc': '作为新文档导入',
+  'image.boundary': '边界',
+  'image.import_tip': '按住 Shift 键以新文档方式导入',
 } as const

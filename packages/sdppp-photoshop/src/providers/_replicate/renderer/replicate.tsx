@@ -4,15 +4,16 @@ import { useState, useEffect } from 'react';
 import { replicateStore, changeSelectedModel, createTask } from './replicate.store';
 import { WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
 import Link from 'antd/es/typography/Link';
-import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
+import { sdpppSDK } from '@sdppp/common';
 import { WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { WidgetableProvider } from '@sdppp/widgetable-ui';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
-import { ModelSelector } from '../../base/ModelSelector';
+import { ModelSelector } from '../../base/components/ModelSelector';
 import { useTranslation } from '@sdppp/common';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
 import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
+import { WorkBoundary } from '../../base/components';
 
 const { Password } = Input;
 
@@ -22,6 +23,7 @@ export default function ReplicateRenderer({ showingPreview }: { showingPreview: 
 
     return (
         <Flex className="replicate-renderer" vertical gap={8}>
+            <WorkBoundary />
             {!showingPreview ? <Flex gap={8}>
                 <Password
                     placeholder={t('replicate.apikey_placeholder')}
@@ -100,7 +102,7 @@ function ReplicateRendererModels() {
             widgetRegistry={createBaseWidgetRegistry()}
         >
             <Flex gap={4} align="center">
-                <Tooltip title={t('replicate.help_tooltip', 'How to use?')} placement="left">
+                <Tooltip title={t('replicate.help_tooltip', { defaultMessage: 'How to use?' })} placement="left">
                     <Button
                         type="text"
                         size="small"

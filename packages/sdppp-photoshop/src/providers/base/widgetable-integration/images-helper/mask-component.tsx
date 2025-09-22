@@ -7,12 +7,14 @@ interface MaskProps {
     images: ImageDetail[];
     maxCount: number;
     uiWeightCSS: React.CSSProperties;
+    enableRemove?: boolean;
 }
 
 export const MaskComponent: React.FC<MaskProps> = ({
     images,
     maxCount,
-    uiWeightCSS
+    uiWeightCSS,
+    enableRemove = false
 }) => {
     const { setImages, callOnValueChange } = useImageUpload();
     const [previewVisible, setPreviewVisible] = useState(false);
@@ -77,6 +79,7 @@ export const MaskComponent: React.FC<MaskProps> = ({
                     maxCount={maxCount}
                     isMask={true}
                     imagesRef={imagesRef}
+                    enableRemove={enableRemove}
                 />
             )}
         </div>

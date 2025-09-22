@@ -39,11 +39,39 @@
   }
 }
 
+// DirectoryTree styles
+.workflow-list__main {
+  .ant-tree-switcher {
+    width: 12px !important;
+    flex: 0 0 12px !important;
+    margin-right: 4px !important;
+  }
+
+  .ant-tree-node-content-wrapper {
+    font-size: 14px !important;
+    padding: 2px 0 !important;
+    min-height: 24px !important;
+    line-height: 20px !important;
+  }
+
+  .ant-tree-title {
+    font-size: 14px !important;
+  }
+
+  .ant-tree-treenode {
+    padding: 2px 0 !important;
+  }
+
+  .ant-tree-indent-unit {
+    width: 12px !important;
+  }
+}
+
 // Ant Design overrides for workflow list item
 .workflow-list-item {
   .ant-list-item {
     padding: 8px 16px;
-    
+
     // 确保 actions 区域可见
     .ant-list-item-actions {
       display: flex;

@@ -1,7 +1,7 @@
 import { Alert, Button, Flex, Input, Tooltip } from 'antd';
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
-import { sdpppSDK } from '../../../sdk/sdppp-ps-sdk';
+import { sdpppSDK } from '@sdppp/common';
 import { WidgetableProvider } from '@sdppp/widgetable-ui';
 import './comfy_frontend.less';
 import { ComfyFrontendRendererContent } from './components';
@@ -17,7 +17,7 @@ const log = sdpppSDK.logger.extend("comfy-frontend")
 declare const SDPPP_VERSION: string;
 
 export function ComfyFrontendRenderer() {
-    const { t } = useTranslation()
+    const { t, language } = useTranslation()
     const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
     const comfyWebviewLoading = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoading);
     const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
@@ -30,13 +30,13 @@ export function ComfyFrontendRenderer() {
 
     return (
         <>
-            <Flex gap={8}>
-                <Tooltip title={t('comfy.help_tooltip', 'Visit ComfyUI official website')}>
+            <Flex gap={8} align="center">
+                <Tooltip title={t('comfy.help_tooltip', { defaultMessage: 'How to use?' })} placement="left">
                     <Button
                         type="text"
                         size="small"
                         icon={<QuestionCircleOutlined />}
-                        onClick={() => {
+                        onClick={async () => {
                             const banners = loadRemoteConfig('banners');
                             const comfyURL = banners.find((banner: any) => banner.type === 'comfy_tutorial' && banner.locale == language)?.link;
                             sdpppSDK.plugins.photoshop.openExternalLink({ url: comfyURL })
@@ -64,7 +64,9 @@ export function ComfyFrontendRenderer() {
     )
 }
 
-export function ComfyConnectStatusText() {
+// 将这个函数转换为 hook，避免在 render 中重复调用
+function useComfyConnectStatus() {
+
     const { t } = useTranslation()
     const comfyWebviewConnectStatus = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewConnectStatus);
     const comfyWebviewLoadError = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewLoadError);
@@ -108,8 +110,9 @@ export function ComfyConnectStatusText() {
 }
 
 export function ComfyFrontendContent() {
+
     const comfyURL = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyURL);
-    const { statusText, statusTextType, showRenderer } = ComfyConnectStatusText();
+    const { statusText, statusTextType, showRenderer } = useComfyConnectStatus();
 
     if (!comfyURL) return null;
 

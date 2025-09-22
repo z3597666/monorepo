@@ -1,14 +1,15 @@
-import { sdpppSDK } from "../../../sdk/sdppp-ps-sdk";
+import { sdpppSDK } from '@sdppp/common';
 import { createStore } from "zustand";
 import { createJSONStorage } from "zustand/middleware";
 import { persist } from "zustand/middleware";
 
 // Re-export from workflow-provider
-export { 
-    type Workflow, 
-    type WorkflowDataSource, 
-    WorkflowListProvider, 
-    useWorkflowListContext 
+export {
+    type Workflow,
+    type WorkflowDataSource,
+    type TreeNodeData,
+    WorkflowListProvider,
+    useWorkflowListContext
 } from "./workflow-provider";
 
 export const comfyWorkflowStore = createStore<{

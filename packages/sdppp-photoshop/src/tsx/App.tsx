@@ -1,6 +1,6 @@
 import { useStore } from 'zustand'
 import './App.less'
-import { sdpppSDK } from '../sdk/sdppp-ps-sdk'
+import { sdpppSDK } from '@sdppp/common'
 import { Button, ConfigProvider, Flex, Select, theme } from 'antd'
 import { Providers } from '../providers'
 import { MainStore } from './App.store'
@@ -106,11 +106,18 @@ function AppContent({ psTheme, showingPreview, previewImageList, fontSize }: {
                         colorText: 'var(--sdppp-host-text-color)',
                         colorBorder: 'var(--sdppp-widget-border-color)'
                     },
+                    Tree: {
+                        fontSize: 14,
+                        colorBgContainer: 'transparent',
+                        colorText: 'var(--sdppp-host-text-color)',
+                        nodeSelectedBg: 'var(--sdppp-widget-hover-background-color)',
+                        nodeHoverBg: 'var(--sdppp-widget-hover-background-color)',
+                    },
                 }
             }}>
             {!showingPreview && previewImageList.length ? <Flex gap={8} justify="center" align="center" style={{ marginBottom: 16 }}>
                 <Button size="small" type="primary" onClick={() => MainStore.setState({ showingPreview: true })}>
-                    {t('preview.show', { count: previewImageList.length })}
+                    {t('preview.show', { count: previewImageList.length, defaultMessage: 'Show Preview ({count})' })}
                 </Button>
             </Flex> : null}
             {

@@ -1,7 +1,9 @@
 import { availableModels as replicateAvailableModels, SDPPPReplicate } from "./_replicate/client";
 import { SDPPPRunningHub } from "./_runninghub/client";
+import { SDPPPCustomAPI } from "./_customapi/client";
 import ReplicateRenderer from "./_replicate/renderer/replicate";
 import RunningHubRenderer from "./_runninghub/renderer/runninghub";
+import CustomAPIRenderer from "./_customapi/renderer/customapi";
 import { ComfyFrontendRenderer } from "./_comfy_frontend/renderer/comfy_frontend.tsx";
 
 // Use public paths to access logos without bundling
@@ -16,6 +18,18 @@ export interface ProviderMetadata {
     brandColor: string;
     logoPath: string;
 }
+
+const CustomAPIProvider = {
+    client: SDPPPCustomAPI,
+    Renderer: CustomAPIRenderer,
+    metadata: {
+        id: 'CustomAPI',
+        name: 'Google/OpenAI',
+        description: 'provider.google.description',
+        brandColor: '#777',
+        logoPath: ''
+    }
+} as const;
 
 export const Providers = {
     Replicate: {
@@ -50,11 +64,13 @@ export const Providers = {
             brandColor: '#172Ed8',
             logoPath: ComfyUILogo
         }
-    }
+    },
+    CustomAPI: CustomAPIProvider
 }
 
 export const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
-    ComfyUI: Providers.ComfyUI.metadata,
     Replicate: Providers.Replicate.metadata,
-    RunningHub: Providers.RunningHub.metadata
+    RunningHub: Providers.RunningHub.metadata,
+    ComfyUI: Providers.ComfyUI.metadata,
+    CustomAPI: Providers.CustomAPI.metadata
 };

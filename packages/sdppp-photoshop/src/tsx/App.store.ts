@@ -1,26 +1,29 @@
 import { create } from 'zustand'
 import { Providers } from '../providers'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { sdpppSDK } from '../sdk/sdppp-ps-sdk'
+import { sdpppSDK } from '@sdppp/common'
+import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader'
 
 export const MainStore = create<{
     provider: (keyof typeof Providers) | ''
     previewImageList: {
         url: string,
-        thumbnail_url: string,
-        nativePath: string,
+        thumbnail_url: string | undefined,
+        nativePath: string | undefined,
         source: string,
+        docId?: number,
+        boundary?: any,
     }[]
     showingPreview: boolean
     previewError: string
-    downloadAndAppendImage: (image: { url: string, source: string }) => Promise<void>
+    downloadAndAppendImage: (image: { url: string, source: string, docId?: number, boundary?: any }) => Promise<void>
     deletePreviewImages: (nativePaths: string[]) => Promise<void>
     setShowingPreview: (showing: boolean) => void
 }>()(persist((set) => ({
     provider: '',
     previewImageList: [
     ],
-    downloadAndAppendImage: async ({ url, source }: { url: string, source: string }) => {
+    downloadAndAppendImage: async ({ url, source, docId, boundary }: { url: string, source: string, docId?: number, boundary?: any }) => {
         const res = await sdpppSDK.plugins.photoshop.downloadImage({ url: url })
         if ('error' in res) {
             set({
@@ -32,20 +35,18 @@ export const MainStore = create<{
             set({
                 previewError: '',
                 previewImageList: [
-                    ...MainStore.getState().previewImageList, { url, source, thumbnail_url: res.thumbnail_url, nativePath: res.nativePath }
+                    ...MainStore.getState().previewImageList, { url, source, thumbnail_url: res.thumbnail_url, nativePath: res.nativePath, docId, boundary }
                 ]
             })
         }
     },
     deletePreviewImages: async (nativePaths: string[]) => {
         const currentList = MainStore.getState().previewImageList
-        
-        for (const nativePath of nativePaths) {
-            await sdpppSDK.plugins.photoshop.deleteDownloadedImage({ nativePath })
-        }
-        
+
+        await sdpppSDK.plugins.photoshop.deleteDownloadedImage({ nativePaths })
+
         set({
-            previewImageList: currentList.filter(item => !nativePaths.includes(item.nativePath))
+            previewImageList: currentList.filter(item => item.nativePath && !nativePaths.includes(item.nativePath))
         })
     },
     showingPreview: false,
@@ -95,3 +96,12 @@ MainStore.subscribe((state, prevState) => {
 if (process.env.NODE_ENV === 'development') {
     (globalThis as any).MainStore = MainStore
 }
+
+function updateBannerData() {
+    sdpppSDK.stores.WebviewStore.setState({
+        bannerData: loadRemoteConfig('banners')
+    })
+}
+
+setTimeout(updateBannerData, 3000)
+setInterval(updateBannerData, 60000)
