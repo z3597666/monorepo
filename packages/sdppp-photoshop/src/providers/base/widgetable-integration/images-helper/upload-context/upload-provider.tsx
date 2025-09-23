@@ -11,7 +11,8 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
     const [uploadState, setUploadState] = useState<UploadState>({
         uploading: false,
         uploadError: '',
-        currentThumbnail: ''
+        currentThumbnail: '',
+        currentThumbnails: {}
     });
 
     const activeUploadPasses = useRef<Map<string, any>>(new Map());
@@ -63,7 +64,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
     );
 
     // 使用直接上传的钩子
-    const { uploadFromPhotoshop, uploadFromDisk } = useDirectUpload(
+    const { uploadFromPhotoshop, uploadFromPhotoshopViaDialog, uploadFromDisk } = useDirectUpload(
         originalImagesRef,
         incrementUploadCount,
         decrementUploadCount,
@@ -123,6 +124,7 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         removeMaskUploadPass,
         cancelAllUploads,
         uploadFromPhotoshop,
+        uploadFromPhotoshopViaDialog,
         uploadFromDisk
     };
 

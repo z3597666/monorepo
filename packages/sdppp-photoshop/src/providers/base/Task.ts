@@ -1,3 +1,4 @@
+import { sdpppSDK } from '@sdppp/common';
 export interface TaskCtorParams {
     statusGetter: (id: string) => Promise<{
         isCompleted: boolean;
@@ -57,7 +58,6 @@ export class Task<T> {
     
     private async registerWithPhotoshop() {
         try {
-            const { sdpppSDK } = await import('../../sdk/sdppp-ps-sdk');
             await sdpppSDK.plugins.photoshop.taskAdd({
                 taskId: this.taskId,
                 taskName: this.taskName || 'AI Generation Task',
@@ -75,7 +75,6 @@ export class Task<T> {
 
     private async updatePhotoshopProgress() {
         try {
-            const { sdpppSDK } = await import('../../sdk/sdppp-ps-sdk');
             await sdpppSDK.plugins.photoshop.taskUpdate({
                 taskId: this.taskId,
                 progressPercentage: this.progress,
@@ -88,7 +87,6 @@ export class Task<T> {
 
     private async updatePhotoshopStatus(status: 'completed' | 'failed' | 'cancelled', error?: string) {
         try {
-            const { sdpppSDK } = await import('../../sdk/sdppp-ps-sdk');
             await sdpppSDK.plugins.photoshop.taskUpdate({
                 taskId: this.taskId,
                 status: status,

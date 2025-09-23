@@ -6,12 +6,16 @@ export interface ImageDetail {
     thumbnail?: string;
     auto?: boolean;
     uploadId?: string;
+    isUploading?: boolean;
 }
 
 export interface UploadState {
     uploading: boolean;
     uploadError: string;
+    // Deprecated: last global thumbnail (kept for backward compatibility)
     currentThumbnail: string;
+    // New: per-image current thumbnails, keyed by image.uploadId or image.url
+    currentThumbnails: Record<string, string>;
 }
 
 export interface UploadContextValue {
@@ -32,8 +36,10 @@ export interface UploadContextValue {
     cancelAllUploads: () => void;
 
     // Direct upload methods
-    uploadFromPhotoshop: (isMask?: boolean, source: 'canvas' | 'curlayer') => Promise<void>;
+    uploadFromPhotoshop: (isMask?: boolean, source?: 'canvas' | 'curlayer' | 'selection', reverse?: boolean) => Promise<void>;
     uploadFromDisk: (file: File) => Promise<void>;
+    // Advanced: open PS selection dialog then fetch
+    uploadFromPhotoshopViaDialog: (isMask?: boolean) => Promise<void>;
 }
 
 export interface UploadProviderProps {

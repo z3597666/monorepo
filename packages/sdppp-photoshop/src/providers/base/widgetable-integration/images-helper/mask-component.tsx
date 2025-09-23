@@ -46,24 +46,26 @@ export const MaskComponent: React.FC<MaskProps> = ({
             return <EmptyState />;
         }
 
-        return (
-            <SingleImagePreview
-                image={images[0]}
-                previewVisible={previewVisible}
-                previewCurrent={previewCurrent}
-                onPreviewVisibleChange={setPreviewVisible}
-                onPreviewCurrentChange={setPreviewCurrent}
-                onPreviewChange={handlePreviewChange}
-                onImageUpdate={handleImageUpdate}
-            />
-        );
+            return (
+                <SingleImagePreview
+                    image={images[0]}
+                    previewVisible={previewVisible}
+                    previewCurrent={previewCurrent}
+                    onPreviewVisibleChange={setPreviewVisible}
+                    onPreviewCurrentChange={setPreviewCurrent}
+                    onPreviewChange={handlePreviewChange}
+                    onImageUpdate={handleImageUpdate}
+                    isMask={true}
+                />
+            );
     };
 
     const renderedImages = useMemo(() => {
         return renderPreviewImages();
     }, [images, previewVisible, previewCurrent]);
 
-    const shouldHideActionButtons = images.length > 0 && images[0].auto;
+    // Always show action buttons for mask to ensure trash button is visible
+    const shouldHideActionButtons = false;
 
     return (
         <div
@@ -73,15 +75,13 @@ export const MaskComponent: React.FC<MaskProps> = ({
             <div className="image-preview-container">
                 {renderedImages}
             </div>
-            {!shouldHideActionButtons && (
-                <ActionButtons
-                    images={images}
-                    maxCount={maxCount}
-                    isMask={true}
-                    imagesRef={imagesRef}
-                    enableRemove={enableRemove}
-                />
-            )}
+            <ActionButtons
+                images={images}
+                maxCount={maxCount}
+                isMask={true}
+                imagesRef={imagesRef}
+                enableRemove={enableRemove}
+            />
         </div>
     );
 };

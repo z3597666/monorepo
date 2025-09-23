@@ -42,10 +42,14 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
       // 0. 清理之前的guide
       await sdpppSDK.plugins.photoshop.manageGuides({ action: "clear" });
 
-      // 1. 调用新的 showImageSelectionDialog 弹窗获取用户选择
-      const { boundary } = await sdpppSDK.plugins.photoshop.showImageSelectionDialog({
-        dialogType: 'boundary'
-      });
+      // 1. 调用新的 showBoundarySelectionDialog 弹窗获取用户选择
+      const result = await sdpppSDK.plugins.photoshop.showBoundarySelectionDialog({});
+
+      if (result.cancelled) {
+        return;
+      }
+
+      const { boundary } = result;
 
       // 2. 更新当前边界类型
       const activeDocId = activeDocumentID;
@@ -73,8 +77,8 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
             [activeDocId]: {
               leftDistance: 0,
               topDistance: 0,
-              rightDistance: 999999,
-              bottomDistance: 999999,
+              rightDistance: 0,
+              bottomDistance: 0,
               width: 999999,
               height: 999999
             }
@@ -118,6 +122,16 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
       console.error('Failed to clear guides:', error);
     }
   };
+
+  // Auto-update when switching documents: reset thumbnail and guides
+  useEffect(() => {
+    // Clear any hover state and guides from previous document
+    setIsHovered(false);
+    setThumbnailUrl(null);
+    sdpppSDK.plugins.photoshop.manageGuides({ action: "clear" }).catch(console.error);
+    // When activeDocumentID changes, the label reads from workBoundaries[activeDocumentID]
+    // so clearing thumbnail ensures text updates instead of stale preview
+  }, [activeDocumentID]);
 
 
   return (

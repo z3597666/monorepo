@@ -27,32 +27,9 @@ export const useWidgetableRenderer = ({
 
     const { getWidgetRenderer } = useWidgetable();
 
-    // 检查依赖项是否变化
-    const prevDeps = React.useRef<any>(null);
-    const currentDeps = [widgetableValues, onWidgetChange, getWidgetRenderer, extraOptions];
-    if (prevDeps.current) {
-        const changes = [];
-        if (prevDeps.current[0] !== widgetableValues) changes.push('widgetableValues');
-        if (prevDeps.current[1] !== onWidgetChange) changes.push('onWidgetChange');
-        if (prevDeps.current[2] !== getWidgetRenderer) changes.push('getWidgetRenderer');
-        if (prevDeps.current[3] !== extraOptions) changes.push('extraOptions');
-        if (changes.length > 0) {
-            // console.log(`🔄 renderWidget useCallback deps changed:`, changes);
-            // 详细分析每个变化的依赖
-            // changes.forEach(change => {
-            //     const index = ['widgetableValues', 'onWidgetChange', 'getWidgetRenderer', 'extraOptions'].indexOf(change);
-            //     console.log(`   - ${change}:`, {
-            //         prev: prevDeps.current[index],
-            //         current: currentDeps[index],
-            //         equal: prevDeps.current[index] === currentDeps[index]
-            //     });
-            // });
-        }
-    }
-    prevDeps.current = currentDeps;
+    // Note: no debug logging here; keep hook lean
 
     const renderWidget = useCallback((fieldInfo: WidgetableNode, widget: WidgetableWidget, widgetIndex: number): React.ReactElement | null => {
-        // console.log(`🔧 renderWidget called for ${fieldInfo.id}[${widgetIndex}] (${widget.outputType})`);
         const widgetType = widget.outputType as string;
         const renderer = getWidgetRenderer(widgetType);
 

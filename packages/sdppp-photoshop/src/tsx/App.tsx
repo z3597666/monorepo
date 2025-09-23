@@ -10,12 +10,16 @@ import { useTranslation, I18nextProvider, i18n } from '@sdppp/common'
 import zhCN from 'antd/locale/zh_CN'
 import enUS from 'antd/locale/en_US'
 
+ 
+
 export default function App() {
     const psTheme = useStore(sdpppSDK.stores.PhotoshopStore, state => state.theme)
     const showingPreview = MainStore(state => state.showingPreview)
     const previewImageList = MainStore(state => state.previewImageList)
 
     const fontSize = 12
+
+    
 
     return <I18nextProvider i18n={i18n}>
         <AppContent psTheme={psTheme} showingPreview={showingPreview} previewImageList={previewImageList} fontSize={fontSize} />
@@ -30,6 +34,7 @@ function AppContent({ psTheme, showingPreview, previewImageList, fontSize }: {
 }) {
     const { t, isZhCN } = useTranslation()
     const antdLocale = isZhCN() ? zhCN : enUS
+    
 
     return <div id="app" className={themeClassName(psTheme)}>
         <ConfigProvider

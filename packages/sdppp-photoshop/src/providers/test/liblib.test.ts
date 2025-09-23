@@ -3,6 +3,10 @@ import { describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { SDPPPLiblib } from '../_liblib/client';
 
+// API configuration
+const LIBLIB_API_KEY = process.env.LIBLIB_API_KEY || '';
+const LIBLIB_BASE_URL = process.env.LIBLIB_BASE_URL || '';
+
 // 下载图片的辅助函数
 async function downloadImage(url: string, filePath: string): Promise<void> {
     try {
@@ -26,8 +30,9 @@ describe('liblib', () => {
         { model: 'kontext-pro-img2img' }
     ];
     const client = new SDPPPLiblib({
-        apiKey: process.env.LIBLIB_API_KEY || '',
-        apiSecret: process.env.LIBLIB_API_SECRET || ''
+        apiKey: LIBLIB_API_KEY,
+        apiSecret: process.env.LIBLIB_API_SECRET || '',
+        baseURL: LIBLIB_BASE_URL
     });
 
     testCases.forEach(({ model }) => {
@@ -85,75 +90,48 @@ describe('liblib', () => {
     });
 
     it('should run kontext model', async () => {
-        const buffer = await readFile(join(import.meta.dirname, `testoutput/liblib.text2img.test.0.png`))
-        const imageUrl = await client.uploadImage(buffer, 'png')
-        console.log(imageUrl)
-        // // 确保testoutput目录存在
-        // const testOutputDir = join(import.meta.dirname, 'testoutput');
-        // await mkdir(testOutputDir, { recursive: true });
+        // Ensure testoutput directory exists
+        const testOutputDir = join(import.meta.dirname, 'testoutput');
+        await mkdir(testOutputDir, { recursive: true });
 
-        // const { defaultInput: defaultInputTxt2Img } = await client.getWidgets('kontext-pro-text2img');
-        // const taskTxt2Img = await client.run('kontext-pro-text2img', defaultInputTxt2Img);
+        // Use the specified input image
+        const buffer = await readFile(join(import.meta.dirname, 'testoutput/liblib.text2img.test.0.png'));
+        const uploadedUrl = await client.uploadImage(buffer, 'png');
 
-        // // 检查任务对象
-        // expect(taskTxt2Img).toBeDefined();
-        // expect(taskTxt2Img).toHaveProperty('taskId');
-        // expect(taskTxt2Img).toHaveProperty('promise');
-        // expect(typeof taskTxt2Img.taskId).toBe('string');
-        // expect(taskTxt2Img.promise).toBeInstanceOf(Promise);
+        // Run img2img with the required prompt and input image
+        const { defaultInput: defaultInputImg2Img } = await client.getWidgets('kontext-pro-img2img');
+        defaultInputImg2Img.image_list = [uploadedUrl] as any;
+        defaultInputImg2Img.prompt = 'change the man to a girl with mouth mask, light grey hair';
 
-        // // 等待任务完成并获取结果
-        // const output = await taskTxt2Img.promise as Array<{ url: string; rawData: any }>;
-        
-        // // 验证输出
-        // expect(output).toBeDefined();
-        // expect(Array.isArray(output)).toBe(true);
-        // expect(output.length).toBeGreaterThan(0);
+        const taskImg2Img = await client.run('kontext-pro-img2img', defaultInputImg2Img);
 
-        // // 检查每个输出项的格式并下载图片
-        // for (let index = 0; index < output.length; index++) {
-        //     const item = output[index];
-        //     expect(item).toHaveProperty('url');
-        //     expect(item).toHaveProperty('rawData');
-        //     expect(typeof item.url).toBe('string');
-        //     expect(item.url).toMatch(/^https?:\/\//); // 应该是有效的URL
-            
-        //     // 下载图片到testoutput目录
-        //     const imageUrl = item.url;
-        //     const fileName = `liblib.text2img.test.${index}.png`;
-        //     const filePath = join(testOutputDir, fileName);
-            
-        //     try {
-        //         await downloadImage(imageUrl, filePath);
-        //         console.log(`Successfully downloaded image to: ${filePath}`);
-        //     } catch (error) {
-        //         console.error(`Failed to download image ${index}:`, error);
-        //         // 如果下载失败，至少保存URL到文件
-        //         const urlFileName = `liblib.text2img.test.${index}.url.txt`;
-        //         const urlFilePath = join(testOutputDir, urlFileName);
-        //         await writeFile(urlFilePath, imageUrl).catch(console.error);
-        //     }
-        // }
+        // Validate task object
+        expect(taskImg2Img).toBeDefined();
+        expect(taskImg2Img).toHaveProperty('taskId');
+        expect(taskImg2Img).toHaveProperty('promise');
+        expect(typeof taskImg2Img.taskId).toBe('string');
+        expect(taskImg2Img.promise).toBeInstanceOf(Promise);
 
+        // Wait for results and download images
+        const outputImg2Img = await taskImg2Img.promise as Array<{ url: string; rawData: any }>;
+        expect(outputImg2Img).toBeDefined();
+        expect(Array.isArray(outputImg2Img)).toBe(true);
+        expect(outputImg2Img.length).toBeGreaterThan(0);
 
-        // const { defaultInput: defaultInputImg2Img } = await client.getWidgets('kontext-pro-img2img');
-        // const buffer = await readFile(join(import.meta.dirname, `testoutput/liblib.text2img.test.0.png`))
-        // const imageUrl = await client.uploadImage(buffer, 'png')
-        // defaultInputImg2Img.image_list = [imageUrl] as any;
-        // defaultInputImg2Img.prompt = '改为水墨画风格';
-
-        // const taskImg2Img = await client.run('kontext-pro-img2img', defaultInputImg2Img);
-        // const outputImg2Img = await taskImg2Img.promise as Array<{ url: string; rawData: any }>;
-        // for (let index = 0; index < outputImg2Img.length; index++) {
-        //     const item = outputImg2Img[index];
-        //     expect(item).toHaveProperty('url');
-        //     expect(item).toHaveProperty('rawData');
-        //     expect(typeof item.url).toBe('string');
-        //     expect(item.url).toMatch(/^https?:\/\//);
-        //     const fileName = `liblib.img2img.test.${index}.png`;
-        //     const filePath = join(testOutputDir, fileName);
-        //     await downloadImage(item.url, filePath);
-        // }
+        for (let index = 0; index < outputImg2Img.length; index++) {
+            const item = outputImg2Img[index];
+            expect(item).toHaveProperty('url');
+            expect(item).toHaveProperty('rawData');
+            expect(typeof item.url).toBe('string');
+            const fileName = `liblib.img2img.test.${index}.png`;
+            const filePath = join(testOutputDir, fileName);
+            try {
+                await downloadImage(item.url, filePath);
+            } catch (error) {
+                // If direct download fails, at least persist the URL
+                await writeFile(join(testOutputDir, `liblib.img2img.test.${index}.url.txt`), item.url).catch(() => {});
+            }
+        }
     });
 
     it('should throw error for unsupported model', async () => {

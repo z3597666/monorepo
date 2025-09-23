@@ -13,6 +13,8 @@ export const MainStore = create<{
         source: string,
         docId?: number,
         boundary?: any,
+        width?: number,
+        height?: number,
     }[]
     showingPreview: boolean
     previewError: string
@@ -35,7 +37,16 @@ export const MainStore = create<{
             set({
                 previewError: '',
                 previewImageList: [
-                    ...MainStore.getState().previewImageList, { url, source, thumbnail_url: res.thumbnail_url, nativePath: res.nativePath, docId, boundary }
+                    ...MainStore.getState().previewImageList, {
+                        url,
+                        source,
+                        thumbnail_url: res.thumbnail_url,
+                        nativePath: res.nativePath,
+                        docId,
+                        boundary,
+                        width: (res as any).width,
+                        height: (res as any).height,
+                    }
                 ]
             })
         }
@@ -103,5 +114,6 @@ function updateBannerData() {
     })
 }
 
-setTimeout(updateBannerData, 3000)
-setInterval(updateBannerData, 60000)
+// Temporarily disabled to check if this causes re-rendering
+// setTimeout(updateBannerData, 3000)
+// setInterval(updateBannerData, 60000)

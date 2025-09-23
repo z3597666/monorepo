@@ -7,23 +7,52 @@ import { sdpppSDK } from '@sdppp/common';
  * Unified function for getting images from Photoshop with proper boundary handling
  * This function should be used by all upload implementations to ensure consistency
  */
-export const getPhotoshopImage = async (isMask = false, source: 'canvas' | 'curlayer') => {
-    sdpppSDK.logger('getPhotoshopImage called', { isMask, source });
+export const getPhotoshopImage = async (
+    isMask = false,
+    source: 'canvas' | 'curlayer' | 'selection',
+    reverse?: boolean
+) => {
+    // verbose log removed
 
     let thumbnail_url: string, file_token: string, imageSource: string, result: any;
 
     if (isMask) {
-        sdpppSDK.logger('Processing mask upload');
-        // Mask模式仍使用原有逻辑
-        const paramsResult = await sdpppSDK.plugins.photoshop.requestMaskGet({ isMask: true });
-        sdpppSDK.logger('requestMaskGet result', paramsResult);
-        result = await sdpppSDK.plugins.photoshop.doGetMask((paramsResult as any).getMaskParams);
-        sdpppSDK.logger('doGetMask result', result);
+        // verbose log removed
+        // 使蒙版获取与图片获取一致地尊重 WorkBoundary
+        const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
+        const workBoundaries = sdpppSDK.stores.WebviewStore.getState().workBoundaries;
+        const boundary = workBoundaries[activeDocumentID];
+
+        let boundaryParam: "canvas" | "curlayer" | "selection" | {
+            leftDistance: number;
+            topDistance: number;
+            rightDistance: number;
+            bottomDistance: number;
+            width: number;
+            height: number;
+        };
+        if (!boundary || (boundary.width >= 999999 && boundary.height >= 999999)) {
+            boundaryParam = 'canvas';
+        } else {
+            boundaryParam = boundary;
+        }
+
+        const maskParams: any = {
+            content: source,
+            reverse: !!reverse,
+            imageSize: 2048,
+            // Always include boundary; default to 'canvas' if undefined
+            boundary: boundaryParam as any
+        };
+
+        result = await sdpppSDK.plugins.photoshop.getMask(maskParams as any);
+
+
         thumbnail_url = result.thumbnail_url;
         file_token = result.file_token;
         imageSource = result.source;
     } else {
-        sdpppSDK.logger('Processing image upload with source:', source);
+        // verbose log removed
         // 获取WorkBoundary组件维护的boundary信息
         const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
         const workBoundaries = sdpppSDK.stores.WebviewStore.getState().workBoundaries;
@@ -52,9 +81,54 @@ export const getPhotoshopImage = async (isMask = false, source: 'canvas' | 'curl
         };
 
         result = await sdpppSDK.plugins.photoshop.getImage(getImageParams);
+
+        // Debug log for getImage result
+        sdpppSDK.logger('getImage result:', {
+            thumbnail_url: result.thumbnail_url,
+            file_token: result.file_token,
+            source: result.source,
+            error: result.error,
+            fullResult: result
+        });
+
         thumbnail_url = result.thumbnail_url;
         file_token = result.file_token;
         imageSource = result.source;
+    }
+
+    return { thumbnail_url, file_token, source: imageSource, result };
+};
+
+/**
+ * Open Photoshop dialog (selectImage/selectMask) first, then fetch via getImage/getMask
+ */
+export const getPhotoshopImageViaDialog = async (
+    isMask = false
+) => {
+    let thumbnail_url: string, file_token: string, imageSource: string, result: any;
+
+    if (isMask) {
+        const selection = await sdpppSDK.plugins.photoshop.selectMask({});
+        if (!selection || (selection as any).cancelled) {
+            throw new Error('canceled');
+        }
+        const getMaskParams = (selection as any).getMaskParams || {};
+        const maskResult = await sdpppSDK.plugins.photoshop.getMask(getMaskParams);
+        thumbnail_url = (selection as any).thumbnail_url;
+        file_token = maskResult.file_token;
+        imageSource = (selection as any).source;
+        result = maskResult;
+    } else {
+        const selection = await sdpppSDK.plugins.photoshop.selectImage({});
+        if (!selection || (selection as any).cancelled) {
+            throw new Error('canceled');
+        }
+        const getImageParams = (selection as any).getImageParams || {};
+        const imageResult = await sdpppSDK.plugins.photoshop.getImage(getImageParams);
+        thumbnail_url = (selection as any).thumbnail_url;
+        file_token = imageResult.file_token;
+        imageSource = (selection as any).source;
+        result = imageResult;
     }
 
     return { thumbnail_url, file_token, source: imageSource, result };
@@ -71,16 +145,130 @@ export const useDirectUpload = (
     handleImagesChange: (images: ImageDetail[]) => void,
     maxCount: number
 ) => {
-    const uploadFromPhotoshop = useCallback(async (isMask = false, source: 'canvas' | 'curlayer') => {
-        sdpppSDK.logger('uploadFromPhotoshop called', { isMask, source });
+    const uploadFromPhotoshopViaDialog = useCallback(async (isMask = false) => {
+        const originalImages = [...originalImagesRef.current];
+        try {
+            setUploadState(prev => ({ ...prev, uploadError: '' }));
+
+            const { thumbnail_url, file_token, source: imageSource, result } = await getPhotoshopImageViaDialog(isMask);
+
+            if (result?.error) {
+                sdpppSDK.logger('Dialog API returned error:', result.error);
+                onSetImages(originalImages);
+                setUploadState(prev => ({ ...prev, uploadError: `获取图片失败: ${result.error}` }));
+                return;
+            }
+
+            if (!thumbnail_url || !imageSource) {
+                onSetImages(originalImages);
+                setUploadState(prev => ({ ...prev, uploadError: `无法获取图片内容 - 请检查图层是否有可见内容` }));
+                return;
+            }
+
+            const uploadId = v4();
+
+            const markSourceType = (source: string | undefined, type: 'image' | 'mask') => {
+                try {
+                    const parsed = source ? JSON.parse(source) : {};
+                    return JSON.stringify({ ...parsed, __psType: type });
+                } catch {
+                    return JSON.stringify({ __psType: type, raw: source || '' });
+                }
+            };
+            const displaySource = isMask ? markSourceType(imageSource, 'mask') : markSourceType(imageSource, 'image');
+            const thumbnailImages = [{
+                url: thumbnail_url,
+                source: displaySource,
+                thumbnail: thumbnail_url,
+                uploadId,
+                isUploading: true
+            }];
+
+            setUploadState(prev => ({
+                ...prev,
+                currentThumbnail: thumbnail_url,
+                currentThumbnails: {
+                    ...(prev.currentThumbnails || {}),
+                    [uploadId]: thumbnail_url
+                }
+            }));
+
+            const tempImages = maxCount > 1 ? [...originalImages, ...thumbnailImages] : thumbnailImages;
+            onSetImages(tempImages);
+            originalImagesRef.current = tempImages;
+
+            await runUploadPassOnce({
+                getUploadFile: async (signal?: AbortSignal) => {
+                    incrementUploadCount();
+                    if (signal?.aborted) {
+                        throw new DOMException('Upload aborted', 'AbortError');
+                    }
+                    return { type: 'token', tokenOrBuffer: file_token, fileName: `${v4()}.png` };
+                },
+                onUploaded: async (url: string, signal?: AbortSignal) => {
+                    if (signal?.aborted) {
+                        return;
+                    }
+                    const currentImages = [...originalImagesRef.current];
+                    const targetIndex = currentImages.findIndex(img => img.uploadId === uploadId);
+                    if (targetIndex !== -1) {
+                        currentImages[targetIndex] = {
+                            url,
+                            source: displaySource,
+                            // 对于 mask，使用最终 URL 作为缩略图，避免黑色缩略图影响预览
+                            thumbnail: isMask ? url : thumbnail_url,
+                            isUploading: false
+                        };
+                        originalImagesRef.current = currentImages;
+                        onCallOnValueChange(currentImages);
+                        if (isMask) {
+                            setUploadState(prev => ({
+                                ...prev,
+                                currentThumbnail: url,
+                                currentThumbnails: {
+                                    ...(prev.currentThumbnails || {}),
+                                    [uploadId]: url
+                                }
+                            }));
+                        }
+                    } else {
+                        const newImages = [{ url, source: displaySource, thumbnail: isMask ? url : thumbnail_url, isUploading: false }];
+                        handleImagesChange(newImages);
+                        if (isMask) {
+                            setUploadState(prev => ({ ...prev, currentThumbnail: url }));
+                        }
+                    }
+                    decrementUploadCount();
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                },
+                onUploadError: (error: Error) => {
+                    if (error.name !== 'AbortError') {
+                        onSetImages(originalImages);
+                    }
+                    decrementUploadCount();
+                    setUploadState(prev => ({ ...prev, uploadError: error.name === 'AbortError' ? '' : error.message }));
+                }
+            });
+        } catch (error: any) {
+            if (error?.message === 'canceled') {
+                // silently ignore cancel
+                return;
+            }
+            onSetImages(originalImages);
+            setUploadState(prev => ({ ...prev, uploading: false, uploadError: error.message }));
+        }
+    }, [runUploadPassOnce, onSetImages, handleImagesChange, maxCount]);
+    const uploadFromPhotoshop = useCallback(async (isMask = false, source: 'canvas' | 'curlayer' | 'selection', reverse?: boolean) => {
+        // verbose log removed
         // 保存原始images状态，用当前最新状态
         const originalImages = [...originalImagesRef.current];
-        sdpppSDK.logger('originalImages', originalImages);
+        // verbose log removed
 
         try {
             setUploadState(prev => ({ ...prev, uploadError: '' }));
-            sdpppSDK.logger('upload state reset, starting upload process');
-            const { thumbnail_url, file_token, source: imageSource, result } = await getPhotoshopImage(isMask, source);
+
+            // verbose log removed
+            const { thumbnail_url, file_token, source: imageSource, result } = await getPhotoshopImage(isMask, source, reverse);
 
 
             // 检查API是否返回了错误
@@ -109,11 +297,50 @@ export const useDirectUpload = (
             // 为这个上传任务生成唯一ID
             const uploadId = v4();
 
-            // 获取到thumbnail时先显示缩略图，添加uploadId标识
-            const thumbnailImages = [{ url: thumbnail_url, source: imageSource, thumbnail: thumbnail_url, uploadId }];
+            // 获取到thumbnail时先显示缩略图，添加uploadId标识和上传状态
+            // 对于mask，source应该显示为mask相关的信息，而不是JSON字符串
+            const markSourceType = (source: string | undefined, type: 'image' | 'mask') => {
+                try {
+                    const parsed = source ? JSON.parse(source) : {};
+                    return JSON.stringify({ ...parsed, __psType: type });
+                } catch {
+                    return JSON.stringify({ __psType: type, raw: source || '' });
+                }
+            };
+            const displaySource = isMask ? markSourceType(imageSource, 'mask') : markSourceType(imageSource, 'image');
+            const thumbnailImages = [{
+                url: thumbnail_url,
+                source: displaySource,
+                thumbnail: thumbnail_url,
+                uploadId,
+                isUploading: true
+            }];
+
+            // 更新本地上传状态中的缩略图，仅使用本地记录供预览展示
+            setUploadState(prev => ({
+                ...prev,
+                currentThumbnail: thumbnail_url,
+                currentThumbnails: {
+                    ...(prev.currentThumbnails || {}),
+                    [uploadId]: thumbnail_url
+                }
+            }));
+
+            // 对于单图片场景，也要先显示缩略图，然后在上传完成后替换
+            // 这样用户就能看到缩略图显示的阶段
             const tempImages = maxCount > 1
                 ? [...originalImages, ...thumbnailImages]
                 : thumbnailImages;
+
+            // Debug log for thumbnail display
+            sdpppSDK.logger('Setting thumbnail images:', {
+                thumbnailImages,
+                tempImages,
+                maxCount,
+                originalImagesLength: originalImages.length,
+                isMask
+            });
+
             onSetImages(tempImages);
             // 立即更新 originalImagesRef 以确保后续操作基于正确的状态
             originalImagesRef.current = tempImages;
@@ -141,14 +368,28 @@ export const useDirectUpload = (
                     const targetIndex = currentImages.findIndex(img => img.uploadId === uploadId);
 
                     if (targetIndex !== -1) {
-                        // 替换找到的缩略图
-                        const finalImage = { url, source: imageSource, thumbnail: thumbnail_url };
+                        const finalImage = {
+                            url,
+                            source: isMask ? markSourceType(imageSource, 'mask') : markSourceType(imageSource, 'image'),
+                            thumbnail: thumbnail_url,
+                            isUploading: false
+                        };
                         currentImages[targetIndex] = finalImage;
                         originalImagesRef.current = currentImages;
+
+                        // Debug log for final image replacement
+                        sdpppSDK.logger('Upload completed, keeping thumbnail:', {
+                            uploadId,
+                            targetIndex,
+                            thumbnailKept: thumbnail_url.substring(0, 50) + '...',
+                            finalUrl: url,
+                            isMask
+                        });
+
                         onCallOnValueChange(currentImages);
                     } else {
                         // 如果找不到对应缩略图，降级为追加模式
-                        const newImages = [{ url, source: imageSource, thumbnail: thumbnail_url }];
+                        const newImages = [{ url, source: isMask ? markSourceType(imageSource, 'mask') : markSourceType(imageSource, 'image'), thumbnail: thumbnail_url, isUploading: false }];
                         handleImagesChange(newImages);
                     }
 
@@ -194,7 +435,10 @@ export const useDirectUpload = (
         const uploadId = v4();
         
         const thumbnailURL = URL.createObjectURL(file);
-        const thumbnailImages = [{ url: thumbnailURL, source: 'disk', thumbnail: thumbnailURL, uploadId }];
+        const thumbnailImages = [{ url: thumbnailURL, source: 'disk', thumbnail: thumbnailURL, uploadId, isUploading: true }];
+
+        // 本地上传（磁盘）也同步记录本地缩略图用于预览
+        setUploadState(prev => ({ ...prev, currentThumbnail: thumbnailURL }));
 
         setUploadState(prev => ({ ...prev, uploadError: '' }));
         // 先显示缩略图，支持多图片
@@ -226,13 +470,13 @@ export const useDirectUpload = (
                     const targetIndex = currentImages.findIndex(img => img.uploadId === uploadId);
                     
                     if (targetIndex !== -1) {
-                        // 替换找到的缩略图
-                        currentImages[targetIndex] = { url, source: 'disk', thumbnail: thumbnailURL };
+                        // 保持原始缩略图，只更新URL和移除上传状态
+                        currentImages[targetIndex] = { url, source: 'disk', thumbnail: thumbnailURL, isUploading: false };
                         originalImagesRef.current = currentImages;
                         onCallOnValueChange(currentImages);
                     } else {
                         // 如果找不到对应缩略图，降级为追加模式
-                        const newImages = [{ url, source: 'disk', thumbnail: thumbnailURL }];
+                        const newImages = [{ url, source: 'disk', thumbnail: thumbnailURL, isUploading: false }];
                         handleImagesChange(newImages);
                     }
                     
@@ -256,7 +500,8 @@ export const useDirectUpload = (
     }, [runUploadPassOnce, onSetImages, handleImagesChange, maxCount]);
 
     return {
-        uploadFromPhotoshop,  
+        uploadFromPhotoshop, 
+        uploadFromPhotoshopViaDialog,
         uploadFromDisk
     };
 };

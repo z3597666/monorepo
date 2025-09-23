@@ -8,6 +8,8 @@ import './workflow-item.less';
 
 const { DirectoryTree } = Tree;
 
+const log = sdpppSDK.logger.extend('workflow-list');
+
 interface WorkflowListProps {
   setCurrentWorkflow: (workflow: string) => void;
   currentWorkflow: string;
@@ -33,12 +35,6 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
     refetch();
   }, []);
 
-  useEffect(() => {
-    if (currentWorkflow) {
-      setSelectedKeys([currentWorkflow]);
-    }
-  }, [currentWorkflow]);
- 
   // Show error if workflows failed to load
   if (workflowsError) {
     return (
@@ -56,14 +52,13 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
   const handleSelect = async (selectedKeys: string[], e: { selected: boolean; selectedNodes: any; node: any; event: any }) => {
     if (e.selected && e.node.isLeaf && e.node.workflow) {
       try {
+        setCurrentWorkflow(e.node.key);
         await sdpppSDK.plugins.ComfyCaller.openWorkflow({
           workflow_path: e.node.key,
           reset: false
         });
-        setCurrentWorkflow(e.node.key);
-        setSelectedKeys([e.node.key]);
       } catch (error: any) {
-        console.error('Failed to open workflow:', error);
+        log('[Error] Failed to open workflow:', error);
         // 可以选择显示错误提示
       }
     }

@@ -8,25 +8,20 @@ interface SingleImageProps {
     images: ImageDetail[];
     maxCount: number;
     uiWeightCSS: React.CSSProperties;
-    thumbnail?: string;
-    onThumbnailChange?: (thumbnail: string) => void;
     enableRemove?: boolean;
 }
 
-export const SingleImageComponent: React.FC<SingleImageProps> = ({
+const SingleImageComponentImpl: React.FC<SingleImageProps> = ({
     images,
     maxCount,
     uiWeightCSS,
-    thumbnail: externalThumbnail = '',
-    onThumbnailChange,
     enableRemove = false
 }) => {
-    // log(images)
+    
+
     const { callOnValueChange } = useImageUpload();
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewCurrent, setPreviewCurrent] = useState(0);
-    const [internalThumbnail, setInternalThumbnail] = useState<string>('');
-    const thumbnail = externalThumbnail || internalThumbnail;
     const imagesRef = useRef(images);
     imagesRef.current = images;
 
@@ -49,64 +44,19 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
         callOnValueChange(newImages);
     }, [callOnValueChange]);
 
-    const setThumbnailImage = useCallback((thumbnailUrl: string) => {
-        if (onThumbnailChange) {
-            onThumbnailChange(thumbnailUrl);
-        } else {
-            setInternalThumbnail(thumbnailUrl);
-        }
-    }, [onThumbnailChange]);
-
-    const clearThumbnail = useCallback(() => {
-        if (onThumbnailChange) {
-            onThumbnailChange('');
-        } else {
-            setInternalThumbnail('');
-        }
-    }, [onThumbnailChange]);
-
     // 使用 upload context 提供的方法
-    const { uploadFromPhotoshop, uploadFromDisk } = useImageUpload();
-    const [uploadingSource, setUploadingSource] = useState<string>('');
-    const [isUploading, setIsUploading] = useState<boolean>(false);
-
-    const customUploadFromPhotoshop = useCallback(async (isMask = false, source: 'canvas' | 'curlayer' = 'canvas') => {
-        try {
-            setIsUploading(true);
-            setUploadingSource(source);
-            await uploadFromPhotoshop(isMask, source);
-        } finally {
-            setIsUploading(false);
-            setUploadingSource('');
-        }
-    }, [uploadFromPhotoshop]);
-
-    const customUploadFromDisk = useCallback(async (file: File) => {
-        try {
-            setIsUploading(true);
-            await uploadFromDisk(file);
-        } finally {
-            setIsUploading(false);
-        }
-    }, [uploadFromDisk]);
+    const { } = useImageUpload();
 
     const renderPreviewImages = () => {
-        if (images.length === 0 && !thumbnail) {
+        if (images.length === 0) {
             return <EmptyState />;
         }
 
-        // Show thumbnail when uploading, otherwise show the actual image
-        const displayImage = thumbnail ? {
-            url: thumbnail,
-            source: uploadingSource,
-            thumbnail: thumbnail
-        } : images[0];
-
         // 确保在有缩略图或有图片时都显示预览组件
-        if (displayImage) {
+        if (images[0]) {
             return (
                 <SingleImagePreview
-                    image={displayImage}
+                    image={images[0]}
                     previewVisible={previewVisible}
                     previewCurrent={previewCurrent}
                     onPreviewVisibleChange={setPreviewVisible}
@@ -122,7 +72,7 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
 
     const renderedImages = useMemo(() => {
         return renderPreviewImages();
-    }, [images, previewVisible, previewCurrent, thumbnail, uploadingSource]);
+    }, [images, previewVisible, previewCurrent]);
 
     const shouldHideActionButtons = images.length > 0 && images[0].auto;
 
@@ -139,12 +89,43 @@ export const SingleImageComponent: React.FC<SingleImageProps> = ({
                     images={images}
                     maxCount={maxCount}
                     imagesRef={imagesRef}
-                    customUploadFromPhotoshop={customUploadFromPhotoshop}
-                    customUploadFromDisk={customUploadFromDisk}
-                    isUploading={isUploading}
                     enableRemove={enableRemove}
                 />
             )}
         </div>
     );
 };
+
+// Wrap with React.memo to prevent unnecessary re-renders
+export const SingleImageComponent = React.memo(SingleImageComponentImpl, (prevProps, nextProps) => {
+    // Check if images array actually changed
+    if (prevProps.images.length !== nextProps.images.length) {
+        return false;
+    }
+
+    // Check if image content changed
+    for (let i = 0; i < prevProps.images.length; i++) {
+        const prevImage = prevProps.images[i];
+        const nextImage = nextProps.images[i];
+
+        if (!nextImage ||
+            prevImage.url !== nextImage.url ||
+            prevImage.isUploading !== nextImage.isUploading ||
+            prevImage.auto !== nextImage.auto) {
+            return false;
+        }
+    }
+
+    // Check other props
+    if (prevProps.maxCount !== nextProps.maxCount ||
+        prevProps.enableRemove !== nextProps.enableRemove) {
+        return false;
+    }
+
+    // uiWeightCSS is typically stable, but we'll do a shallow check
+    if (JSON.stringify(prevProps.uiWeightCSS) !== JSON.stringify(nextProps.uiWeightCSS)) {
+        return false;
+    }
+
+    return true;
+});

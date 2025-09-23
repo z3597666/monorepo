@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, Flex, Spin, Typography, Select, Button } from 'antd';
+import { Alert, Flex, Spin, Typography, AutoComplete, Button, Input } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 
 export interface ModelOption {
@@ -59,6 +59,8 @@ export function ModelSelector({
         }
     }, [value, options, isFocused]);
 
+    // Use AntD AutoComplete with a custom Input to control input attributes.
+
     const handleChange = async (newValue: string) => {
         if (isHandling) {
             return;
@@ -78,15 +80,9 @@ export function ModelSelector({
         onInputChange?.(newValue);
     };
 
-    const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    const handleFocus = () => {
         setIsFocused(true);
         setInputValue('');
-        // 使用 setTimeout 确保在下一个事件循环中执行，以覆盖默认的光标位置设置
-        setTimeout(() => {
-            if (e.target) {
-                e.target.setSelectionRange(0, 0);
-            }
-        }, 0);
     };
 
     const handleBlur = () => {
@@ -112,10 +108,24 @@ export function ModelSelector({
 
     const renderSelector = () => {
         return (
-            <Select
+            <AutoComplete
                 placeholder={placeholder}
                 value={inputValue || undefined}
-                onChange={(selectedValue, option) => {
+                onSearch={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        const currentValue = (e.target as HTMLInputElement).value;
+                        if (currentValue && currentValue.trim()) {
+                            handleChange(currentValue);
+                            (e.target as HTMLInputElement).blur();
+                        } else {
+                            handleEnterPress();
+                        }
+                    }
+                }}
+                onSelect={(selectedValue, option) => {
                     const selectedOption = option as any;
                     if (selectedOption && selectedOption.displayText) {
                         setInputValue(selectedOption.displayText);
@@ -123,22 +133,6 @@ export function ModelSelector({
                         setInputValue(selectedValue);
                     }
                     handleChange(selectedValue);
-                }}
-                onSearch={handleInputChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                onInputKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                        // 在Enter事件中直接获取输入框的值，因为handleInputChange可能在Enter后被清空
-                        const currentValue = (e.target as HTMLInputElement).value;
-                        if (currentValue && currentValue.trim()) {
-                            handleChange(currentValue);
-                            // 失焦输入框
-                            (e.target as HTMLInputElement).blur();
-                        } else {
-                            handleEnterPress();
-                        }
-                    }
                 }}
                 options={options.map(option => ({
                     ...option,
@@ -164,7 +158,6 @@ export function ModelSelector({
                         </div>
                     ) : option.label
                 }))}
-                showSearch={true}
                 allowClear={true}
                 filterOption={(input, option) => {
                     if (!option) return false;
@@ -174,7 +167,9 @@ export function ModelSelector({
                 notFoundContent={notFoundContent}
                 className={className}
                 style={{ flex: 1 }}
-            />
+            >
+                <Input autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+            </AutoComplete>
         );
     };
 

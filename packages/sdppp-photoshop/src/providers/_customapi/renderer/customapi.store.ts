@@ -1,5 +1,6 @@
 import { SDPPPCustomAPI } from "../client";
 import { BaseStoreState, createBaseStore, AsyncOperationManager, createTask as createBaseTask } from "../../base/BaseStore";
+import { sdpppSDK } from "@sdppp/common";
 
 // CustomAPI（Google/OpenAI）特有的状态接口
 interface CustomAPIStoreState extends BaseStoreState<SDPPPCustomAPI> {
@@ -18,7 +19,7 @@ export const customapiStore = createBaseStore<SDPPPCustomAPI, CustomAPIStoreStat
     {
         format: 'google',
         apiKey: '',
-        baseURL: 'http://zombie208.devcloud.woa.com/v1/',
+        baseURL: '',
         setFormat: (format) => customapiStore.setState({ format }),
         setApiKey: (apiKey) => customapiStore.setState({ apiKey }),
         setBaseURL: (baseURL) => customapiStore.setState({ baseURL }),
@@ -34,15 +35,21 @@ export const customapiStore = createBaseStore<SDPPPCustomAPI, CustomAPIStoreStat
 
 // 客户端重置逻辑
 async function resetClient(state: CustomAPIStoreState, prevState: CustomAPIStoreState) {
-    if (
-        state.apiKey && (
-            state.apiKey !== prevState.apiKey ||
-            state.baseURL !== prevState.baseURL ||
-            state.format !== prevState.format
-        )
-    ) {
-        const client = new SDPPPCustomAPI({ apiKey: state.apiKey, baseURL: state.baseURL, format: state.format });
-        customapiStore.setState({ client });
+    const changed = (
+        state.apiKey !== prevState.apiKey ||
+        state.baseURL !== prevState.baseURL ||
+        state.format !== prevState.format
+    );
+    if (changed) {
+        if (state.apiKey && state.baseURL) {
+            // sdpppSDK.plugins.fetchProxy.registerProxyDomains(state.baseURL.split('/').filter(Boolean)[1]);
+            // sdpppSDK.logger('registerProxyDomains', state.baseURL.split('/').filter(Boolean)[1]);
+            const client = new SDPPPCustomAPI({ apiKey: state.apiKey, baseURL: state.baseURL, format: state.format });
+            customapiStore.setState({ client });
+        } else {
+            // Missing required params, clear client
+            customapiStore.setState({ client: null as any });
+        }
     }
 }
 customapiStore.subscribe(resetClient);

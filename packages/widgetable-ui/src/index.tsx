@@ -79,13 +79,6 @@ export default function WorkflowEdit({
     onTitleChange
 }: WorkflowEditProps) {
     workflowEditRenderCount++;
-    // console.log(`📝 WorkflowEdit render #${workflowEditRenderCount}`, {
-    //     nodeCount: widgetableStructure?.nodeIndexes?.length || 0,
-    //     valuesKeys: Object.keys(widgetableValues || {}),
-    //     errorsCount: Object.keys(widgetableErrors || {}).length,
-    //     onWidgetChangeIdentity: onWidgetChange?.toString().slice(0, 50) + '...',
-    //     onTitleChangeIdentity: onTitleChange?.toString().slice(0, 50) + '...'
-    // });
 
     useWidgetable();
 
@@ -97,7 +90,6 @@ export default function WorkflowEdit({
     });
 
     const allRenderedFields = useMemo(() => {
-        // console.log(`🔄 WorkflowEdit: allRenderedFields useMemo recalculating for render #${workflowEditRenderCount}`);
         return widgetableStructure.nodeIndexes.map(nodeID => {
             const fieldInfo = widgetableStructure.nodes[nodeID]
 

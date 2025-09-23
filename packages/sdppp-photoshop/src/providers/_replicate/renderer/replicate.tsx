@@ -23,7 +23,6 @@ export default function ReplicateRenderer({ showingPreview }: { showingPreview: 
 
     return (
         <Flex className="replicate-renderer" vertical gap={8}>
-            <WorkBoundary />
             {!showingPreview ? <Flex gap={8}>
                 <Password
                     placeholder={t('replicate.apikey_placeholder')}
@@ -167,6 +166,7 @@ function ReplicateRendererForm() {
     });
     return (
         <>
+            <WorkBoundary />
             <Button type="primary" onClick={handleRun}>{t('replicate.execute')}</Button>
             {progressMessage && (
                 <Alert 

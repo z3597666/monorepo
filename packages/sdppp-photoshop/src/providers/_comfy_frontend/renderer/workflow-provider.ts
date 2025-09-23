@@ -1,5 +1,7 @@
-import React, { useCallback, useEffect, useState, createContext, useContext, ReactNode } from "react";
+import React, { useCallback, useEffect, useState, createContext, useContext, ReactNode, useRef } from "react";
 import { defaultComfyDataSource } from "./comfy-workflow-datasource";
+import { useStore } from "zustand";
+import { sdpppSDK } from "@sdppp/common";
 
 export interface Workflow {
     path: string;
@@ -21,12 +23,15 @@ export interface TreeNodeData {
     workflow?: Workflow;
 }
 
+const log = sdpppSDK.logger.extend('workflow-provider');
+
 function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource) {
     const [allWorkflowList, setAllWorkflowList] = useState<Record<string, Workflow>>({});
     const [treeData, setTreeData] = useState<TreeNodeData[]>([]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const comfyWebviewConnectStatus = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyWebviewConnectStatus);
 
     // Build tree structure from flat workflow list
     const buildTreeData = useCallback((workflows: Record<string, Workflow>): TreeNodeData[] => {
@@ -114,9 +119,19 @@ function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource
         return await dataSource.getWorkflowJSON(workflowPath);
     }, [dataSource]);
 
+    // Track connect status changes to trigger fetch only when becoming connected
+    const prevStatusRef = useRef<string | undefined>(undefined);
     useEffect(() => {
-        doFetchWorkflowList();
-    }, [doFetchWorkflowList]);
+        const prev = prevStatusRef.current;
+        if (comfyWebviewConnectStatus === "connected") {
+            // If just became connected (including initial mount when already connected), refetch once
+            if (prev !== "connected") {
+                doFetchWorkflowList();
+            }
+        }
+        // Update previous status
+        prevStatusRef.current = comfyWebviewConnectStatus;
+    }, [comfyWebviewConnectStatus, doFetchWorkflowList]);
 
     // Handle expand/collapse - allow multiple folders to be expanded
     const handleExpand = useCallback((newExpandedKeys: string[]) => {
@@ -132,6 +147,8 @@ function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource
         loading,
         error,
         refetch: () => {
+            // Avoid fetching when not connected
+            if (comfyWebviewConnectStatus !== "connected") return;
             doFetchWorkflowList();
         },
 

@@ -19,6 +19,16 @@ export const useUploadPasses = (
     addUploadPass: (pass: any) => void,
     removeUploadPass: (pass: any) => void
 ) => {
+    // 标记来源类型，避免依赖启发式字段（如 reverse/boundary）
+    const markSourceType = (source: string | undefined, type: 'image' | 'mask') => {
+        try {
+            const parsed = source ? JSON.parse(source) : {};
+            return JSON.stringify({ ...parsed, __psType: type });
+        } catch {
+            return JSON.stringify({ __psType: type, raw: source || '' });
+        }
+    };
+
     const createImageUploadPass = useCallback((config: PhotoshopParams) => {
         const passKey = `${config.content}-${config.boundary}-${config.cropBySelection}`;
 
@@ -74,14 +84,23 @@ export const useUploadPasses = (
 
                     const thumbnailUrl = thumbnail_url || '';
                     currentThumbnailRef.current = thumbnailUrl;
-                    setUploadState(prev => ({ ...prev, currentThumbnail: thumbnailUrl }));
+                    setUploadState(prev => ({
+                        ...prev,
+                        currentThumbnail: thumbnailUrl,
+                        currentThumbnails: {
+                            ...(prev.currentThumbnails || {}),
+                            // No uploadId here; key by thumbnailUrl so SingleImagePreview can find via image.url
+                            [thumbnailUrl]: thumbnailUrl
+                        }
+                    }));
 
                     // 获取到thumbnail时调用setImages
                     const newImages = [{
-                        url: thumbnailUrl, source: source || '',
+                        url: thumbnailUrl, source: markSourceType(source, 'image'),
                         thumbnail: thumbnailUrl, auto: true
                     }];
                     sourceInfoRef = source || ''
+                    log('set temp image from GET', { url: thumbnailUrl, source: sourceInfoRef });
                     onSetImages(newImages);
 
                     return { type: 'token' as const, tokenOrBuffer: file_token || '', fileName: `${v4()}.png` };
@@ -110,10 +129,13 @@ export const useUploadPasses = (
                 decrementUploadCount();
                 // switchImageSource逻辑改为调用onCallOnValueChange
                 const newImages = [{
-                    url, source: sourceInfoRef,
-                    auto: true,
+                    url,
+                    source: markSourceType(sourceInfoRef, 'image'),
+                    // 保留用户的 auto 设置（若未定义则默认保持开启）
+                    auto: (originalImagesRef.current?.[0]?.auto ?? true),
                     thumbnail: currentThumbnailRef.current
                 }];
+                log('onUploaded set final image', { url, thumb: currentThumbnailRef.current });
                 onCallOnValueChange(newImages);
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
@@ -145,12 +167,40 @@ export const useUploadPasses = (
                         throw new DOMException('Upload aborted', 'AbortError');
                     }
 
-                    const content = config.content || layerIdentifyRef.current;
-                    const { thumbnail_url, file_token, source } = await sdpppSDK.plugins.photoshop.doGetMask({
-                        content: content as 'canvas' | 'curlayer' | 'selection',
+                    const content = (config.content || layerIdentifyRef.current) as 'canvas' | 'curlayer' | 'selection';
+
+                    // 与图片获取一致，尊重 WorkBoundary
+                    const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
+                    const workBoundaries = sdpppSDK.stores.WebviewStore.getState().workBoundaries;
+                    const boundary = workBoundaries[activeDocumentID];
+
+                    let boundaryParam: "canvas" | "curlayer" | "selection" | {
+                        leftDistance: number;
+                        topDistance: number;
+                        rightDistance: number;
+                        bottomDistance: number;
+                        width: number;
+                        height: number;
+                    };
+                    if (!boundary || (boundary.width >= 999999 && boundary.height >= 999999)) {
+                        boundaryParam = 'canvas';
+                    } else {
+                        boundaryParam = boundary;
+                    }
+
+                    // 当有明确矩形边界时，使用 selection 触发蒙版生成（若后端支持 selection 边界）
+                    const contentParam: 'canvas' | 'curlayer' | 'selection' =
+                        boundaryParam === 'canvas' ? content : 'selection';
+
+                    const maskParams: any = {
+                        content: contentParam,
                         reverse: config.reverse || false,
-                        imageSize: config.imageSize || 0
-                    });
+                        imageSize: config.imageSize || 0,
+                        // Always include boundary; default to 'canvas' if undefined
+                        boundary: boundaryParam as any
+                    };
+
+                    const { thumbnail_url, file_token, source } = await sdpppSDK.plugins.photoshop.getMask(maskParams as any);
 
                     // Check if aborted during the async operation
                     if (signal?.aborted) {
@@ -159,14 +209,22 @@ export const useUploadPasses = (
 
                     const thumbnailUrl = thumbnail_url || '';
                     currentThumbnailRef.current = thumbnailUrl;
-                    setUploadState(prev => ({ ...prev, currentThumbnail: thumbnailUrl }));
+                    setUploadState(prev => ({
+                        ...prev,
+                        currentThumbnail: thumbnailUrl,
+                        currentThumbnails: {
+                            ...(prev.currentThumbnails || {}),
+                            [thumbnailUrl]: thumbnailUrl
+                        }
+                    }));
 
                     // 获取到thumbnail时调用setImages
                     const newImages = [{
-                        url: thumbnailUrl, source: source || '',
+                        url: thumbnailUrl, source: markSourceType(source || '', 'mask'),
                         thumbnail: thumbnailUrl, auto: true
                     }];
                     sourceInfoRef = source || ''
+                    log('set temp mask from GET', { url: thumbnailUrl, source: sourceInfoRef });
                     onSetImages(newImages);
 
                     return { type: 'token' as const, tokenOrBuffer: file_token || '', fileName: `${v4()}.png` };
@@ -195,10 +253,13 @@ export const useUploadPasses = (
                 decrementUploadCount();
                 // switchImageSource逻辑改为调用onCallOnValueChange
                 const newImages = [{
-                    url, source: sourceInfoRef,
-                    auto: true,
+                    url,
+                    source: markSourceType(sourceInfoRef, 'mask'),
+                    // 保留用户的 auto 设置（若未定义则默认保持开启）
+                    auto: (originalImagesRef.current?.[0]?.auto ?? true),
                     thumbnail: currentThumbnailRef.current
                 }];
+                log('onUploaded mask set final image', { url, thumb: currentThumbnailRef.current });
                 onCallOnValueChange(newImages);
                 await new Promise(resolve => setTimeout(resolve, 100));
             }

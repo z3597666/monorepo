@@ -1,3 +1,4 @@
+import './wdyr'
 import './polyfill';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -10,9 +11,7 @@ import { changeLanguage } from '@sdppp/common/i18n/core';
 declare const sdpppSDK: any;
 
 (async () => {
-    console.log('init')
     await sdpppSDK.init();
-    console.log('inited')
     setStorageAdapter({
         getItem: async (key) => {
             const result = await sdpppSDK.plugins.photoshop.getStorage({ key });
@@ -31,10 +30,8 @@ declare const sdpppSDK: any;
         sdpppSDK.stores.PhotoshopStore.subscribe((state: any) => {
             // resolve(true);
             if (state.locale && state.locale !== lastLocale) {
-                console.log('Language changing from', lastLocale, 'to', state.locale);
                 changeLanguage(state.locale);
                 lastLocale = state.locale;
-                console.log('Language changed to', state.locale);
             }
         });
     // })

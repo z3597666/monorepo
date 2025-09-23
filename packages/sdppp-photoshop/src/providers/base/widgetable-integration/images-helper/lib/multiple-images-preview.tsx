@@ -7,6 +7,7 @@ interface ImageDetail {
     url: string;
     source: string;
     thumbnail?: string;
+    isUploading?: boolean;
 }
 
 interface MultipleImagesPreviewProps {
@@ -34,6 +35,8 @@ export const MultipleImagesPreview: React.FC<MultipleImagesPreviewProps> = ({
     onPreviewChange,
     onEllipsisClick
 }) => {
+    // no local thumbnail buffering in original version
+
     return (
         <Image.PreviewGroup
             preview={{
@@ -61,21 +64,21 @@ export const MultipleImagesPreview: React.FC<MultipleImagesPreviewProps> = ({
                                 onPreviewCurrentChange(index);
                                 onPreviewVisibleChange(true);
                             }}
-                            style={{ cursor: 'pointer' }}
+                            style={{ cursor: 'pointer', position: 'relative' }}
                         >
                             <Image
-                                src={image.thumbnail || image.url}
-                                alt={`preview-${index}`}
-                                className="preview-image"
-                                width="100%"
-                                height="100%"
-                                style={{
-                                    objectFit: 'contain',
-                                    backgroundImage: `url("${checkerboardDataUrl}")`,
-                                    backgroundSize: '192px 192px',
-                                    backgroundRepeat: 'repeat'
-                                }}
-                                preview={false}
+                                    src={image.thumbnail || image.url}
+                                    alt={`preview-${index}`}
+                                    className="preview-image"
+                                    width="100%"
+                                    height="100%"
+                                    style={{
+                                        objectFit: 'contain',
+                                        backgroundImage: `url("${checkerboardDataUrl}")`,
+                                        backgroundSize: '192px 192px',
+                                        backgroundRepeat: 'repeat'
+                                    }}
+                                    preview={false}
                             />
                         </div>
                     </Col>

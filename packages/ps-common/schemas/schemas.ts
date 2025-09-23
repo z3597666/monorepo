@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export const BoundaryRectSchema = z.object({
+    leftDistance: z.number(),
+    topDistance: z.number(),
+    rightDistance: z.number(),
+    bottomDistance: z.number(),
+    width: z.number(),
+    height: z.number(),
+})
+
 export const WidgetableBaseWidgetSchemaPart = {
     name: z.string(),
     uiWeight: z.number(),

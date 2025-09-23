@@ -32,7 +32,7 @@ export const enUS = {
   'comfy.uploading': 'Uploading...',
   'comfy.help_tooltip': 'Tutorial',
   'boundary.title': 'AI Boundary',
-  'boundary.tooltip': 'AI Boundary',
+  'boundary.tooltip': 'The boundary area that AI will process',
   'boundary.current_canvas': 'Entire Canvas',
   'boundary.current_layer': 'Current Layer',
   'boundary.current_selection': 'Current Selection',
@@ -173,10 +173,17 @@ export const enUS = {
   // Image upload component related translations
   'image.upload.from_canvas': 'Canvas',
   'image.upload.from_curlayer': 'Current Layer',
+  'image.upload.from_selection': 'Selection',
   'image.upload.from_harddisk': 'Hard Disk',
   'image.upload.clear': 'Clear',
   'image.upload.uploading': 'Uploading, if the image too large, may be stuck...',
   'image.upload.no_images': 'No images',
+  // Tooltips for Photoshop fetch buttons
+  'image.upload.tooltip.more_options_hint': '+Shift for more options.',
+  'image.upload.tooltip.image.canvas': 'Get image from Photoshop (Canvas)',
+  'image.upload.tooltip.image.curlayer': 'Get image from Photoshop (Current Layer)',
+  'image.upload.tooltip.mask.curlayer': 'Get mask from Photoshop (Current Layer)',
+  'image.upload.tooltip.mask.selection': 'Get mask from Photoshop (Selection)',
 
   // Source render component related translations
   'source.source': 'Source',
@@ -221,7 +228,6 @@ export const enUS = {
   'google.status.failed': 'Failed',
   'google.status.generating': 'Generating',
   'google.apikey_placeholder': 'Enter Google API Key',
-  'google.baseurl_placeholder': 'Base URL (optional)',
   'google.get_apikey': 'Get API Key',
   'google.help_tooltip': 'Google Gemini Image Generator',
   'google.model_name': 'Gemini 2.5 Flash Image',
@@ -237,4 +243,16 @@ export const enUS = {
   'image.import_as_newdoc': 'Import as New Document',
   'image.boundary': 'Boundary',
   'image.import_tip': 'Hold Shift key to import as new document',
+  // === Auto-added missing keys ===
+  "auth.guest_login_success": "auth.guest_login_success",
+  "boundary.canvas": "Canvas",
+  "boundary.select_boundary": "Select boundary",
+  "boundary.selection": "Selection",
+  "convert widget {0} failed:": "convert widget {0} failed:",
+  "document {0} not found": "document {0} not found",
+  "image.document.new": "image.document.new",
+  "image.layer.smart_object": "image.layer.smart_object",
+  "layer not found {0}": "layer not found {0}",
+  "photoshop.invalid_boundary_type": "photoshop.invalid_boundary_type",
+  "photoshop.no_active_layer": "photoshop.no_active_layer",
 } as const

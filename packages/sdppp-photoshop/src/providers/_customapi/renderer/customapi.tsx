@@ -1,5 +1,5 @@
 import './customapi.less';
-import { Input, Alert, Flex, Button, Tooltip, Select } from 'antd';
+import { Input, Alert, Flex, Button, Select } from 'antd';
 import { useState, useEffect } from 'react';
 import { customapiStore, changeSelectedModel, createTask } from './customapi.store';
 import { WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
@@ -9,8 +9,9 @@ import { WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { WidgetableProvider } from '@sdppp/widgetable-ui';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
 import { useTranslation } from '@sdppp/common';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+// removed help icon
 import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
+import { WorkBoundary } from '../../base/components';
 
 const log = sdpppSDK.logger.extend('customapi')
 
@@ -24,36 +25,40 @@ export default function CustomAPIRenderer({ showingPreview }: { showingPreview: 
     return (
         <Flex className="customapi-renderer" vertical gap={8}>
             {!showingPreview ? <Flex gap={8} vertical>
-                <Select
-                    value={format}
-                    onChange={(v) => setFormat(v as any)}
-                    options={[
-                        { label: 'Google', value: 'google' },
-                        { label: 'OpenAI', value: 'openai' },
-                    ]}
-                />
-                <Password
-                    placeholder={format === 'google' ? t('google.apikey_placeholder', 'Enter Google API Key') : 'Enter OpenAI API Key'}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                />
+                {/* First line: Base URL */}
                 <Input
-                    placeholder={t('google.baseurl_placeholder', 'Base URL (optional)')}
+                    placeholder={t('google.baseurl_placeholder', 'Base URL')}
                     value={baseURL}
                     onChange={(e) => setBaseURL(e.target.value)}
                 />
+                {/* Second line: Format + API Key */}
+                <Flex gap={8}>
+                    <Select
+                        value={format}
+                        onChange={(v) => setFormat(v as any)}
+                        options={[
+                            { label: 'Google format', value: 'google' },
+                            { label: 'OpenAI format', value: 'openai' },
+                        ]}
+                        style={{ minWidth: 160 }}
+                    />
+                    <Password
+                        placeholder={format === 'google' ? t('google.apikey_placeholder', 'Enter Google API Key') : 'Enter OpenAI API Key'}
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                    />
+                </Flex>
+                {/* Third line: Model name */}
                 <Input
                     placeholder={format === 'google' ? 'gemini-2.5-flash-image-preview' : 'gpt-image-1'}
                     value={selectedModel}
                     onChange={(e) => setSelectedModel(e.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                 />
             </Flex> : null}
-            {
-                !apiKey && <Link underline onClick={async () => {
-                    sdpppSDK.plugins.photoshop.openExternalLink({ url: format === 'google' ? 'https://developers.google.com/ai' : 'https://platform.openai.com' })
-                }}>{t('google.get_apikey', 'Get API Key')}</Link>
-            }
-
+            
             {error && (
                 <Alert
                     message={t('common.error')}
@@ -105,25 +110,7 @@ function CustomAPIRendererModels() {
             }}
             widgetRegistry={createBaseWidgetRegistry()}
         >
-            <Flex gap={4} align="center">
-                <Tooltip title={t('google.help_tooltip', { defaultMessage: 'How to use?' })} placement="left">
-                    <Button
-                        type="text"
-                        size="small"
-                        icon={<QuestionCircleOutlined />}
-                        onClick={async () => {
-                            sdpppSDK.plugins.photoshop.openExternalLink({ url: 'https://developers.google.com/ai/generativelanguage/docs' })
-                        }}
-                        style={{ color: 'var(--sdppp-host-text-color-secondary)' }}
-                    />
-                </Tooltip>
-                <span style={{
-                    color: 'var(--sdppp-host-text-color)',
-                    fontWeight: 500
-                }}>
-                    {t('google.model_name', 'Google/OpenAI')}
-                </span>
-            </Flex>
+            {/* No help icon or model title header for Custom API */}
             {!loading && !loadError && <CustomAPIRendererForm />}
             {loading && <Alert message={t('google.loading', 'Loading...')} type="info" showIcon />}
             {loadError && <Alert message={loadError} type="error" showIcon />}
@@ -170,6 +157,7 @@ function CustomAPIRendererForm() {
 
     return (
         <>
+            <WorkBoundary />
             <Button type="primary" onClick={handleRun} disabled={isRunning}>
                 {isRunning ? t('google.generating', 'Generating...') : t('google.generate', 'Generate')}
             </Button>

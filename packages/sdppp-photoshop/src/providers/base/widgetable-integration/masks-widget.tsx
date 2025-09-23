@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { WidgetRenderer } from '@sdppp/widgetable-ui';
 import ImageSelect from './images';
 
@@ -8,10 +8,15 @@ const MasksWidgetComponent: React.FC<{
     onValueChange: (value: any) => void;
     extraOptions?: any;
 }> = ({ value, onValueChange, extraOptions }) => {
+    // Memoize the callback to prevent unnecessary re-renders
+    const handleValueChange = useCallback((v: any[]) => {
+        onValueChange(v[0]);
+    }, [onValueChange]);
+
     return (
         <ImageSelect
             value={value ? [value] : []}
-            onValueChange={(v) => onValueChange(v[0])}
+            onValueChange={handleValueChange}
             maxCount={1}
             extraOptions={extraOptions}
             isMask={true}

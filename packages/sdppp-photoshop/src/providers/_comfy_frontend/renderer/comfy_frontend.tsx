@@ -12,8 +12,6 @@ import { QuestionCircleOutlined } from '@ant-design/icons';
 import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
 import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
 
-const log = sdpppSDK.logger.extend("comfy-frontend")
-
 declare const SDPPP_VERSION: string;
 
 export function ComfyFrontendRenderer() {

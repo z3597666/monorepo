@@ -1,4 +1,10 @@
-import { sdpppSDK, StreamActionIterator } from '@sdppp/common';
+import { sdpppSDK,  } from '@sdppp/common';
+import { MainStore } from '../../tsx/App.store';
+import { BoundaryRectSchema } from '@sdppp/common/schemas/schemas';
+import { z } from 'zod';
+
+type BoundaryRect = z.infer<typeof BoundaryRectSchema>;
+
 
 export class ComfyTask {
     public readonly taskId: string;
@@ -8,7 +14,7 @@ export class ComfyTask {
     public taskName: string;
     private cancelled = false;
     private docId: number;
-    private boundary: any;
+    private boundary: BoundaryRect;
 
     constructor(runParams: { size: number }, workflowName: string, docId: number, boundary: any) {
         this.taskId = `comfy_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -66,7 +72,6 @@ export class ComfyTask {
                 if (item.images) {
                     images.push(...item.images);
                     // 处理图片结果（保持现有逻辑）
-                    const { MainStore } = await import('../../tsx/App.store');
                     item.images.forEach((image: any) => {
                         MainStore.getState().downloadAndAppendImage({
                             url: image.url,

@@ -32,7 +32,7 @@ export const zhCN = {
   'comfy.uploading': '正在上传...',
   'comfy.help_tooltip': '使用教程',
   'boundary.title': 'AI处理边界',
-  'boundary.tooltip': 'AI处理边界',
+  'boundary.tooltip': 'AI识别你画布的边界范围',
   'boundary.current_canvas': '整个画布',
   'boundary.current_layer': '当前图层',
   'boundary.current_selection': '当前选区',
@@ -173,10 +173,17 @@ export const zhCN = {
   // 图片上传组件相关翻译
   'image.upload.from_canvas': '画布',
   'image.upload.from_curlayer': '当前图层',
+  'image.upload.from_selection': '选区',
   'image.upload.from_harddisk': '硬盘',
   'image.upload.clear': '清空',
   'image.upload.uploading': '上传中，如果图片过大，可能会卡顿...',
   'image.upload.no_images': '暂无图片',
+  // PS获取按钮提示
+  'image.upload.tooltip.more_options_hint': '+Shift 调整更多选项。',
+  'image.upload.tooltip.image.canvas': '从 Photoshop 获取图像（画布）',
+  'image.upload.tooltip.image.curlayer': '从 Photoshop 获取图像（当前图层）',
+  'image.upload.tooltip.mask.curlayer': '从 Photoshop 获取遮罩（当前图层）',
+  'image.upload.tooltip.mask.selection': '从 Photoshop 获取遮罩（选区）',
 
   // 来源渲染组件相关翻译
   'source.source': '来源',
@@ -221,7 +228,7 @@ export const zhCN = {
   'google.status.failed': '失败',
   'google.status.generating': '生成中',
   'google.apikey_placeholder': '请输入您的 Google API Key',
-  'google.baseurl_placeholder': '基础 URL (可选)',
+  'google.baseurl_placeholder': '基础 URL',
   'google.get_apikey': '获取 API Key',
   'google.help_tooltip': 'Google Gemini 图像生成器',
   'google.model_name': 'Gemini 2.5 Flash 图像',
@@ -237,4 +244,16 @@ export const zhCN = {
   'image.import_as_newdoc': '作为新文档导入',
   'image.boundary': '边界',
   'image.import_tip': '按住 Shift 键以新文档方式导入',
+  // === 自动补充缺失的键 ===
+  "auth.guest_login_success": '',
+  "boundary.canvas": "画布",
+  "boundary.select_boundary": "选择边界",
+  "boundary.selection": "选区",
+  "convert widget {0} failed:": '',
+  "document {0} not found": '',
+  "image.document.new": '',
+  "image.layer.smart_object": '',
+  "layer not found {0}": '',
+  "photoshop.invalid_boundary_type": '',
+  "photoshop.no_active_layer": '',
 } as const

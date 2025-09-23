@@ -15,7 +15,7 @@ export function ComfyFrontendRendererContent() {
     const rawWidgetablePath = useStore(sdpppSDK.stores.ComfyStore, (state) => {
         const path = state.widgetableStructure?.widgetablePath;
         return typeof path === 'string' ? path : '';
-    }, (a, b) => a === b);
+    });
 
     const widgetablePath = useMemo(() => {
         const processed = rawWidgetablePath.replace(/^workflows\//, '');
@@ -23,6 +23,7 @@ export function ComfyFrontendRendererContent() {
     }, [rawWidgetablePath]);
 
     useEffect(() => {
+        sdpppSDK.logger('widgetablePath', widgetablePath, 'currentWorkflow', currentWorkflow);
         if (widgetablePath === currentWorkflow && currentWorkflow) {
             setView('detail');
         } else {

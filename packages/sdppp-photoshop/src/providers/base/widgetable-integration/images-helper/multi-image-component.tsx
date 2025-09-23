@@ -114,7 +114,7 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
         };
     }, [cancelAllUploads]);
 
-    const customUploadFromPhotoshop = useCallback(async (isMask = false, source: 'canvas' | 'curlayer' = 'canvas') => {
+    const customUploadFromPhotoshop = useCallback(async (isMask = false, source: 'canvas' | 'curlayer' | 'selection' = 'canvas') => {
         try {
             const { thumbnail_url, file_token, source: imageSource } = await getPhotoshopImage(isMask, source);
 
@@ -387,8 +387,6 @@ export const MultiImageComponent: React.FC<MultiImageProps> = ({
                 images={images}
                 maxCount={maxCount}
                 imagesRef={imagesRef}
-                customUploadFromPhotoshop={useVerticalLayout ? customUploadFromPhotoshop : undefined}
-                customUploadFromDisk={useVerticalLayout ? customUploadFromDisk : undefined}
                 isUploading={activeUploads > 0}
                 uploadProgress={activeUploads > 0 ? { completed: totalUploads - activeUploads, total: totalUploads } : undefined}
                 enableRemove={enableRemove}

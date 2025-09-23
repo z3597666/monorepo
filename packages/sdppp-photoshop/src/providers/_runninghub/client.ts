@@ -19,7 +19,7 @@ export class SDPPPRunningHub extends Client<{
 
   private getBaseHost(): string {
     const locale = getCurrentLanguage();
-    return locale === 'en-US' ? 'www.runninghub.cn' : 'www.runninghub.cn';
+    return locale === 'en-US' ? 'www.runninghub.ai' : 'www.runninghub.cn';
   }
 
   async getAccountStatus(): Promise<{

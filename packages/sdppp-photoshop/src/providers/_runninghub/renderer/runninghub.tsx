@@ -26,7 +26,6 @@ export default function RunningHubRenderer({ showingPreview }: { showingPreview:
 
     return (
         <Flex className="runninghub-renderer" vertical gap={8}>
-            <WorkBoundary />
             {!showingPreview ? <Flex gap={8}>
                 <Password
                     placeholder={t('runninghub.apikey_placeholder')}
@@ -229,6 +228,7 @@ function RunningHubRendererForm() {
 
     return (
         <>
+            <WorkBoundary />
             <Button type="primary" onClick={handleRun}>{t('runninghub.execute')}</Button>
             {progressMessage && (
                 <Alert 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { WidgetRenderer } from '@sdppp/widgetable-ui';
 import ImageSelect from './images';
 import { WidgetableImagesWidget } from "@sdppp/common/schemas/schemas";
@@ -28,6 +28,11 @@ const ImagesWidgetComponent: React.FC<{
         };
     }
 
+    // Memoize the callback to prevent unnecessary re-renders for single image mode
+    const handleSingleValueChange = useCallback((v: any[]) => {
+        onValueChange(v[0]);
+    }, [onValueChange]);
+
     if (widget.options?.maxCount && widget.options.maxCount > 1) {
         return (
             <ImageSelect
@@ -41,7 +46,7 @@ const ImagesWidgetComponent: React.FC<{
         return (
             <ImageSelect
                 value={processedValue ? [processedValue] : []}
-                onValueChange={(v) => onValueChange(v[0])}
+                onValueChange={handleSingleValueChange}
                 maxCount={1}
                 extraOptions={extraOptions}
             />

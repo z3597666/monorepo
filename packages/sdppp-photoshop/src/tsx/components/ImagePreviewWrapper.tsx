@@ -44,7 +44,12 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
       const type = event?.shiftKey ? 'newdoc' : 'smartobject';
       await sdpppSDK.plugins.photoshop.importImage({
         nativePath: images[currentIndex].nativePath || images[currentIndex].url,
-        type: type
+        // Pass boundary if available; default to 'canvas'
+        boundary: images[currentIndex].boundary ?? 'canvas',
+        type: type,
+        // Pass through original image dimensions when known
+        sourceWidth: (images as any)[currentIndex]?.width,
+        sourceHeight: (images as any)[currentIndex]?.height
       });
     } finally {
       setSending(false);
@@ -79,7 +84,10 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
       const promises = imageItems.map(image =>
         sdpppSDK.plugins.photoshop.importImage({
           nativePath: image.nativePath || image.url,
-          type: type
+          boundary: image.boundary ?? 'canvas',
+          type: type,
+          sourceWidth: (image as any)?.width,
+          sourceHeight: (image as any)?.height
         })
       );
       await Promise.all(promises);

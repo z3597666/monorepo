@@ -27,9 +27,33 @@ interface SourceInfo {
 
 export function useSourceInfo(source: string): SourceInfo {
     return useMemo(() => {
-        // 尝试解析 JSON 格式的 doGetImage 参数
+        // 尝试解析 JSON 格式的参数
         try {
             const parsed = JSON.parse(source);
+            // 1) 显式类型优先（由上传流程标记）
+            if (parsed && typeof parsed === 'object' && parsed.__psType === 'mask') {
+                return {
+                    type: 'photoshop_mask',
+                    maskParams: {
+                        content: parsed.content,
+                        reverse: parsed.reverse,
+                        imageSize: parsed.imageSize
+                    }
+                };
+            }
+            if (parsed && typeof parsed === 'object' && parsed.__psType === 'image') {
+                return {
+                    type: 'photoshop_image',
+                    params: {
+                        content: parsed.content,
+                        boundary: parsed.boundary,
+                        imageSize: parsed.imageSize,
+                        imageQuality: parsed.imageQuality,
+                        cropBySelection: parsed.cropBySelection
+                    }
+                };
+            }
+            // 2) 回退：根据结构字段推断（避免依赖 reverse 作为唯一信号）
             if (parsed && typeof parsed === 'object' && parsed.content && parsed.boundary) {
                 return {
                     type: 'photoshop_image',
@@ -42,7 +66,7 @@ export function useSourceInfo(source: string): SourceInfo {
                     }
                 };
             }
-            if (parsed && typeof parsed === 'object' && parsed.content && parsed.reverse !== undefined) { // mask
+            if (parsed && typeof parsed === 'object' && parsed.content && parsed.reverse !== undefined) {
                 return {
                     type: 'photoshop_mask',
                     maskParams: {
@@ -77,6 +101,7 @@ export function useSourceInfo(source: string): SourceInfo {
 }
 
 export const SourceRender: React.FC<SourceRenderProps> = ({ source }) => {
+
     const sourceInfo = useSourceInfo(source);
     const { t } = useTranslation();
 
@@ -100,13 +125,6 @@ export const SourceRender: React.FC<SourceRenderProps> = ({ source }) => {
                 'curlayer': t('source.current_layer'),
                 'selection': t('source.selection')
             };
-            const boundaryMap: Record<string, string> = {
-                'canvas': t('source.canvas'),
-                'curlayer': t('source.current_layer'),
-                'selection': t('source.selection')
-            };
-
-            const boundaryText = params?.boundary ? `${t('source.boundary')}：${boundaryMap[params.boundary] || params.boundary}` : '';
             const contentText = params?.content ? `${t('source.content')}：${contentMap[params.content] || params.content}` : '';
 
             // 添加额外的信息如果存在
@@ -121,7 +139,8 @@ export const SourceRender: React.FC<SourceRenderProps> = ({ source }) => {
                 extras.push(cropMap[params.cropBySelection] || params.cropBySelection);
             }
 
-            const baseText = `${t('source.source')}：${t('source.ps_image')}\n${contentText}\n${boundaryText}`;
+            // 不再展示 boundary 信息，仅展示来源与内容
+            const baseText = `${t('source.source')}：${t('source.ps_image')}\n${contentText}`;
             return extras.length > 0 ? `${baseText}\n(${extras.join(', ')})` : baseText;
         }
 

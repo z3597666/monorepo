@@ -27,9 +27,14 @@ const { Text } = Typography;
 
 const WorkflowStatus: React.FC<{ currentWorkflow: string, uploading: boolean }> = ({ currentWorkflow, uploading }) => {
   const { t } = useTranslation()
-  const comfyStore = useStore(sdpppSDK.stores.ComfyStore)
-  const { lastError, progress, executingNodeTitle, queueSize } = comfyStore;
+  // Avoid subscribing to the whole store to prevent re-render on every state change
+  const lastError = useStore(sdpppSDK.stores.ComfyStore, (s) => s.lastError)
+  const progress = useStore(sdpppSDK.stores.ComfyStore, (s) => s.progress)
+  const executingNodeTitle = useStore(sdpppSDK.stores.ComfyStore, (s) => s.executingNodeTitle)
+  const queueSize = useStore(sdpppSDK.stores.ComfyStore, (s) => s.queueSize)
   const autoRunning = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.comfyAutoRunning)
+
+  // Removed debug render logging per request
 
   if (uploading) {
     return <Alert type="info" message={t('comfy.uploading')} showIcon className="workflow-run-status" />;
@@ -98,20 +103,31 @@ const AutoRunButton = ({ currentWorkflow, setUploading }: { currentWorkflow: str
   const [isAutoRunning, setIsAutoRunning] = useState(false)
   const canvasStateID = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.canvasStateID)
   const { waitAllUploadPasses } = useWidgetable();
+  // Stabilize referenced values/functions inside the effect to avoid retriggers
+  const waitAllUploadPassesRef = useRef(waitAllUploadPasses)
+  useEffect(() => { waitAllUploadPassesRef.current = waitAllUploadPasses }, [waitAllUploadPasses])
+  const currentWorkflowRef = useRef(currentWorkflow)
+  useEffect(() => { currentWorkflowRef.current = currentWorkflow }, [currentWorkflow])
+
+  // Removed debug render logging per request
 
   // Listen for canvasStateID changes and trigger run
   useEffect(() => {
-    if (isAutoRunning && canvasStateID) {
-      const doAutoRun = async () => {
-        setUploading(true);
-        await waitAllUploadPasses();
+    if (!isAutoRunning || !canvasStateID) return;
+    let cancelled = false;
+    (async () => {
+      setUploading(true);
+      try {
+        await waitAllUploadPassesRef.current();
+      } finally {
         setUploading(false);
-
-        const task = await runAndWaitResult(1, currentWorkflow);
-      };
-      doAutoRun();
-    }
-  }, [canvasStateID, isAutoRunning, currentWorkflow, waitAllUploadPasses, setUploading]);
+      }
+      if (!cancelled) {
+        await runAndWaitResult(1, currentWorkflowRef.current);
+      }
+    })();
+    return () => { cancelled = true };
+  }, [canvasStateID, isAutoRunning, setUploading]);
 
   return (
     <Tooltip title={isAutoRunning ? t('comfy.stop_auto_run') : t('comfy.start_auto_run')}>
@@ -229,13 +245,7 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
   const widgetableStructure = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableStructure)
   const widgetableErrors = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableErrors)
 
-  // console.log(`🔧 WorkflowDetail render #${workflowDetailRenderCount}`, {
-  //   currentWorkflow,
-  //   setCurrentWorkflowType: typeof setCurrentWorkflow,
-  //   valuesJSON: JSON.stringify(widgetableValues).slice(0, 100) + '...',
-  //   structureNodesCount: widgetableStructure?.nodeIndexes?.length,
-  //   errorsCount: Object.keys(widgetableErrors || {}).length
-  // });
+  // Removed debug render logging per request
   const [hasRecoverHistory, setHasRecoverHistory] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
   useEffect(() => {
