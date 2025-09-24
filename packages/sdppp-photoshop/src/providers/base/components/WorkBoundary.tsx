@@ -16,8 +16,11 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const canvasStateID = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.canvasStateID);
+  const selectionStateID = useStore(sdpppSDK.stores.PhotoshopStore, (state) => (state as any).selectionStateID);
   const activeDocumentID = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.activeDocumentID);
   const workBoundaries = useStore(sdpppSDK.stores.WebviewStore, (state) => state.workBoundaries);
+  const workBoundaryMaxSizes = useStore(sdpppSDK.stores.WebviewStore, (state: any) => (state?.workBoundaryMaxSizes || {}));
+  // Avoid selecting dynamic objects to prevent infinite update loops.
 
   // Get boundary name display text
   const getBoundaryName = (): string => {
@@ -49,29 +52,37 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
         return;
       }
 
-      const { boundary } = result;
+      const { boundary, imageSize } = result as any;
 
       // 2. 更新当前边界类型
       const activeDocId = activeDocumentID;
       const currentBoundaries = sdpppSDK.stores.WebviewStore.getState().workBoundaries;
       // 3. 如果选择的是 curlayer 或 selection，获取具体的矩形
       if (boundary === 'curlayer' || boundary === 'selection') {
-        const boundaryResult = await sdpppSDK.plugins.photoshop.getBoundary({ type: boundary });
+        const boundaryResult = await sdpppSDK.plugins.photoshop.getBoundary({ type: boundary } as any);
 
         // 4. 直接存储 BoundaryRect 数据（不需要转换）
-        sdpppSDK.stores.WebviewStore.setState({
+        sdpppSDK.stores.WebviewStore.setState((prev: any) => ({
           workBoundaries: {
             ...currentBoundaries,
             [activeDocId]: boundaryResult.boundary
+          },
+          workBoundaryMaxSizes: {
+            ...(prev?.workBoundaryMaxSizes || {}),
+            [activeDocId]: imageSize || sdpppSDK.stores.PhotoshopStore.getState().sdpppX['settings.imaging.defaultImagesSizeLimit']
+          },
+          workBoundaryTypes: {
+            ...(prev?.workBoundaryTypes || {}),
+            [activeDocId]: boundary
           }
-        });
+        }));
 
         // 5. 设置缩略图URL
         if (boundaryResult.thumbnail) {
           setThumbnailUrl(boundaryResult.thumbnail);
         }
       } else {
-        sdpppSDK.stores.WebviewStore.setState({
+        sdpppSDK.stores.WebviewStore.setState((prev: any) => ({
           workBoundaries: {
             ...currentBoundaries,
             [activeDocId]: {
@@ -82,8 +93,16 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
               width: 999999,
               height: 999999
             }
+          },
+          workBoundaryMaxSizes: {
+            ...(prev?.workBoundaryMaxSizes || {}),
+            [activeDocId]: imageSize || sdpppSDK.stores.PhotoshopStore.getState().sdpppX['settings.imaging.defaultImagesSizeLimit']
+          },
+          workBoundaryTypes: {
+            ...(prev?.workBoundaryTypes || {}),
+            [activeDocId]: 'canvas'
           }
-        });
+        }));
         // 清除缩略图
         setThumbnailUrl(null);
       }
@@ -133,9 +152,57 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
     // so clearing thumbnail ensures text updates instead of stale preview
   }, [activeDocumentID]);
 
+  // Auto-update thumbnail when selection changes and boundary type is 'selection'
+  useEffect(() => {
+    (async () => {
+      try {
+        const boundaryType = (sdpppSDK.stores.WebviewStore.getState() as any).workBoundaryTypes?.[activeDocumentID];
+        if (boundaryType === 'selection') {
+          const boundaryRect = sdpppSDK.stores.WebviewStore.getState().workBoundaries?.[activeDocumentID];
+          if (!boundaryRect) return;
+          const res = await sdpppSDK.plugins.photoshop.getImage({
+            boundary: boundaryRect,
+            content: 'canvas',
+            imageSize: 192,
+            imageQuality: 1,
+            cropBySelection: 'no',
+          } as any);
+          const thumb = (res as any)?.thumbnail_url;
+          if (thumb && thumb !== thumbnailUrl) setThumbnailUrl(thumb);
+        }
+      } catch (e) {
+        // ignore errors
+      }
+    })();
+  }, [selectionStateID, activeDocumentID]);
+
+  // Auto-update thumbnail when active layer/history changes and boundary type is 'curlayer'
+  useEffect(() => {
+    (async () => {
+      try {
+        const boundaryType = (sdpppSDK.stores.WebviewStore.getState() as any).workBoundaryTypes?.[activeDocumentID];
+        if (boundaryType === 'curlayer') {
+          const boundaryRect = sdpppSDK.stores.WebviewStore.getState().workBoundaries?.[activeDocumentID];
+          if (!boundaryRect) return;
+          const res = await sdpppSDK.plugins.photoshop.getImage({
+            boundary: boundaryRect,
+            content: 'canvas',
+            imageSize: 192,
+            imageQuality: 1,
+            cropBySelection: 'no',
+          } as any);
+          const thumb = (res as any)?.thumbnail_url;
+          if (thumb && thumb !== thumbnailUrl) setThumbnailUrl(thumb);
+        }
+      } catch (e) {
+        // ignore errors
+      }
+    })();
+  }, [canvasStateID, selectionStateID, activeDocumentID]);
+
 
   return (
-    <Tooltip title={t('boundary.tooltip', { defaultMessage: 'AI Boundary' })}>
+    <Tooltip title={t('boundary.tooltip', { defaultMessage: 'Input Setting' })}>
       <div
         className={`work-boundary ${className || ''}`}
         onMouseEnter={handleMouseEnter}
@@ -143,7 +210,7 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
         onClick={handleClick}
       >
         <div className="work-boundary-label">
-          AI Boundary
+          {t('boundary.title', { defaultMessage: 'Input Setting' })}
         </div>
         <div className="work-boundary-right">
           {isHovered && (
@@ -151,6 +218,17 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
               <EditOutlined />
             </div>
           )} 
+          {/* Current selected max size badge (placed left of boundary display) */}
+          {(() => {
+            const size = workBoundaryMaxSizes[activeDocumentID];
+            if (!size || size === 999999) return null;
+            return (
+              <div className="work-boundary-size" title={t('image.limit_size')}>
+                ({size}px)
+              </div>
+            );
+          })()}
+
           {thumbnailUrl ? (
             <Popover
               content={
@@ -173,6 +251,7 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
               {getBoundaryName()}
             </div>
           )}
+
 
         </div>
       </div>

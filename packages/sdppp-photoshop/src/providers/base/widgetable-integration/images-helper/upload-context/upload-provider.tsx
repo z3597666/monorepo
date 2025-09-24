@@ -31,8 +31,12 @@ export const UploadProvider: React.FC<UploadProviderProps> = ({ children, onSetI
         activeUploadsCount.current = Math.max(0, activeUploadsCount.current - 1);
         if (activeUploadsCount.current === 0) {
             setUploadState(prev => ({ ...prev, uploading: false }));
+            // If upload passes are active, emit a single final value change with all images
+            if (activeUploadPasses.current.size > 0) {
+                onCallOnValueChange(originalImagesRef.current);
+            }
         }
-    }, []);
+    }, [onCallOnValueChange]);
 
     // 处理多图片添加的辅助方法
     const handleImagesChange = useCallback((newImages: ImageDetail[]) => {

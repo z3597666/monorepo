@@ -29,8 +29,8 @@ export const useUploadPasses = (
         }
     };
 
-    const createImageUploadPass = useCallback((config: PhotoshopParams) => {
-        const passKey = `${config.content}-${config.boundary}-${config.cropBySelection}`;
+    const createImageUploadPass = useCallback((config: PhotoshopParams, targetIndex?: number) => {
+        const passKey = `${targetIndex ?? -1}:${config.content}-${config.boundary}-${config.cropBySelection}`;
 
         // Remove existing pass if any
         if (activeUploadPasses.current.has(passKey)) {
@@ -39,6 +39,7 @@ export const useUploadPasses = (
         }
 
         let sourceInfoRef = '';
+        let uploadIdRef: string | null = null;
 
         const uploadPass = {
             getUploadFile: async (signal?: AbortSignal) => {
@@ -69,7 +70,7 @@ export const useUploadPasses = (
                         }
                     }
 
-                    const { thumbnail_url, file_token, source } = await sdpppSDK.plugins.photoshop.doGetImage({
+                    const { thumbnail_url, file_token, source, error } = await sdpppSDK.plugins.photoshop.getImage({
                         content,
                         boundary: boundaryParam,
                         imageSize: config.imageSize || 0,
@@ -77,33 +78,41 @@ export const useUploadPasses = (
                         cropBySelection: config.cropBySelection || 'no'
                     });
 
+                    if (error) {
+                        throw new Error(error);
+                    }
+
                     // Check if aborted during the async operation
                     if (signal?.aborted) {
                         throw new DOMException('Upload aborted', 'AbortError');
                     }
 
                     const thumbnailUrl = thumbnail_url || '';
+                    uploadIdRef = uploadIdRef || v4();
                     currentThumbnailRef.current = thumbnailUrl;
                     setUploadState(prev => ({
                         ...prev,
                         currentThumbnail: thumbnailUrl,
                         currentThumbnails: {
                             ...(prev.currentThumbnails || {}),
-                            // No uploadId here; key by thumbnailUrl so SingleImagePreview can find via image.url
-                            [thumbnailUrl]: thumbnailUrl
+                            [uploadIdRef]: thumbnailUrl
                         }
                     }));
 
-                    // 获取到thumbnail时调用setImages
-                    const newImages = [{
-                        url: thumbnailUrl, source: markSourceType(source, 'image'),
-                        thumbnail: thumbnailUrl, auto: true
-                    }];
-                    sourceInfoRef = source || ''
-                    log('set temp image from GET', { url: thumbnailUrl, source: sourceInfoRef });
-                    onSetImages(newImages);
+                    // 获取到thumbnail时调用setImages (per-slot)
+                    const nextImages = [...originalImagesRef.current];
+                    const tempItem = { url: thumbnailUrl, source: markSourceType(source, 'image'), thumbnail: thumbnailUrl, auto: true, uploadId: uploadIdRef } as ImageDetail;
+                    const idx = typeof targetIndex === 'number' ? targetIndex : 0;
+                    while (nextImages.length < idx) nextImages.push({ url: '', source: '', thumbnail: '' } as any);
+                    nextImages[idx] = tempItem;
+                    sourceInfoRef = source || '';
+                    log('set temp image from GET', { url: thumbnailUrl, source: sourceInfoRef, index: idx });
+                    onSetImages(nextImages);
 
-                    return { type: 'token' as const, tokenOrBuffer: file_token || '', fileName: `${v4()}.png` };
+                    if (!file_token) {
+                        throw new Error('Missing file token from getImage');
+                    }
+                    return { type: 'token' as const, tokenOrBuffer: file_token, fileName: `${v4()}.png` };
                 } catch (error: any) {
                     // 上传失败时恢复到原始状态
                     if (error.name !== 'AbortError') {
@@ -127,16 +136,23 @@ export const useUploadPasses = (
                 }
 
                 decrementUploadCount();
-                // switchImageSource逻辑改为调用onCallOnValueChange
-                const newImages = [{
+                const nextImages = [...originalImagesRef.current];
+                const idx = typeof targetIndex === 'number' ? targetIndex : 0;
+                const finalItem = {
                     url,
                     source: markSourceType(sourceInfoRef, 'image'),
-                    // 保留用户的 auto 设置（若未定义则默认保持开启）
-                    auto: (originalImagesRef.current?.[0]?.auto ?? true),
-                    thumbnail: currentThumbnailRef.current
-                }];
-                log('onUploaded set final image', { url, thumb: currentThumbnailRef.current });
-                onCallOnValueChange(newImages);
+                    auto: (nextImages[idx]?.auto ?? true),
+                    thumbnail: currentThumbnailRef.current,
+                    uploadId: uploadIdRef || undefined
+                } as ImageDetail;
+                nextImages[idx] = finalItem;
+                log('onUploaded set final image', { url, thumb: currentThumbnailRef.current, index: idx });
+                originalImagesRef.current = nextImages; // 确保引用指向最新数据
+                onSetImages(nextImages);
+                // 如果这是最后一个上传完成的，直接调用onCallOnValueChange以确保及时传播
+                setTimeout(() => {
+                    onCallOnValueChange(nextImages);
+                }, 50);
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
         };
@@ -145,8 +161,8 @@ export const useUploadPasses = (
         addUploadPass(uploadPass);
     }, [addUploadPass, removeUploadPass, onSetImages, onCallOnValueChange]);
 
-    const createMaskUploadPass = useCallback((config: PhotoshopMaskParams) => {
-        const passKey = `mask-${config.content}-${config.reverse}-${config.imageSize}`;
+    const createMaskUploadPass = useCallback((config: PhotoshopMaskParams, targetIndex?: number) => {
+        const passKey = `mask-${targetIndex ?? -1}-${config.content}-${config.reverse}-${config.imageSize}`;
 
         // Remove existing pass if any
         if (activeUploadPasses.current.has(passKey)) {
@@ -155,6 +171,7 @@ export const useUploadPasses = (
         }
 
         let sourceInfoRef = '';
+        let uploadIdRef: string | null = null;
 
         const uploadPass = {
             getUploadFile: async (signal?: AbortSignal) => {
@@ -188,9 +205,8 @@ export const useUploadPasses = (
                         boundaryParam = boundary;
                     }
 
-                    // 当有明确矩形边界时，使用 selection 触发蒙版生成（若后端支持 selection 边界）
-                    const contentParam: 'canvas' | 'curlayer' | 'selection' =
-                        boundaryParam === 'canvas' ? content : 'selection';
+                    // Respect requested content; do not override to selection
+                    const contentParam: 'canvas' | 'curlayer' | 'selection' = content;
 
                     const maskParams: any = {
                         content: contentParam,
@@ -208,24 +224,25 @@ export const useUploadPasses = (
                     }
 
                     const thumbnailUrl = thumbnail_url || '';
+                    uploadIdRef = uploadIdRef || v4();
                     currentThumbnailRef.current = thumbnailUrl;
                     setUploadState(prev => ({
                         ...prev,
                         currentThumbnail: thumbnailUrl,
                         currentThumbnails: {
                             ...(prev.currentThumbnails || {}),
-                            [thumbnailUrl]: thumbnailUrl
+                            [uploadIdRef]: thumbnailUrl
                         }
                     }));
 
-                    // 获取到thumbnail时调用setImages
-                    const newImages = [{
-                        url: thumbnailUrl, source: markSourceType(source || '', 'mask'),
-                        thumbnail: thumbnailUrl, auto: true
-                    }];
-                    sourceInfoRef = source || ''
-                    log('set temp mask from GET', { url: thumbnailUrl, source: sourceInfoRef });
-                    onSetImages(newImages);
+                    const nextImages = [...originalImagesRef.current];
+                    const idx = typeof targetIndex === 'number' ? targetIndex : 0;
+                    const tempItem = { url: thumbnailUrl, source: markSourceType(source || '', 'mask'), thumbnail: thumbnailUrl, auto: true, uploadId: uploadIdRef } as ImageDetail;
+                    while (nextImages.length < idx) nextImages.push({ url: '', source: '', thumbnail: '' } as any);
+                    nextImages[idx] = tempItem;
+                    sourceInfoRef = source || '';
+                    log('set temp mask from GET', { url: thumbnailUrl, source: sourceInfoRef, index: idx });
+                    onSetImages(nextImages);
 
                     return { type: 'token' as const, tokenOrBuffer: file_token || '', fileName: `${v4()}.png` };
                 } catch (error: any) {
@@ -251,16 +268,23 @@ export const useUploadPasses = (
                 }
 
                 decrementUploadCount();
-                // switchImageSource逻辑改为调用onCallOnValueChange
-                const newImages = [{
+                const nextImages = [...originalImagesRef.current];
+                const idx = typeof targetIndex === 'number' ? targetIndex : 0;
+                const finalItem = {
                     url,
                     source: markSourceType(sourceInfoRef, 'mask'),
-                    // 保留用户的 auto 设置（若未定义则默认保持开启）
-                    auto: (originalImagesRef.current?.[0]?.auto ?? true),
-                    thumbnail: currentThumbnailRef.current
-                }];
-                log('onUploaded mask set final image', { url, thumb: currentThumbnailRef.current });
-                onCallOnValueChange(newImages);
+                    auto: (nextImages[idx]?.auto ?? true),
+                    thumbnail: currentThumbnailRef.current,
+                    uploadId: uploadIdRef || undefined
+                } as ImageDetail;
+                nextImages[idx] = finalItem;
+                log('onUploaded mask set final image', { url, thumb: currentThumbnailRef.current, index: idx });
+                originalImagesRef.current = nextImages; // 确保引用指向最新数据
+                onSetImages(nextImages);
+                // 如果这是最后一个上传完成的，直接调用onCallOnValueChange以确保及时传播
+                setTimeout(() => {
+                    onCallOnValueChange(nextImages);
+                }, 50);
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
         };
@@ -269,8 +293,8 @@ export const useUploadPasses = (
         addUploadPass(uploadPass);
     }, [addUploadPass, removeUploadPass, onSetImages, onCallOnValueChange]);
 
-    const removeImageUploadPassByConfig = useCallback((config: PhotoshopParams) => {
-        const passKey = `${config.content}-${config.boundary}-${config.cropBySelection}`;
+    const removeImageUploadPassByConfig = useCallback((config: PhotoshopParams, targetIndex?: number) => {
+        const passKey = `${targetIndex ?? -1}:${config.content}-${config.boundary}-${config.cropBySelection}`;
         const uploadPass = activeUploadPasses.current.get(passKey);
 
         if (uploadPass) {
@@ -279,8 +303,8 @@ export const useUploadPasses = (
         }
     }, [removeUploadPass]);
 
-    const removeMaskUploadPassByConfig = useCallback((config: PhotoshopMaskParams) => {
-        const passKey = `mask-${config.content}-${config.reverse}-${config.imageSize}`;
+    const removeMaskUploadPassByConfig = useCallback((config: PhotoshopMaskParams, targetIndex?: number) => {
+        const passKey = `mask-${targetIndex ?? -1}-${config.content}-${config.reverse}-${config.imageSize}`;
         const uploadPass = activeUploadPasses.current.get(passKey);
 
         if (uploadPass) {

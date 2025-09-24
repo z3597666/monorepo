@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
 import { Button, Image, Row, Col, Tooltip, Segmented, Switch } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import { useTranslation } from '@sdppp/common/i18n/react';
-import { SourceRender, useSourceInfo } from './source-render';
+import { useSourceInfo } from './source-render';
 import { checkerboardDataUrl } from '../constants';
 import { useImageUpload } from '../upload-context';
 import { sdpppSDK } from '@sdppp/common';
+import { useRealtimeThumbnail } from '../realtime-thumbnail-store';
 
 interface ImageDetail {
     url: string;
@@ -23,6 +25,9 @@ interface SingleImagePreviewProps {
     onPreviewChange: (current: number, prev: number) => void;
     onImageUpdate?: (updatedImage: ImageDetail) => void;
     isMask?: boolean;
+    actions?: React.ReactNode;
+    removable?: boolean;
+    onRemove?: () => void;
 }
 
 export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
@@ -33,25 +38,17 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
     onPreviewCurrentChange,
     onPreviewChange,
     onImageUpdate,
-    isMask = false
+    isMask = false,
+    actions,
+    removable = false,
+    onRemove
 }) => {
 
     const { t } = useTranslation();
     const { uploadState } = useImageUpload();
-    const log = useMemo(() => sdpppSDK.logger.extend('SinglePreview'), []);
 
     // Memoize tooltip titles to prevent PopupContent re-renders
-    const tooltipTitles = useMemo(() => ({
-        autoRefetch: t('image.auto_refetch'),
-    }), [t]);
-    const handleAutoToggle = (checked: boolean) => {
-        if (onImageUpdate) {
-            onImageUpdate({
-                ...image,
-                auto: checked
-            });
-        }
-    };
+    // Auto toggle removed; action buttons now control auto mode
 
     const sourceInfo = useSourceInfo(image.source);
     const isPSSource = sourceInfo.type === 'photoshop_image' || sourceInfo.type === 'photoshop_mask';
@@ -61,17 +58,15 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
     const perImageThumb = (image.uploadId && uploadState.currentThumbnails?.[image.uploadId])
         || (image.url && uploadState.currentThumbnails?.[image.url])
         || '';
-    const inlineSrc = perImageThumb || image.thumbnail || image.url || '';
+    const autoContent = (sourceInfo.type === 'photoshop_image' && sourceInfo.params?.content) || (sourceInfo.type === 'photoshop_mask' && sourceInfo.maskParams?.content) || undefined;
+    const realtimeThumb = image.auto && autoContent ? useRealtimeThumbnail(
+        sourceInfo.type === 'photoshop_mask' ? 'mask' : 'image',
+        autoContent as any
+    ) : '';
+    const inlineSrc = realtimeThumb || perImageThumb || image.thumbnail || image.url || '';
     // Consider uploading when explicit flag is set or auto flow is active
     const isUploading = !!image.isUploading || (image.auto ? uploadState.uploading : false);
 
-    // Debug current inline/final sources
-    log('render', {
-        url: image.url,
-        thumbnail: image.thumbnail,
-        auto: image.auto,
-        uploading: uploadState.uploading
-    });
 
     return (
         <Image.PreviewGroup
@@ -88,30 +83,15 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
                 src: image.thumbnail || image.url || ''
             }]}
         >
-            <Row gutter={[8, 8]} className="image-preview-row single-image">
-                <Col span={8} className="image-info-col">
+            <Row gutter={[8, 4]} className="image-preview-row single-image" wrap={false}>
+                <Col flex="0 0 auto" className="image-info-col" style={{ width: 'auto' }}>
                     <div className="image-info-panel">
-                        <div className="info-details">
-                            <SourceRender
-                                source={image.source}
-                            />
+                        <div className="info-actions">
+                            {actions}
                         </div>
-                        {isPSSource && (
-                            <div className="info-actions">
-                                <Tooltip title={tooltipTitles.autoRefetch}>
-                                    <Switch
-                                        style={{ width: '100%' }}
-                                        checked={image.auto || false}
-                                        onChange={handleAutoToggle}
-                                        checkedChildren={t('image.auto_toggle')}
-                                        unCheckedChildren={t('image.auto_toggle')}
-                                    />
-                                </Tooltip>
-                            </div>
-                        )}
                     </div>
                 </Col>
-                <Col span={16} className="preview-image-col">
+                <Col flex="1 1 auto" className="preview-image-col">
                     <div
                         className={`preview-image-wrapper single ${isMask ? 'mask' : ''}`}
                         onClick={() => {
@@ -121,6 +101,26 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
                         }}
                         style={{ cursor: isUploading ? 'not-allowed' : 'pointer', position: 'relative' }}
                     >
+                        {removable && (
+                            <Button
+                                shape="circle"
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRemove && onRemove();
+                                }}
+                                style={{
+                                    position: 'absolute',
+                                    top: 6,
+                                    right: 6,
+                                    zIndex: 3,
+                                    backgroundColor: 'rgba(0,0,0,0.45)',
+                                    color: '#fff',
+                                    border: '1px solid rgba(255,255,255,0.3)'
+                                }}
+                            />
+                        )}
                         {isUploading && (
                             <div
                                 style={{
@@ -142,7 +142,7 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
                                     style={{
                                         objectFit: 'contain',
                                         ...(isMask ? {
-                                            backgroundColor: '#000'
+                                            backgroundColor: '#fff'
                                         } : {
                                             backgroundImage: `url("${checkerboardDataUrl}")`,
                                             backgroundSize: '192px 192px',
@@ -155,13 +155,12 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
                             
                         ) : (
                             <div
-                                    className="preview-image"
+                                className="preview-image"
                                     style={{
                                         width: '100%',
                                         height: '100%',
-                                        minHeight: '120px',
                                         ...(isMask ? {
-                                            backgroundColor: '#000'
+                                            backgroundColor: '#fff'
                                         } : {
                                             backgroundImage: `url("${checkerboardDataUrl}")`,
                                             backgroundSize: '192px 192px',
@@ -169,11 +168,11 @@ export const SingleImagePreview: React.FC<SingleImagePreviewProps> = ({
                                         }),
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
-                                        border: '1px dashed #d9d9d9',
-                                        borderRadius: '6px'
-                                    }}
-                                />
+                                    justifyContent: 'center',
+                                    border: '1px dashed #d9d9d9',
+                                    borderRadius: '6px'
+                                }}
+                            />
                             )}
                     </div>
                 </Col>

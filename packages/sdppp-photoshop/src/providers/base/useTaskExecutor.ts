@@ -6,6 +6,7 @@ import { t } from '@sdppp/common';
 export interface UseTaskExecutorOptions {
     selectedModel: string;
     currentValues: any;
+    getCurrentValues?: () => any;
     createTask: (model: string, values: any) => Promise<any>;
     runningTasks: any[];
     beforeCreateTaskHook: (values: any) => any;
@@ -14,6 +15,7 @@ export interface UseTaskExecutorOptions {
 export function useTaskExecutor({
     selectedModel,
     currentValues,
+    getCurrentValues,
     createTask,
     runningTasks,
     beforeCreateTaskHook
@@ -54,11 +56,14 @@ export function useTaskExecutor({
         setProgressMessage(t('task.waiting_upload'));
         setIsRunning(true);
         await waitAllUploadPasses();
+        // 等待一帧以确保各 UploadProvider 通过 onCallOnValueChange 将最终值写回表单
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         setProgressMessage(t('task.creating_task'));
         
         // 在创建任务前调用 hook 来修改 currentValues
-        const finalValues = beforeCreateTaskHook ? beforeCreateTaskHook(currentValues) : currentValues;
+        const liveValues = getCurrentValues ? getCurrentValues() : currentValues;
+        const finalValues = beforeCreateTaskHook ? beforeCreateTaskHook(liveValues) : liveValues;
         
         try {
             const task = await createTask(selectedModel, finalValues);

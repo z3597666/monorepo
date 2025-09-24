@@ -29,17 +29,17 @@ export interface UploadContextValue {
     setUploadError: (error: string) => void;
 
     // Actions
-    createImageUploadPass: (config: PhotoshopParams) => void;
-    removeImageUploadPass: (config: PhotoshopParams) => void;
-    createMaskUploadPass: (config: PhotoshopMaskParams) => void;
-    removeMaskUploadPass: (config: PhotoshopMaskParams) => void;
+    createImageUploadPass: (config: PhotoshopParams, targetIndex?: number) => void;
+    removeImageUploadPass: (config: PhotoshopParams, targetIndex?: number) => void;
+    createMaskUploadPass: (config: PhotoshopMaskParams, targetIndex?: number) => void;
+    removeMaskUploadPass: (config: PhotoshopMaskParams, targetIndex?: number) => void;
     cancelAllUploads: () => void;
 
     // Direct upload methods
-    uploadFromPhotoshop: (isMask?: boolean, source?: 'canvas' | 'curlayer' | 'selection', reverse?: boolean) => Promise<void>;
-    uploadFromDisk: (file: File) => Promise<void>;
+    uploadFromPhotoshop: (isMask?: boolean, source?: 'canvas' | 'curlayer' | 'selection', reverse?: boolean, targetIndex?: number) => Promise<void>;
+    uploadFromDisk: (file: File, targetIndex?: number) => Promise<void>;
     // Advanced: open PS selection dialog then fetch
-    uploadFromPhotoshopViaDialog: (isMask?: boolean) => Promise<void>;
+    uploadFromPhotoshopViaDialog: (isMask?: boolean, source?: 'canvas' | 'curlayer' | 'selection', targetIndex?: number) => Promise<void>;
 }
 
 export interface UploadProviderProps {

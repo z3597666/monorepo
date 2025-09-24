@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import './images.less';
-import { BaseWidgetProps } from '@sdppp/widgetable-ui';
 import { useUIWeightCSS } from '@sdppp/widgetable-ui';
 import { MultiImageComponent, SingleImageComponent, MaskComponent, ImageDetail, UploadProvider } from './images-helper';
 import { useImageUpload } from './images-helper/upload-context';
-import { Alert } from 'antd';
 import { sdpppSDK } from '@sdppp/common';
 
-interface ImageSelectProps extends BaseWidgetProps {
+interface ImageSelectProps {
+    uiWeight?: number;
     value?: ImageDetail[];
     onValueChange?: (images: ImageDetail[]) => void;
     extraOptions?: Record<string, any>;
@@ -39,7 +38,6 @@ function fixValue(value: ImageDetail[]) {
 
 function ImageSelectComponent({ maxCount = 1, uiWeight, value = [], onValueChange, extraOptions, isMask = false }: ImageSelectProps) {
     // Memoize fixValue result to avoid unnecessary calculations
-    const log = useMemo(() => sdpppSDK.logger.extend('ImageSelect'), []);
     const fixedValue = useMemo(() => fixValue(value), [value]);
     const [images, setImages] = useState<ImageDetail[]>(fixedValue);
     // 临时上传展示标记：在 GET 返回 thumbnail 时阻止外部 value 覆盖
@@ -51,7 +49,9 @@ function ImageSelectComponent({ maxCount = 1, uiWeight, value = [], onValueChang
     const imagesRef = useRef<ImageDetail[]>([]);
     imagesRef.current = images;
 
-    
+    // 初次渲染默认自动采集（方案2）：支持通过 extraOptions.defaultAuto 指定 'canvas'|'curlayer'|'selection'
+    // 多图可通过 extraOptions.defaultAutoSlots 指定需要激活的槽位（如 [0,1] 或 数字 n 表示前 n 个），默认仅激活第 0 槽位。
+    const initAutoDoneRef = useRef<boolean>(false);
 
     // Memoize extraOptions to handle object reference instability
     const stableExtraOptions = useMemo(() => extraOptions || {}, [extraOptions]);
@@ -59,71 +59,157 @@ function ImageSelectComponent({ maxCount = 1, uiWeight, value = [], onValueChang
     // Get enableRemove from extraOptions, default to false - memoize to avoid unnecessary re-renders
     const enableRemove = useMemo(() => stableExtraOptions.enableRemove === true, [stableExtraOptions.enableRemove]);
 
-    // Sync internal state with value prop changes - use more efficient comparison
     useEffect(() => {
-        // 当处于临时上传展示阶段（例如展示 GET 的 thumbnail）时，不要被外部 value 覆盖
-        if (tempImagesRef.current) {
-            // 如果外部 value 已经与内部 images 一致，则解除临时态
-            const isSame = fixedValue.length === images.length &&
-                fixedValue.every((item, index) => (
-                    !!images[index] &&
-                    item.url === images[index].url &&
-                    item.source === images[index].source &&
-                    item.thumbnail === images[index].thumbnail
-                ));
-            if (isSame) {
-                log('external value matched internal temp images, clear temp flag');
-                tempImagesRef.current = false;
-            }
-            log('skip external sync due to temp images', {
-                external: fixedValue.map(i => ({ url: i?.url, th: i?.thumbnail, auto: i?.auto })),
-                internal: images.map(i => ({ url: i?.url, th: i?.thumbnail, auto: i?.auto }))
-            });
+        if (initAutoDoneRef.current) return;
+        // 若外部已提供初值，则不做默认激活，避免覆盖外部意图
+        if ((imagesRef.current && imagesRef.current.length > 0)) {
+            initAutoDoneRef.current = true;
+            return;
+        }
+        const autoContent = (stableExtraOptions.defaultAuto as ('canvas' | 'curlayer' | 'selection')) || 'canvas';
+        if (!autoContent) {
+            initAutoDoneRef.current = true;
+            return;
+        }
+        const psType = isMask ? 'mask' : 'image';
+        const buildAutoImage = (): ImageDetail => ({
+            url: '',
+            thumbnail: '',
+            source: JSON.stringify({ __psType: psType, content: autoContent }),
+            auto: true
+        });
+
+        if (maxCount <= 1) {
+            setImages([buildAutoImage()]);
+            initAutoDoneRef.current = true;
             return;
         }
 
-        // 与外部 value 同步：长度或关键字段不同才更新
-        if (fixedValue.length !== images.length ||
-            fixedValue.some((item, index) =>
-                !images[index] ||
-                item.url !== images[index].url ||
-                item.source !== images[index].source ||
-                item.thumbnail !== images[index].thumbnail
-            )) {
-            // 若是单图场景，且当前内部 url 等于最后一次“已提交”的最终 url，
-            // 但外部传入的 url 与该“最终 url”不一致，则认为外部值可能是旧值/延迟同步，忽略之，避免闪烁。
+        // 多图：默认激活第 0 槽位；支持 extraOptions.defaultAutoSlots（数组或数字）
+        const slotsOpt = stableExtraOptions.defaultAutoSlots;
+        let targetIndexes: number[] = [0];
+        if (Array.isArray(slotsOpt)) {
+            targetIndexes = slotsOpt.filter((i) => Number.isInteger(i) && i >= 0 && i < maxCount);
+        } else if (typeof slotsOpt === 'number') {
+            const n = Math.min(Math.max(0, slotsOpt), maxCount);
+            targetIndexes = Array.from({ length: n }, (_, i) => i);
+        }
+        const next = [...imagesRef.current];
+        const needLen = Math.max(next.length, (targetIndexes.length ? Math.max(...targetIndexes) + 1 : 1));
+        while (next.length < needLen) next.push({ url: '', source: '', thumbnail: '' } as any);
+        for (const idx of targetIndexes) {
+            next[idx] = buildAutoImage();
+        }
+        setImages(next);
+        initAutoDoneRef.current = true;
+    }, [stableExtraOptions.defaultAuto, stableExtraOptions.defaultAutoSlots, maxCount, isMask]);
+
+    // Sync internal state with value prop changes - per-slot reconcile for multi-image
+    useEffect(() => {
+        // 当处于临时上传展示阶段（例如展示 GET 的 thumbnail）时：
+        // 单图：整体阻断外部覆盖（保留现有逻辑）；多图：逐槽位合并（上传中的槽位保留内部，其余槽位接受外部）。
+        if (tempImagesRef.current) {
+            if (maxCount > 1) {
+                const maxLen = Math.max(fixedValue.length, images.length);
+                const merged: ImageDetail[] = [] as any;
+                for (let i = 0; i < maxLen; i++) {
+                    const internal = images[i] as any;
+                    const external = fixedValue[i] as any;
+                    if (internal && (internal.isUploading || internal.uploadId)) {
+                        merged[i] = internal;
+                    } else if (external) {
+                        merged[i] = external;
+                    } else if (internal) {
+                        merged[i] = internal;
+                    }
+                }
+                // 清除已无上传中的临时态
+                if (!merged.some((it: any) => it && (it.isUploading))) {
+                    tempImagesRef.current = false;
+                }
+                // 仅当有变化时再更新，避免无谓渲染
+                const changed = merged.length !== images.length || merged.some((m, idx) => {
+                    const cur = images[idx];
+                    return !cur || m?.url !== cur?.url || m?.source !== cur?.source || m?.thumbnail !== cur?.thumbnail || (!!m?.isUploading) !== (!!cur?.isUploading);
+                });
+                if (changed) setImages(merged.filter(Boolean) as ImageDetail[]);
+                return;
+            } else {
+                // 单图：若外部与内部一致则解除临时态
+                const isSame = fixedValue.length === images.length &&
+                    fixedValue.every((item, index) => (
+                        !!images[index] &&
+                        item.url === images[index].url &&
+                        item.source === images[index].source &&
+                        item.thumbnail === images[index].thumbnail
+                    ));
+                if (isSame) {
+                    tempImagesRef.current = false;
+                }
+                return;
+            }
+        }
+
+        // 非临时态：与外部 value 对齐（避免不必要更新）
+        const needUpdate = (
+            fixedValue.length !== images.length ||
+            fixedValue.some((item, index) => {
+                const currentItem = images[index];
+                if (!currentItem) return true;
+
+                // 如果当前项有auto状态，只比较url和thumbnail，忽略source差异
+                if (currentItem.auto !== undefined) {
+                    return item.url !== currentItem.url || item.thumbnail !== currentItem.thumbnail;
+                }
+
+                // 普通情况下比较所有字段
+                return item.url !== currentItem.url ||
+                       item.source !== currentItem.source ||
+                       item.thumbnail !== currentItem.thumbnail;
+            })
+        );
+        if (needUpdate) {
+            // 合并外部value与当前auto状态，保留auto属性和source
+            const mergedImages = fixedValue.map((externalItem, index) => {
+                const currentItem = images[index];
+                // 如果当前图片有auto状态，保留auto和source
+                if (currentItem?.auto !== undefined) {
+                    return {
+                        ...externalItem,
+                        auto: currentItem.auto,
+                        // 保留当前的source，因为它包含了正确的激活状态信息
+                        source: currentItem.source
+                    };
+                }
+                return externalItem;
+            });
+
+            // 单图的旧值防护
             if (maxCount <= 1 && images.length === 1 && fixedValue.length === 1) {
                 const currentUrl = images[0]?.url || '';
                 const externalUrl = fixedValue[0]?.url || '';
                 if (lastCommittedUrlRef.current && currentUrl === lastCommittedUrlRef.current && externalUrl !== lastCommittedUrlRef.current) {
-                    log('ignore external value due to committed url mismatch', { currentUrl, externalUrl, committed: lastCommittedUrlRef.current });
                     return;
                 }
             }
-            log('sync internal images from external value', {
-                from: images.map(i => ({ url: i?.url, th: i?.thumbnail, auto: i?.auto })),
-                to: fixedValue.map(i => ({ url: i?.url, th: i?.thumbnail, auto: i?.auto }))
-            });
-            setImages(fixedValue);
+            setImages(mergedImages);
         }
-    }, [fixedValue, images]);
+    }, [fixedValue, images, maxCount]);
 
     const callOnValueChange = useCallback((newImages: ImageDetail[]) => {
         // 最终值回写：解除临时态并同步到外部
         tempImagesRef.current = false;
-        // 记录“最终提交”的 url（仅单图考虑）
+        // 记录"最终提交"的 url（仅单图考虑）
         if (maxCount <= 1 && newImages?.[0]?.url) {
             lastCommittedUrlRef.current = newImages[0].url;
         }
-        log('callOnValueChange', newImages.map(i => ({ url: i?.url, th: i?.thumbnail, auto: i?.auto })));
         setImages(newImages);
         onValueChange?.(newImages);
-    }, [onValueChange]);
+    }, [onValueChange, maxCount]);
 
     const handleImagesSet = useCallback((newImages: ImageDetail[]) => {
         // 来自上传流程的中间态（例如 GET thumbnail），允许覆盖内部显示
         tempImagesRef.current = true;
-        log('onSetImages(temp)', newImages.map(i => ({ url: i?.url, th: i?.thumbnail, auto: i?.auto, up: i?.isUploading })));
         setImages(newImages);
     }, []);
 
@@ -166,16 +252,7 @@ function ImageSelectComponent({ maxCount = 1, uiWeight, value = [], onValueChang
                             enableRemove={enableRemove}
                         />
                     )}
-                    {shouldShowGlobalError && (
-                        <div style={{ marginTop: 8 }}>
-                            <Alert
-                                message={uploadState.uploadError}
-                                type="error"
-                                showIcon
-                                closable
-                            />
-                        </div>
-                    )}
+                    {/* Error indicator moved into specific image components bottom */}
                 </>
             );
         };

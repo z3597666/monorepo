@@ -1,4 +1,7 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { Spin, Alert } from 'antd';
+import { LoadingOutlined } from '@ant-design/icons';
+import { useTranslation } from '@sdppp/common/i18n/react';
 import { ActionButtons, EmptyState } from './lib/common-components';
 import { SingleImagePreview } from './lib/single-image-preview';
 import { ImageDetail, useAutoImageUpload, useImageUpload } from './upload-context';
@@ -19,17 +22,20 @@ const SingleImageComponentImpl: React.FC<SingleImageProps> = ({
 }) => {
     
 
-    const { callOnValueChange } = useImageUpload();
+    const { callOnValueChange, uploadState } = useImageUpload();
+    const { t } = useTranslation();
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewCurrent, setPreviewCurrent] = useState(0);
     const imagesRef = useRef(images);
     imagesRef.current = images;
 
     // Auto upload logic for images with auto=true
-    const hasAutoImage = images.length > 0 && images[0].auto;
-    const autoImageSource = hasAutoImage ? images[0].source : '';
+    // If empty, default to auto from Photoshop canvas (image)
+    const defaultAutoSource = useMemo(() => JSON.stringify({ __psType: 'image', content: 'canvas' as const }), []);
+    const hasAutoImage = images.length > 0 ? !!images[0].auto : true;
+    const autoImageSource = images.length > 0 ? (images[0].source || '') : defaultAutoSource;
 
-    // Use auto upload when image has auto=true
+    // Use auto upload when image has auto=true (or default auto when empty)
     useAutoImageUpload(
         autoImageSource,
         hasAutoImage
@@ -48,33 +54,34 @@ const SingleImageComponentImpl: React.FC<SingleImageProps> = ({
     const { } = useImageUpload();
 
     const renderPreviewImages = () => {
-        if (images.length === 0) {
-            return <EmptyState />;
-        }
-
-        // 确保在有缩略图或有图片时都显示预览组件
-        if (images[0]) {
-            return (
-                <SingleImagePreview
-                    image={images[0]}
-                    previewVisible={previewVisible}
-                    previewCurrent={previewCurrent}
-                    onPreviewVisibleChange={setPreviewVisible}
-                    onPreviewCurrentChange={setPreviewCurrent}
-                    onPreviewChange={handlePreviewChange}
-                    onImageUpdate={handleImageUpdate}
-                />
-            );
-        }
-
-        return <EmptyState />;
+        // When empty, still render preview with default auto canvas state and show actions
+        const displayImage = images[0] || { url: '', source: defaultAutoSource, auto: true } as ImageDetail;
+        return (
+            <SingleImagePreview
+                image={displayImage}
+                previewVisible={previewVisible}
+                previewCurrent={previewCurrent}
+                onPreviewVisibleChange={setPreviewVisible}
+                onPreviewCurrentChange={setPreviewCurrent}
+                onPreviewChange={handlePreviewChange}
+                onImageUpdate={handleImageUpdate}
+                actions={
+                    <ActionButtons
+                        images={images.length > 0 ? images : [displayImage]}
+                        maxCount={maxCount}
+                        imagesRef={imagesRef}
+                        enableRemove={enableRemove}
+                    />
+                }
+            />
+        );
     };
 
     const renderedImages = useMemo(() => {
         return renderPreviewImages();
     }, [images, previewVisible, previewCurrent]);
 
-    const shouldHideActionButtons = images.length > 0 && images[0].auto;
+    const shouldHideActionButtons = false;
 
     return (
         <div
@@ -84,12 +91,22 @@ const SingleImageComponentImpl: React.FC<SingleImageProps> = ({
             <div className="image-preview-container">
                 {renderedImages}
             </div>
-            {!shouldHideActionButtons && (
-                <ActionButtons
-                    images={images}
-                    maxCount={maxCount}
-                    imagesRef={imagesRef}
-                    enableRemove={enableRemove}
+            {(uploadState.uploading) && (
+                <div style={{ marginTop: 8, textAlign: 'center' }}>
+                    <Spin 
+                        indicator={<LoadingOutlined style={{ fontSize: 16 }} spin />}
+                        size="small"
+                    />
+                    <span style={{ marginLeft: 8, fontSize: '12px', color: 'var(--sdppp-host-text-color-secondary)' }}>{t('image.upload.uploading')}</span>
+                </div>
+            )}
+            {uploadState.uploadError && (
+                <Alert
+                    message={uploadState.uploadError}
+                    type="error"
+                    showIcon
+                    closable
+                    style={{ marginTop: 8 }}
                 />
             )}
         </div>

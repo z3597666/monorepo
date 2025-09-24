@@ -201,6 +201,7 @@ function RunningHubRendererForm() {
     const { runError, progressMessage, handleRun, handleCancel, isRunning, canCancel } = useTaskExecutor({
         selectedModel: webappId,
         currentValues,
+        getCurrentValues: () => runninghubStore.getState().currentValues,
         createTask,
         runningTasks,
         beforeCreateTaskHook: (values) => {

@@ -4,10 +4,10 @@ import { join } from 'path'
 import { SDPPPCustomAPI } from '../_customapi/client'
 
 // API configuration
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'og2@ls16'
-const GOOGLE_BASE_URL = process.env.GOOGLE_BASE_URL || 'https://momi.qq.com/v1'
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || 'og2@ls16'
-const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://momi.qq.com/v1'
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY 
+const GOOGLE_BASE_URL = process.env.GOOGLE_BASE_URL 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY 
+const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL 
 
 async function writeImagePng(url: string, outPath: string) {
   if (url.startsWith('data:')) {

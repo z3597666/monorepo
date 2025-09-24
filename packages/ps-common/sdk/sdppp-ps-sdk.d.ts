@@ -44,7 +44,10 @@ export declare const sdpppSDK: {
 			token: string;
 			userInfo: Record<string, any>;
 			taskLastRun: number;
+			canvasThumbnail: string;
+			curlayerThumbnail: string;
 			canvasStateID?: number | undefined;
+			selectionStateID?: string | undefined;
 		}>;
 		WebviewStore: NodeStore<{
 			refreshable: boolean;
@@ -59,6 +62,7 @@ export declare const sdpppSDK: {
 				width: number;
 				height: number;
 			}>;
+			workBoundaryMaxSizes: Record<number, number>;
 			bannerData?: any;
 		}>;
 		ComfyStore: NodeStore<{
@@ -260,9 +264,6 @@ export declare const sdpppSDK: {
 				width: number;
 				height: number;
 			}>;
-			requestBoundary: (data: {}, signal?: AbortSignal) => Promise<{
-				boundary: "canvas" | "curlayer" | "selection";
-			}>;
 			getImage: (data: {
 				boundary: {
 					leftDistance: number;
@@ -275,7 +276,7 @@ export declare const sdpppSDK: {
 				content: string;
 				imageSize: number;
 				imageQuality: number;
-				cropBySelection: "no" | "positive" | "negative";
+				cropBySelection: "positive" | "negative" | "no";
 			}, signal?: AbortSignal) => Promise<{
 				error?: string | undefined;
 				thumbnail_url?: string | undefined;
@@ -327,29 +328,53 @@ export declare const sdpppSDK: {
 				boundary?: "canvas" | "curlayer" | "selection" | undefined;
 				cancelled?: boolean | undefined;
 			}>;
-			selectImage: (data: {
+			selectCanvasImage: (data: {
 				additionalData?: Record<string, any> | undefined;
 			}, signal?: AbortSignal) => Promise<{
 				source?: string | undefined;
+				cancelled?: boolean | undefined;
 				getImageParams?: {
 					boundary: "canvas" | "curlayer" | "selection";
 					content: string;
 					imageSize: number;
 					imageQuality: number;
-					cropBySelection: "no" | "positive" | "negative";
+					cropBySelection: "positive" | "negative" | "no";
 				} | undefined;
-				cancelled?: boolean | undefined;
 			}>;
-			selectMask: (data: {
+			selectLayerImage: (data: {
 				additionalData?: Record<string, any> | undefined;
 			}, signal?: AbortSignal) => Promise<{
 				source?: string | undefined;
+				cancelled?: boolean | undefined;
+				getImageParams?: {
+					boundary: "canvas" | "curlayer" | "selection";
+					content: string;
+					imageSize: number;
+					imageQuality: number;
+					cropBySelection: "positive" | "negative" | "no";
+				} | undefined;
+			}>;
+			selectLayerMask: (data: {
+				additionalData?: Record<string, any> | undefined;
+			}, signal?: AbortSignal) => Promise<{
+				source?: string | undefined;
+				cancelled?: boolean | undefined;
 				getMaskParams?: {
 					reverse: boolean;
 					content: "canvas" | "curlayer" | "selection";
 					imageSize: number;
 				} | undefined;
+			}>;
+			selectSelectionMask: (data: {
+				additionalData?: Record<string, any> | undefined;
+			}, signal?: AbortSignal) => Promise<{
+				source?: string | undefined;
 				cancelled?: boolean | undefined;
+				getMaskParams?: {
+					reverse: boolean;
+					content: "canvas" | "curlayer" | "selection";
+					imageSize: number;
+				} | undefined;
 			}>;
 			taskAdd: (data: {
 				status: "running" | "completed" | "failed" | "cancelled";
@@ -508,71 +533,30 @@ export declare const sdpppSDK: {
 				headers?: Record<string, string> | undefined;
 				statusText?: string | undefined;
 			}>;
-			doGetImage: (data: {
-				boundary: "canvas" | "curlayer" | "selection";
-				content: string;
-				imageSize: number;
-				imageQuality: number;
-				cropBySelection: "no" | "positive" | "negative";
+			openaiImageEdit: (data: {
+				apiKey: string;
+				baseURL: string;
+				imageToken: string;
+				prompt: string;
+				model: string;
 			}, signal?: AbortSignal) => Promise<{
+				success: boolean;
 				error?: string | undefined;
-				thumbnail_url?: string | undefined;
-				file_token?: string | undefined;
-				source?: string | undefined;
+				imageUrl?: string | undefined;
+				apiTime?: number | undefined;
 			}>;
-			doGetMask: (data: {
-				reverse: boolean;
-				content: "canvas" | "curlayer" | "selection";
-				imageSize: number;
+			geminiImageGenerate: (data: {
+				apiKey: string;
+				prompt: string;
+				imageInputType: "token" | "base64";
+				baseURL?: string | undefined;
+				imageInputs?: string[] | undefined;
+				imageInput?: string | undefined;
 			}, signal?: AbortSignal) => Promise<{
+				success: boolean;
 				error?: string | undefined;
-				thumbnail_url?: string | undefined;
-				file_token?: string | undefined;
-				source?: string | undefined;
-			}>;
-			doSendImage: (data: {
-				url: string;
-				source: string;
-				selection: "newdoc_canvas" | "newlayer_canvas" | "newlayer_curlayer" | "newlayer_selection" | "curlayer_canvas" | "curlayer_curlayer" | "curlayer_selection";
-				cropBySelection: "no" | "positive" | "negative";
-			}, signal?: AbortSignal) => Promise<{
-				error?: string | undefined;
-			}>;
-			requestImageGet: (data: {}, signal?: AbortSignal) => Promise<{
-				getImageParams: {
-					boundary: "canvas" | "curlayer" | "selection";
-					content: string;
-					imageSize: number;
-					imageQuality: number;
-					cropBySelection: "no" | "positive" | "negative";
-				};
-				error?: string | undefined;
-				thumbnail_url?: string | undefined;
-				source?: string | undefined;
-			}>;
-			requestMaskGet: (data: {
-				isMask: boolean;
-			}, signal?: AbortSignal) => Promise<{
-				getMaskParams: {
-					reverse: boolean;
-					content: "canvas" | "curlayer" | "selection";
-					imageSize: number;
-				};
-				error?: string | undefined;
-				thumbnail_url?: string | undefined;
-				source?: string | undefined;
-			}>;
-			requestImageSend: (data: {
-				url: string;
-				source: string;
-			}, signal?: AbortSignal) => Promise<{
-				error?: string | undefined;
-				sendImageParams?: {
-					url: string;
-					source: string;
-					selection: "newdoc_canvas" | "newlayer_canvas" | "newlayer_curlayer" | "newlayer_selection" | "curlayer_canvas" | "curlayer_curlayer" | "curlayer_selection";
-					cropBySelection: "no" | "positive" | "negative";
-				} | undefined;
+				imageUrl?: string | undefined;
+				apiTime?: number | undefined;
 			}>;
 			downloadImage: (data: {
 				url: string;

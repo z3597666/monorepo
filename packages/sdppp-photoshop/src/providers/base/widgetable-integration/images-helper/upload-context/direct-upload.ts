@@ -20,7 +20,9 @@ export const getPhotoshopImage = async (
         // verbose log removed
         // 使蒙版获取与图片获取一致地尊重 WorkBoundary
         const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
-        const workBoundaries = sdpppSDK.stores.WebviewStore.getState().workBoundaries;
+        const webviewState: any = sdpppSDK.stores.WebviewStore.getState();
+        const workBoundaries = webviewState.workBoundaries;
+        const workBoundaryMaxSizes = (webviewState as any).workBoundaryMaxSizes || {};
         const boundary = workBoundaries[activeDocumentID];
 
         let boundaryParam: "canvas" | "curlayer" | "selection" | {
@@ -40,7 +42,7 @@ export const getPhotoshopImage = async (
         const maskParams: any = {
             content: source,
             reverse: !!reverse,
-            imageSize: 2048,
+            imageSize: workBoundaryMaxSizes[activeDocumentID] || sdpppSDK.stores.PhotoshopStore.getState().sdpppX['settings.imaging.defaultImagesSizeLimit'],
             // Always include boundary; default to 'canvas' if undefined
             boundary: boundaryParam as any
         };
@@ -55,7 +57,9 @@ export const getPhotoshopImage = async (
         // verbose log removed
         // 获取WorkBoundary组件维护的boundary信息
         const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
-        const workBoundaries = sdpppSDK.stores.WebviewStore.getState().workBoundaries;
+        const webviewState: any = sdpppSDK.stores.WebviewStore.getState();
+        const workBoundaries = webviewState.workBoundaries;
+        const workBoundaryMaxSizes = (webviewState as any).workBoundaryMaxSizes || {};
         const boundary = workBoundaries[activeDocumentID];
 
         let boundaryParam: "canvas" | "curlayer" | "selection" | {
@@ -76,8 +80,9 @@ export const getPhotoshopImage = async (
         const getImageParams = {
             content: source,
             boundary: boundaryParam,
-            imageSize: 2048,
-            cropBySelection: 'no'
+            imageSize: workBoundaryMaxSizes[activeDocumentID] || sdpppSDK.stores.PhotoshopStore.getState().sdpppX['settings.imaging.defaultImagesSizeLimit'],
+            // For image fetch, interpret reverse=true as cropBySelection negative (Shift behavior)
+            cropBySelection: reverse ? 'negative' : 'no'
         };
 
         result = await sdpppSDK.plugins.photoshop.getImage(getImageParams);
@@ -103,29 +108,34 @@ export const getPhotoshopImage = async (
  * Open Photoshop dialog (selectImage/selectMask) first, then fetch via getImage/getMask
  */
 export const getPhotoshopImageViaDialog = async (
-    isMask = false
+    isMask = false,
+    source: 'canvas' | 'curlayer' | 'selection' = 'canvas'
 ) => {
     let thumbnail_url: string, file_token: string, imageSource: string, result: any;
 
     if (isMask) {
-        const selection = await sdpppSDK.plugins.photoshop.selectMask({});
+        const selection = source === 'selection'
+            ? await sdpppSDK.plugins.photoshop.selectSelectionMask({})
+            : await sdpppSDK.plugins.photoshop.selectLayerMask({});
         if (!selection || (selection as any).cancelled) {
             throw new Error('canceled');
         }
         const getMaskParams = (selection as any).getMaskParams || {};
         const maskResult = await sdpppSDK.plugins.photoshop.getMask(getMaskParams);
-        thumbnail_url = (selection as any).thumbnail_url;
+        thumbnail_url = maskResult.thumbnail_url;
         file_token = maskResult.file_token;
         imageSource = (selection as any).source;
         result = maskResult;
     } else {
-        const selection = await sdpppSDK.plugins.photoshop.selectImage({});
+        const selection = source === 'canvas'
+            ? await sdpppSDK.plugins.photoshop.selectCanvasImage({})
+            : await sdpppSDK.plugins.photoshop.selectLayerImage({});
         if (!selection || (selection as any).cancelled) {
             throw new Error('canceled');
         }
         const getImageParams = (selection as any).getImageParams || {};
         const imageResult = await sdpppSDK.plugins.photoshop.getImage(getImageParams);
-        thumbnail_url = (selection as any).thumbnail_url;
+        thumbnail_url = imageResult.thumbnail_url;
         file_token = imageResult.file_token;
         imageSource = (selection as any).source;
         result = imageResult;
@@ -145,12 +155,12 @@ export const useDirectUpload = (
     handleImagesChange: (images: ImageDetail[]) => void,
     maxCount: number
 ) => {
-    const uploadFromPhotoshopViaDialog = useCallback(async (isMask = false) => {
+    const uploadFromPhotoshopViaDialog = useCallback(async (isMask = false, source: 'canvas' | 'curlayer' | 'selection' = 'canvas', targetIndex?: number) => {
         const originalImages = [...originalImagesRef.current];
         try {
             setUploadState(prev => ({ ...prev, uploadError: '' }));
 
-            const { thumbnail_url, file_token, source: imageSource, result } = await getPhotoshopImageViaDialog(isMask);
+            const { thumbnail_url, file_token, source: imageSource, result } = await getPhotoshopImageViaDialog(isMask, source);
 
             if (result?.error) {
                 sdpppSDK.logger('Dialog API returned error:', result.error);
@@ -193,9 +203,17 @@ export const useDirectUpload = (
                 }
             }));
 
-            const tempImages = maxCount > 1 ? [...originalImages, ...thumbnailImages] : thumbnailImages;
-            onSetImages(tempImages);
-            originalImagesRef.current = tempImages;
+            let nextImages: ImageDetail[];
+            if (typeof targetIndex === 'number' && maxCount > 1) {
+                nextImages = [...originalImages];
+                while (nextImages.length <= targetIndex) nextImages.push({ url: '', source: '', thumbnail: '' } as any);
+                nextImages[targetIndex] = thumbnailImages[0];
+                sdpppSDK.logger('Thumbnail stage targeting', { targetIndex, nextImagesLength: nextImages.length });
+            } else {
+                nextImages = maxCount > 1 ? [...originalImages, ...thumbnailImages] : thumbnailImages;
+            }
+            onSetImages(nextImages);
+            originalImagesRef.current = nextImages;
 
             await runUploadPassOnce({
                 getUploadFile: async (signal?: AbortSignal) => {
@@ -258,7 +276,7 @@ export const useDirectUpload = (
             setUploadState(prev => ({ ...prev, uploading: false, uploadError: error.message }));
         }
     }, [runUploadPassOnce, onSetImages, handleImagesChange, maxCount]);
-    const uploadFromPhotoshop = useCallback(async (isMask = false, source: 'canvas' | 'curlayer' | 'selection', reverse?: boolean) => {
+    const uploadFromPhotoshop = useCallback(async (isMask = false, source: 'canvas' | 'curlayer' | 'selection', reverse?: boolean, targetIndex?: number) => {
         // verbose log removed
         // 保存原始images状态，用当前最新状态
         const originalImages = [...originalImagesRef.current];
@@ -328,22 +346,20 @@ export const useDirectUpload = (
 
             // 对于单图片场景，也要先显示缩略图，然后在上传完成后替换
             // 这样用户就能看到缩略图显示的阶段
-            const tempImages = maxCount > 1
-                ? [...originalImages, ...thumbnailImages]
-                : thumbnailImages;
+            let nextImages: ImageDetail[];
+            if (typeof targetIndex === 'number' && maxCount > 1) {
+                nextImages = [...originalImages];
+                while (nextImages.length <= targetIndex) nextImages.push({ url: '', source: '', thumbnail: '' } as any);
+                nextImages[targetIndex] = thumbnailImages[0];
+            } else {
+                nextImages = maxCount > 1 ? [...originalImages, ...thumbnailImages] : thumbnailImages;
+            }
 
-            // Debug log for thumbnail display
-            sdpppSDK.logger('Setting thumbnail images:', {
-                thumbnailImages,
-                tempImages,
-                maxCount,
-                originalImagesLength: originalImages.length,
-                isMask
-            });
+            // (removed verbose debug log)
 
-            onSetImages(tempImages);
+            onSetImages(nextImages);
             // 立即更新 originalImagesRef 以确保后续操作基于正确的状态
-            originalImagesRef.current = tempImages;
+            originalImagesRef.current = nextImages;
 
             await runUploadPassOnce({
                 getUploadFile: async (signal?: AbortSignal) => {
@@ -365,26 +381,20 @@ export const useDirectUpload = (
 
                     // 上传成功后替换对应的缩略图
                     const currentImages = [...originalImagesRef.current];
-                    const targetIndex = currentImages.findIndex(img => img.uploadId === uploadId);
+                    const idx = typeof targetIndex === 'number' ? targetIndex : currentImages.findIndex(img => img.uploadId === uploadId);
+                    // (removed verbose debug log)
 
-                    if (targetIndex !== -1) {
+                    if (idx !== -1) {
                         const finalImage = {
                             url,
                             source: isMask ? markSourceType(imageSource, 'mask') : markSourceType(imageSource, 'image'),
                             thumbnail: thumbnail_url,
                             isUploading: false
                         };
-                        currentImages[targetIndex] = finalImage;
+                        currentImages[idx] = finalImage;
                         originalImagesRef.current = currentImages;
 
-                        // Debug log for final image replacement
-                        sdpppSDK.logger('Upload completed, keeping thumbnail:', {
-                            uploadId,
-                            targetIndex,
-                            thumbnailKept: thumbnail_url.substring(0, 50) + '...',
-                            finalUrl: url,
-                            isMask
-                        });
+                        // (removed verbose debug log)
 
                         onCallOnValueChange(currentImages);
                     } else {
@@ -421,7 +431,7 @@ export const useDirectUpload = (
         }
     }, [runUploadPassOnce, onSetImages, handleImagesChange, maxCount]);
 
-    const uploadFromDisk = useCallback(async (file: File) => {
+    const uploadFromDisk = useCallback(async (file: File, targetIndex?: number) => {
         // 保存原始images状态，用当前最新状态
         const originalImages = [...originalImagesRef.current];
 
@@ -442,12 +452,17 @@ export const useDirectUpload = (
 
         setUploadState(prev => ({ ...prev, uploadError: '' }));
         // 先显示缩略图，支持多图片
-        const tempImages = maxCount > 1 
-            ? [...originalImages, ...thumbnailImages]
-            : thumbnailImages;
-        onSetImages(tempImages);
+        let nextImages: ImageDetail[];
+        if (typeof targetIndex === 'number' && maxCount > 1) {
+            nextImages = [...originalImages];
+            while (nextImages.length <= targetIndex) nextImages.push({ url: '', source: '', thumbnail: '' } as any);
+            nextImages[targetIndex] = thumbnailImages[0];
+        } else {
+            nextImages = maxCount > 1 ? [...originalImages, ...thumbnailImages] : thumbnailImages;
+        }
+        onSetImages(nextImages);
         // 立即更新 originalImagesRef 以确保后续操作基于正确的状态
-        originalImagesRef.current = tempImages;
+        originalImagesRef.current = nextImages;
 
         try {
             await runUploadPassOnce({
@@ -467,11 +482,11 @@ export const useDirectUpload = (
 
                     // 上传成功后替换对应的缩略图
                     const currentImages = [...originalImagesRef.current];
-                    const targetIndex = currentImages.findIndex(img => img.uploadId === uploadId);
+                    const idx = typeof targetIndex === 'number' ? targetIndex : currentImages.findIndex(img => img.uploadId === uploadId);
                     
-                    if (targetIndex !== -1) {
+                    if (idx !== -1) {
                         // 保持原始缩略图，只更新URL和移除上传状态
-                        currentImages[targetIndex] = { url, source: 'disk', thumbnail: thumbnailURL, isUploading: false };
+                        currentImages[idx] = { url, source: 'disk', thumbnail: thumbnailURL, isUploading: false };
                         originalImagesRef.current = currentImages;
                         onCallOnValueChange(currentImages);
                     } else {

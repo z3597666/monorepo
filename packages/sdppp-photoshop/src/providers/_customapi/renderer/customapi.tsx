@@ -1,6 +1,6 @@
 import './customapi.less';
 import { Input, Alert, Flex, Button, Select } from 'antd';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { customapiStore, changeSelectedModel, createTask } from './customapi.store';
 import { WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
 import Link from 'antd/es/typography/Link';
@@ -106,7 +106,8 @@ function CustomAPIRendererModels() {
     return (
         <WidgetableProvider
             uploader={async (uploadInput, signal) => {
-                return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'png', signal);
+                // return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'png', signal);
+                return uploadInput.tokenOrBuffer;
             }}
             widgetRegistry={createBaseWidgetRegistry()}
         >
@@ -130,6 +131,7 @@ function CustomAPIRendererForm() {
     const { runError, progressMessage, handleRun, handleCancel, isRunning, canCancel } = useTaskExecutor({
         selectedModel: model,
         currentValues,
+        getCurrentValues: () => customapiStore.getState().currentValues,
         createTask,
         runningTasks,
         beforeCreateTaskHook: (values) => {
@@ -174,16 +176,35 @@ function CustomAPIRendererForm() {
                 />
             )}
             {runError && <Alert message={runError} type="error" showIcon />}
-            <WorkflowEditApiFormat
+            {/* Adjust maxCount for OpenAI gpt-image-1 to 1 */}
+            {(() => {
+                const adjustedNodes = useMemo(() => {
+                    if (format === 'openai' && (model || '').toLowerCase() === 'gpt-image-1') {
+                        return currentNodes.map((node) => ({
+                            ...node,
+                            widgets: node.widgets.map((w) => (
+                                w.outputType === 'images'
+                                    ? { ...w, options: { ...(w.options || {}), maxCount: 1 } }
+                                    : w
+                            ))
+                        }));
+                    }
+                    return currentNodes;
+                }, [format, model, currentNodes]);
+
+                return (
+                    <WorkflowEditApiFormat
                 modelName={model}
-                nodes={currentNodes}
+                nodes={adjustedNodes}
                 values={currentValues}
                 errors={{}}
                 onWidgetChange={(_widgetIndex: number, value: any, fieldInfo: WidgetableNode) => {
                     currentValues[fieldInfo.id] = value;
                     setCurrentValues(currentValues);
                 }}
-            />
+                    />
+                );
+            })()}
         </>
     )
 }

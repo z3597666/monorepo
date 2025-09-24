@@ -13,7 +13,8 @@ export const useImageUpload = () => {
 // Convenience hook for auto upload scenarios
 export const useAutoImageUpload = (
     imageSource: string,
-    enabled = true
+    enabled = true,
+    targetIndex?: number
 ) => {
     const { createImageUploadPass, removeImageUploadPass, createMaskUploadPass, removeMaskUploadPass } = useImageUpload();
     const sourceInfo = useSourceInfo(imageSource);
@@ -56,7 +57,7 @@ export const useAutoImageUpload = (
             }
 
             imageConfigRef.current = config;
-            createImageUploadPass(config);
+            createImageUploadPass(config, targetIndex);
         }
 
         if (sourceInfo.type === 'photoshop_mask' && sourceInfo.maskParams) {
@@ -78,18 +79,18 @@ export const useAutoImageUpload = (
             }
 
             maskConfigRef.current = config;
-            createMaskUploadPass(config);
+            createMaskUploadPass(config, targetIndex);
         }
 
         return () => {
             if (imageConfigRef.current) {
-                removeImageUploadPass(imageConfigRef.current);
+                removeImageUploadPass(imageConfigRef.current, targetIndex);
             }
             if (maskConfigRef.current) {
-                removeMaskUploadPass(maskConfigRef.current);
+                removeMaskUploadPass(maskConfigRef.current, targetIndex);
             }
         };
-    }, [imageSource, sourceInfo, enabled, createImageUploadPass, removeImageUploadPass, createMaskUploadPass, removeMaskUploadPass]);
+    }, [imageSource, sourceInfo, enabled, targetIndex, createImageUploadPass, removeImageUploadPass, createMaskUploadPass, removeMaskUploadPass]);
 
     return { 
         uploadConfig: imageConfigRef.current || maskConfigRef.current,

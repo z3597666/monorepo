@@ -171,6 +171,8 @@ export default defineConfig({
     })
   ],
   resolve: {
+    // Ensure single instances across workspace to keep React/Antd contexts unified
+    dedupe: ['react', 'react-dom', 'antd']
   },
   define: {
     SDPPP_VERSION: readFileSync(resolve(import.meta.dirname, '../../release-repos/sd-ppp/sdppp_python/version2.txt'), 'utf-8').trim(),
