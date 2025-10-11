@@ -174,7 +174,7 @@ export const zhCN = {
   'image.upload.from_canvas': '画布',
   'image.upload.from_curlayer': '当前图层',
   'image.upload.from_selection': '选区',
-  'image.upload.from_harddisk': '硬盘',
+  'image.upload.from_harddisk': '磁盘',
   'image.upload.clear': '清空',
   'image.upload.uploading': '上传中，如果图片过大，可能会卡顿...',
   'image.upload.no_images': '暂无图片',
@@ -182,12 +182,16 @@ export const zhCN = {
   'image.upload.tooltip.more_options_hint': '+Shift 调整更多选项；Ctrl 单次获取。',
   'image.upload.tooltip.alt.crop': '+Alt 按选区裁剪',
   'image.upload.tooltip.alt.reverse': '+Alt 反转遮罩',
-  'image.upload.tooltip.shift.once': '+Shift 单次获取',
   'image.upload.tooltip.image.canvas': '从 画布 获取图像',
   'image.upload.tooltip.image.curlayer': '从 当前图层 获取图像',
   'image.upload.tooltip.mask.curlayer': '从 当前图层 获取遮罩',
   'image.upload.tooltip.mask.selection': '从 选区 获取遮罩',
   'image.upload.tooltip.mask.canvas': '从 画布 获取遮罩',
+  'image.upload.tooltip.autosync.on': '自动同步: 开启',
+  'image.upload.tooltip.autosync.off': '自动同步: 关闭',
+
+  'image.auto_send_enabled': '自动填入画布开启',
+  'image.auto_send_disabled': '自动填入画布关闭',
 
   // 来源渲染组件相关翻译
   'source.source': '来源',

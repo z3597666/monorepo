@@ -1,7 +1,7 @@
+import { t, sdpppSDK } from '@sdppp/common';
 import { useEffect, useState } from 'react';
-import { useWidgetable } from '@sdppp/widgetable-ui';
 import { MainStore } from '../../tsx/App.store';
-import { t } from '@sdppp/common';
+import { useUploadPasses } from './upload-pass-context';
 
 export interface UseTaskExecutorOptions {
     selectedModel: string;
@@ -25,7 +25,7 @@ export function useTaskExecutor({
     const [progressMessage, setProgressMessage] = useState<string>('');
     const [currentTask, setCurrentTask] = useState<any>(null);
     const [isRunning, setIsRunning] = useState<boolean>(false);
-    const { waitAllUploadPasses } = useWidgetable();
+    const { waitAllUploadPasses } = useUploadPasses();
     const downloadAndAppendImage = MainStore((state) => state.downloadAndAppendImage);
 
     // 进度跟踪逻辑
@@ -60,6 +60,9 @@ export function useTaskExecutor({
         await new Promise(resolve => setTimeout(resolve, 100));
 
         setProgressMessage(t('task.creating_task'));
+        // 在任务开始时读取并冻结 docId 与 boundary，保持与 ComfyTask 一致
+        const docIdAtStart = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
+        const boundaryAtStart = sdpppSDK.stores.WebviewStore.getState().workBoundaries[docIdAtStart];
         
         // 在创建任务前调用 hook 来修改 currentValues
         const liveValues = getCurrentValues ? getCurrentValues() : currentValues;
@@ -72,11 +75,14 @@ export function useTaskExecutor({
             if (task) {
                 try {
                     const result = await task.promise;
-                    Promise.all(result.map((output: any) => downloadAndAppendImage({
+                    // 使用开始时读取的 docId 与 boundary 传入预览
+                    await Promise.all(result.map((output: any) => downloadAndAppendImage({
                         url: output.url,
-                        source: 'remote'
-                    })))
-                    
+                        source: 'remote',
+                        docId: docIdAtStart,
+                        boundary: boundaryAtStart,
+                    })));
+
                 } catch (error: any) {
                     setProgressMessage('');
                     setRunError(error.message || error.toString());
@@ -84,7 +90,6 @@ export function useTaskExecutor({
                     // 任务完成后从 Photoshop 面板移除
                     if (task && task.taskId) {
                         try {
-                            const { sdpppSDK } = await import('../../sdk/sdppp-ps-sdk');
                             await sdpppSDK.plugins.photoshop.taskRemove({
                                 taskId: task.taskId
                             });
@@ -122,7 +127,6 @@ export function useTaskExecutor({
                 // 取消后从面板移除
                 if (currentTask && currentTask.taskId) {
                     try {
-                        const { sdpppSDK } = await import('../../sdk/sdppp-ps-sdk');
                         await sdpppSDK.plugins.photoshop.taskRemove({
                             taskId: currentTask.taskId
                         });

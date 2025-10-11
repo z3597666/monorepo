@@ -1,8 +1,7 @@
+import { getCurrentLanguage, sdpppSDK, t } from '@sdppp/common';
 import { WidgetableNode, WidgetableWidget } from '@sdppp/common/schemas/schemas';
-import { sdpppSDK } from '@sdppp/common';
 import { Client } from '../base/Client';
 import { Task } from '../base/Task';
-import { t, getCurrentLanguage } from '@sdppp/common';
 
 const log = sdpppSDK.logger.extend('runninghub')
 
@@ -110,9 +109,22 @@ export class SDPPPRunningHub extends Client<{
   private mergeInputWithNodeInfoList(nodeInfoList: any[], input: Record<string, any>): any[] {
     return nodeInfoList.map(node => {
       const nodeKey = `${node.nodeId}_${node.fieldName}`;
+      let fieldValue = input[nodeKey] !== undefined ? input[nodeKey] : node.fieldValue;
+
+      // If image/file field, submit only the first value
+      const ft = String(node.fieldType || '').toUpperCase();
+      if (ft === 'IMAGE' || ft === 'FILE') {
+        if (Array.isArray(fieldValue)) {
+          const first = fieldValue[0];
+          fieldValue = first && typeof first === 'object' && (first as any).url ? (first as any).url : first;
+        } else if (fieldValue && typeof fieldValue === 'object' && (fieldValue as any).url) {
+          fieldValue = (fieldValue as any).url;
+        }
+      }
+
       return {
         ...node,
-        fieldValue: input[nodeKey] !== undefined ? input[nodeKey] : node.fieldValue
+        fieldValue,
       };
     });
   }

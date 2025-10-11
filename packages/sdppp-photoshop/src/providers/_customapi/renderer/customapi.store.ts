@@ -21,8 +21,8 @@ export const customapiStore = createBaseStore<SDPPPCustomAPI, CustomAPIStoreStat
         apiKey: '',
         baseURL: '',
         setFormat: (format) => customapiStore.setState({ format }),
-        setApiKey: (apiKey) => customapiStore.setState({ apiKey }),
-        setBaseURL: (baseURL) => customapiStore.setState({ baseURL }),
+        setApiKey: (apiKey) => customapiStore.setState({ apiKey: (apiKey ?? '').toString() }),
+        setBaseURL: (baseURL) => customapiStore.setState({ baseURL: (baseURL ?? '').toString() }),
     },
     (state) => ({
         format: state.format,
@@ -41,7 +41,9 @@ async function resetClient(state: CustomAPIStoreState, prevState: CustomAPIStore
         state.format !== prevState.format
     );
     if (changed) {
-        if (state.apiKey && state.baseURL) {
+        const hasKey = typeof state.apiKey === 'string' && state.apiKey.trim().length > 0;
+        const hasBase = typeof state.baseURL === 'string' && state.baseURL.trim().length > 0;
+        if (hasKey && hasBase) {
             // sdpppSDK.plugins.fetchProxy.registerProxyDomains(state.baseURL.split('/').filter(Boolean)[1]);
             // sdpppSDK.logger('registerProxyDomains', state.baseURL.split('/').filter(Boolean)[1]);
             const client = new SDPPPCustomAPI({ apiKey: state.apiKey, baseURL: state.baseURL, format: state.format });

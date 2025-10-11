@@ -53,6 +53,9 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
       }
 
       const { boundary, imageSize } = result as any;
+      // Determine max size robustly: coerce to number; 0 or invalid -> unlimited (999999)
+      const parsedSize = Number(imageSize);
+      const selectedMaxSize = Number.isFinite(parsedSize) && parsedSize > 0 ? parsedSize : 999999;
 
       // 2. 更新当前边界类型
       const activeDocId = activeDocumentID;
@@ -69,7 +72,7 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
           },
           workBoundaryMaxSizes: {
             ...(prev?.workBoundaryMaxSizes || {}),
-            [activeDocId]: imageSize || sdpppSDK.stores.PhotoshopStore.getState().sdpppX['settings.imaging.defaultImagesSizeLimit']
+            [activeDocId]: selectedMaxSize
           },
           workBoundaryTypes: {
             ...(prev?.workBoundaryTypes || {}),
@@ -96,7 +99,7 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
           },
           workBoundaryMaxSizes: {
             ...(prev?.workBoundaryMaxSizes || {}),
-            [activeDocId]: imageSize || sdpppSDK.stores.PhotoshopStore.getState().sdpppX['settings.imaging.defaultImagesSizeLimit']
+            [activeDocId]: selectedMaxSize
           },
           workBoundaryTypes: {
             ...(prev?.workBoundaryTypes || {}),
@@ -151,6 +154,8 @@ export const WorkBoundary: React.FC<WorkBoundaryProps> = ({ className }) => {
     // When activeDocumentID changes, the label reads from workBoundaries[activeDocumentID]
     // so clearing thumbnail ensures text updates instead of stale preview
   }, [activeDocumentID]);
+
+  
 
   // Auto-update thumbnail when selection changes and boundary type is 'selection'
   useEffect(() => {

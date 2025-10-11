@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sdppp/ui-library": "workspace:*",
     "@sdppp/vite-remote-config-loader": "workspace:*",
     "@sdppp/widgetable-ui": "workspace:*",
     "@ant-design/icons": "^6.0.0",

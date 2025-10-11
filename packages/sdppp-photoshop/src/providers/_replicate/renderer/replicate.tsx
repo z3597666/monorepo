@@ -1,19 +1,18 @@
-import './replicate.less';
-import { Input, Alert, Flex, Button, Tooltip } from 'antd';
-import { useState, useEffect } from 'react';
-import { replicateStore, changeSelectedModel, createTask } from './replicate.store';
-import { WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
-import Link from 'antd/es/typography/Link';
-import { sdpppSDK } from '@sdppp/common';
-import { WidgetableNode } from '@sdppp/common/schemas/schemas';
-import { WidgetableProvider } from '@sdppp/widgetable-ui';
-import { useTaskExecutor } from '../../base/useTaskExecutor';
-import { ModelSelector } from '../../base/components/ModelSelector';
-import { useTranslation } from '@sdppp/common';
 import { QuestionCircleOutlined } from '@ant-design/icons';
-import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
+import { sdpppSDK, useTranslation } from '@sdppp/common';
+import { WidgetableNode } from '@sdppp/common/schemas/schemas';
 import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
+import { WidgetableProvider, WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
+import { UploadPassProvider } from '../../base/upload-pass-context';
+import { Alert, Button, Flex, Input, Tooltip } from 'antd';
+import Link from 'antd/es/typography/Link';
+import { useEffect, useState } from 'react';
 import { WorkBoundary } from '../../base/components';
+import { ModelSelector } from '../../base/components/ModelSelector';
+import { useTaskExecutor } from '../../base/useTaskExecutor';
+import { createImageMaskWidgetRegistry } from '../../base/widgetable-image-mask/widgetable-widgets';
+import './replicate.less';
+import { changeSelectedModel, createTask, replicateStore } from './replicate.store';
 
 const { Password } = Input;
 
@@ -94,12 +93,12 @@ function ReplicateRendererModels() {
     }));
 
     return (
-        <WidgetableProvider
+        <UploadPassProvider
             uploader={async (uploadInput, signal) => {
                 return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'jpg', signal);
             }}
-            widgetRegistry={createBaseWidgetRegistry()}
         >
+        <WidgetableProvider widgetRegistry={createImageMaskWidgetRegistry()}>
             <Flex gap={4} align="center">
                 <Tooltip title={t('replicate.help_tooltip', { defaultMessage: 'How to use?' })} placement="left">
                     <Button
@@ -126,6 +125,7 @@ function ReplicateRendererModels() {
             </Flex>
             {selectedModel && !loading && !loadError && <ReplicateRendererForm />}
         </WidgetableProvider>
+        </UploadPassProvider>
     )
 }
 
@@ -188,8 +188,8 @@ function ReplicateRendererForm() {
                 values={currentValues}
                 errors={{}}
                 onWidgetChange={(_widgetIndex: number, value: any, fieldInfo: WidgetableNode) => {
-                    currentValues[fieldInfo.id] = value;
-                    setCurrentValues(currentValues);
+                    const live = replicateStore.getState().currentValues;
+                    setCurrentValues({ ...live, [fieldInfo.id]: value });
                 }}
             />
         </>

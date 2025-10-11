@@ -13,7 +13,7 @@ import {
 import { sdpppSDK } from '@sdppp/common';
 import { useStore } from 'zustand';
 import { WidgetableRenderer as WorkflowEdit } from '@sdppp/widgetable-ui';
-import { useWidgetable } from '@sdppp/widgetable-ui';
+import { useUploadPasses } from '../../../base/upload-pass-context';
 import './workflow-detail.less';
 import { MainStore } from '../../../../tsx/App.store';
 import { comfyWorkflowStore } from '../comfy_frontend';
@@ -102,7 +102,7 @@ const AutoRunButton = ({ currentWorkflow, setUploading }: { currentWorkflow: str
   const { t } = useTranslation()
   const [isAutoRunning, setIsAutoRunning] = useState(false)
   const canvasStateID = useStore(sdpppSDK.stores.PhotoshopStore, (state) => state.canvasStateID)
-  const { waitAllUploadPasses } = useWidgetable();
+  const { waitAllUploadPasses } = useUploadPasses();
   // Stabilize referenced values/functions inside the effect to avoid retriggers
   const waitAllUploadPassesRef = useRef(waitAllUploadPasses)
   useEffect(() => { waitAllUploadPassesRef.current = waitAllUploadPasses }, [waitAllUploadPasses])
@@ -168,7 +168,7 @@ async function runAndWaitResult(multi: number, currentWorkflow: string): Promise
 
 const RunButton = ({ currentWorkflow, setUploading }: { currentWorkflow: string, setUploading: (uploading: boolean) => void }) => {
   const { t } = useTranslation();
-  const { waitAllUploadPasses } = useWidgetable();
+  const { waitAllUploadPasses } = useUploadPasses();
   const [isDisabled, setIsDisabled] = useState(false);
 
   const doRun = useCallback(async () => {
@@ -195,7 +195,7 @@ const RunButton = ({ currentWorkflow, setUploading }: { currentWorkflow: string,
 };
 
 const RunMultiButtons = ({ currentWorkflow, setUploading }: { currentWorkflow: string, setUploading: (uploading: boolean) => void }) => {
-  const { waitAllUploadPasses } = useWidgetable();
+  const { waitAllUploadPasses } = useUploadPasses();
   const [disabledButtons, setDisabledButtons] = useState<Set<number>>(new Set());
 
   const doRun = useCallback(async (multi: number) => {

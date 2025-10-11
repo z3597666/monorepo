@@ -1,10 +1,10 @@
+import { DeleteOutlined, LeftOutlined, MoreOutlined, RightOutlined, SaveOutlined, SendOutlined, ShrinkOutlined, StepForwardOutlined } from '@ant-design/icons';
+import { sdpppSDK, useTranslation } from '@sdppp/common';
+import { SyncButton } from '@sdppp/ui-library';
+import { Button, Divider, Dropdown } from 'antd';
 import React from 'react';
-import { Button, Divider, Dropdown, Space, Tooltip } from 'antd';
-import { CloseOutlined, DeleteOutlined, StepForwardOutlined, SendOutlined, LeftOutlined, RightOutlined, MoreOutlined, SaveOutlined, ShrinkOutlined } from '@ant-design/icons';
-import { MainStore } from '../App.store';
-import { sdpppSDK } from '@sdppp/common';
-import { useTranslation } from '@sdppp/common';
 import { isImage } from '../../utils/fileType';
+import { MainStore } from '../App.store';
 import ImagePreview from './ImagePreview';
 
 interface ImagePreviewWrapperProps {
@@ -18,6 +18,9 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
   const [sending, setSending] = React.useState(false);
   const [sendingAll, setSendingAll] = React.useState(false);
   const [isShiftPressed, setIsShiftPressed] = React.useState(false);
+  const [isAutoSync, setIsAutoSync] = React.useState(false);
+  const isShiftPressedRef = React.useRef(false);
+  const pendingAutoSendRef = React.useRef(new Map<string, { cancel: boolean }>());
 
   const currentItem = images[currentIndex];
   const isCurrentItemImage = currentItem ? isImage(currentItem.url) : false;
@@ -38,18 +41,45 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
     setCurrentIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
-  const handleSendToPS = async (event?: React.MouseEvent) => {
+  // Internal helper to send a specific index
+  const sendToPSAtIndex = async (index: number, opts?: { shiftKey?: boolean }) => {
     try {
       setSending(true);
-      const type = event?.shiftKey ? 'newdoc' : 'smartobject';
+      const type = opts?.shiftKey ? 'newdoc' : 'smartobject';
       await sdpppSDK.plugins.photoshop.importImage({
-        nativePath: images[currentIndex].nativePath || images[currentIndex].url,
+        nativePath: images[index].nativePath || images[index].url,
         // Pass boundary if available; default to 'canvas'
-        boundary: images[currentIndex].boundary ?? 'canvas',
+        boundary: images[index].boundary ?? 'canvas',
         type: type,
         // Pass through original image dimensions when known
-        sourceWidth: (images as any)[currentIndex]?.width,
-        sourceHeight: (images as any)[currentIndex]?.height
+        sourceWidth: (images as any)[index]?.width,
+        sourceHeight: (images as any)[index]?.height
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSendToPS = async (event?: { shiftKey?: boolean }) => {
+    await sendToPSAtIndex(currentIndex, { shiftKey: !!event?.shiftKey });
+  };
+
+  // Send by URL using nativePath once ready
+  const sendNativeImageByUrl = async (url: string) => {
+    try {
+      setSending(true);
+      const list = MainStore.getState().previewImageList;
+      const item = list.find(it => it.url === url);
+      if (!item || !item.nativePath) {
+        return;
+      }
+      const type = isShiftPressedRef.current ? 'newdoc' : 'smartobject';
+      await sdpppSDK.plugins.photoshop.importImage({
+        nativePath: item.nativePath,
+        boundary: item.boundary ?? 'canvas',
+        type,
+        sourceWidth: (item as any)?.width,
+        sourceHeight: (item as any)?.height,
       });
     } finally {
       setSending(false);
@@ -122,6 +152,54 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
     setPrevLength(images.length);
   }, [images.length, currentIndex]);
 
+  // Auto-send newly received images when auto is active, waiting for nativePath
+  const autoPrevLenRef = React.useRef(images.length);
+  const scheduleAutoSendForUrl = (url: string) => {
+    if (pendingAutoSendRef.current.has(url)) return;
+    const token = { cancel: false };
+    pendingAutoSendRef.current.set(url, token);
+    (async () => {
+      try {
+        while (!token.cancel && isAutoSync) {
+          const list = MainStore.getState().previewImageList;
+          const item = list.find(it => it.url === url);
+          if (!item) break; // deleted
+          const downloading = (item as any)?.downloading === true;
+          if (!downloading && !!item.nativePath) {
+            await sendNativeImageByUrl(url);
+            break;
+          }
+          await new Promise(res => setTimeout(res, 200));
+        }
+      } finally {
+        pendingAutoSendRef.current.delete(url);
+      }
+    })();
+  };
+  React.useEffect(() => {
+    if (!isAutoSync) {
+      // cancel all pending tasks when auto-sync turns off
+      pendingAutoSendRef.current.forEach(t => (t.cancel = true));
+      pendingAutoSendRef.current.clear();
+      autoPrevLenRef.current = images.length;
+      return;
+    }
+    if (images.length > autoPrevLenRef.current) {
+      for (let i = autoPrevLenRef.current; i < images.length; i++) {
+        const itm = images[i];
+        if (itm && isImage(itm.url)) {
+          scheduleAutoSendForUrl(itm.url);
+        }
+      }
+    }
+    autoPrevLenRef.current = images.length;
+  }, [images.length, isAutoSync]);
+
+  // keep ref updated for shift key state used in async tasks
+  React.useEffect(() => {
+    isShiftPressedRef.current = isShiftPressed;
+  }, [isShiftPressed]);
+
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Shift') {
@@ -141,6 +219,9 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      // cancel pending tasks on unmount
+      pendingAutoSendRef.current.forEach(t => (t.cancel = true));
+      pendingAutoSendRef.current.clear();
     };
   }, []);
 
@@ -183,7 +264,7 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         onClick={handleJumpToLast}
         shape="circle"
         size="middle"
-        title={t('image.jump_to_last', 'Jump to Last')}
+        title={t('image.jump_to_last')}
       />
     ) : null,
     deleteCurrent: (
@@ -193,7 +274,7 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         onClick={handleDeleteCurrent}
         shape="circle"
         size="middle"
-        title={t('image.delete_current', 'Delete Current')}
+        title={t('image.delete_current')}
       />
     ),
     indicator: (
@@ -208,55 +289,47 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
         onClick={handleClearAll}
         shape="circle"
         size="large"
-        title={t('image.clear_all', 'Clear All')}
+        title={t('image.clear_all')}
       />
     ),
     bottomDeleteCurrent: (
-      <Button
-        className="image-preview__bottom-delete-current"
-        icon={<DeleteOutlined />}
-        onClick={handleDeleteCurrent}
-        size="middle"
-        style={{ width: '64px', height: '32px' }}
-        title={t('image.delete_current', 'Delete Current')}
-      />
+      <div className="image-preview__bottom-delete-current" style={{ background: 'transparent', boxShadow: 'none', color: 'inherit' }}>
+        <Button
+          icon={<DeleteOutlined />}
+          onClick={handleDeleteCurrent}
+          size="middle"
+          type="default"
+          style={{ width: '56px' }}
+          title={t('image.delete_current')}
+        />
+      </div>
     ),
     bottomSend: isCurrentItemImage ? (
-      <Tooltip
-        title={
-          <div>
-            <div>{isShiftPressed ? t('image.import_as_newdoc', 'Import as New Document') : t('image.import_as_smartobject', 'Import as Smart Object')}</div>
-            {currentItem?.boundary && (
-              <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '4px' }}>
-                {t('image.boundary', 'Boundary')}: {getBoundaryText(currentItem.boundary)}
-              </div>
-            )}
-            <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '2px' }}>
-              {t('image.import_tip', 'Shift: New doc; Default: Smart Object')}
-            </div>
-          </div>
-        }
-        placement="top"
-      >
-        <Button
-          className="image-preview__bottom-send"
-          type="primary"
-          onClick={(e) => handleSendToPS(e)}
-          size="middle"
-          loading={sending}
+      <div className="image-preview__bottom-send">
+        <SyncButton
           disabled={sending || sendingAll}
-          style={{ width: '64px', height: '32px' }}
+          isAutoSync={isAutoSync}
+          onSync={({ altKey, shiftKey }) => handleSendToPS({ shiftKey })}
+          onAutoSyncToggle={() => setIsAutoSync(prev => !prev)}
+          buttonWidth={88}
+          mainButtonType="primary"
+          autoSyncButtonTooltips={{
+            enabled: t('image.auto_send_enabled'),
+            disabled: t('image.auto_send_disabled')
+          }}
+          syncButtonTooltip={t('image.import_as_smartobject') + ' | ' + t('image.import_tip')}
+          data-testid="image-preview-sync-button"
         >
-          {sending ? t('image.sending', 'Sending...') : <SendOutlined />}
-        </Button>
-      </Tooltip>
+          {sending ? t('image.sending') : <SendOutlined />}
+        </SyncButton>
+      </div>
     ) : (
       <Button
         className="image-preview__bottom-save"
         type="primary"
         onClick={handleSaveCurrent}
         size="middle"
-        style={{ width: '64px', height: '32px' }}
+        style={{ width: '56px' }}
       >
         <SaveOutlined />
       </Button>
@@ -267,13 +340,13 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
           items: [
             {
               key: 'saveCurrent',
-              label: t('image.save_current', 'Save Current'),
+              label: t('image.save_current'),
               icon: <SaveOutlined />,
               onClick: handleSaveCurrent
             },
             {
               key: 'saveAll',
-              label: t('image.save_all', 'Save All'),
+              label: t('image.save_all'),
               icon: <SaveOutlined />,
               onClick: handleSaveAll
             },
@@ -282,7 +355,7 @@ export default function ImagePreviewWrapper({ children }: ImagePreviewWrapperPro
             },
             {
               key: 'clearAll',
-              label: t('image.clear_all', 'Clear All'),
+              label: t('image.clear_all'),
               icon: <DeleteOutlined />,
               onClick: handleClearAll
             }

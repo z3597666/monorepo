@@ -1,16 +1,16 @@
+import { QuestionCircleOutlined } from '@ant-design/icons';
+import { sdpppSDK, useTranslation } from '@sdppp/common';
+import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
+import { WidgetableProvider } from '@sdppp/widgetable-ui';
+import { UploadPassProvider } from '../../base/upload-pass-context';
 import { Alert, Button, Flex, Input, Tooltip } from 'antd';
 import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
-import { sdpppSDK } from '@sdppp/common';
-import { WidgetableProvider } from '@sdppp/widgetable-ui';
+import { createImageMaskWidgetRegistry } from '../../base/widgetable-image-mask/widgetable-widgets';
+import { ComfyCloudRecommendBanner } from './cloud_recommend';
+import { WorkflowListProvider } from './comfy_frontend';
 import './comfy_frontend.less';
 import { ComfyFrontendRendererContent } from './components';
-import { WorkflowListProvider } from './comfy_frontend';
-import { ComfyCloudRecommendBanner } from './cloud_recommend';
-import { useTranslation } from '@sdppp/common';
-import { QuestionCircleOutlined } from '@ant-design/icons';
-import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
-import { loadRemoteConfig } from '@sdppp/vite-remote-config-loader';
 
 declare const SDPPP_VERSION: string;
 
@@ -117,7 +117,7 @@ export function ComfyFrontendContent() {
     return (
         // This Provider is used to provide the context for the WorkflowEditApiFormat
         // 这个Provider是必须的，因为WorkflowEditApiFormat需要使用WidgetableProvider
-        <WidgetableProvider
+        <UploadPassProvider
             uploader={async (uploadInput, signal) => {
                 // Check if already aborted
                 if (signal?.aborted) {
@@ -126,12 +126,13 @@ export function ComfyFrontendContent() {
                 const { name } = await sdpppSDK.plugins.photoshop.uploadComfyImage({ uploadInput, overwrite: true });
                 return name;
             }}
-            widgetRegistry={createBaseWidgetRegistry()}
         >
+        <WidgetableProvider widgetRegistry={createImageMaskWidgetRegistry()}>
             {statusTextType === 'empty' ? null :
                 <Alert message={statusText} type={statusTextType} />}
             {showRenderer && comfyURL && <ComfyFrontendRendererContent />}
         </WidgetableProvider>
+        </UploadPassProvider>
     )
 }
 

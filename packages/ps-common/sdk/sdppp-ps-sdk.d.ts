@@ -277,6 +277,7 @@ export declare const sdpppSDK: {
 				imageSize: number;
 				imageQuality: number;
 				cropBySelection: "positive" | "negative" | "no";
+				SkipNonNormalLayer: boolean;
 			}, signal?: AbortSignal) => Promise<{
 				error?: string | undefined;
 				thumbnail_url?: string | undefined;
@@ -548,7 +549,7 @@ export declare const sdpppSDK: {
 			geminiImageGenerate: (data: {
 				apiKey: string;
 				prompt: string;
-				imageInputType: "token" | "base64";
+				imageInputType: "base64" | "token";
 				baseURL?: string | undefined;
 				imageInputs?: string[] | undefined;
 				imageInput?: string | undefined;

@@ -3,7 +3,6 @@ export { default as WidgetableRenderer, WorkflowEditApiFormat } from './index.ts
 
 // Context and providers
 export { WidgetableProvider, useWidgetable } from './context';
-export type { UploadPass, UploadPassInput } from './context';
 
 // Widget registry
 export { createDefaultWidgetRegistry } from './widget-registry';

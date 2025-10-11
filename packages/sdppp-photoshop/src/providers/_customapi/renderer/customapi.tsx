@@ -1,17 +1,15 @@
-import './customapi.less';
-import { Input, Alert, Flex, Button, Select } from 'antd';
-import { useState, useEffect, useMemo } from 'react';
-import { customapiStore, changeSelectedModel, createTask } from './customapi.store';
-import { WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
-import Link from 'antd/es/typography/Link';
-import { sdpppSDK } from '@sdppp/common';
+import { sdpppSDK, useTranslation } from '@sdppp/common';
 import { WidgetableNode } from '@sdppp/common/schemas/schemas';
-import { WidgetableProvider } from '@sdppp/widgetable-ui';
+import { WidgetableProvider, WorkflowEditApiFormat } from '@sdppp/widgetable-ui';
+import { UploadPassProvider } from '../../base/upload-pass-context';
+import { Alert, Button, Flex, Input, Select } from 'antd';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTaskExecutor } from '../../base/useTaskExecutor';
-import { useTranslation } from '@sdppp/common';
+import './customapi.less';
+import { changeSelectedModel, createTask, customapiStore } from './customapi.store';
 // removed help icon
-import { createBaseWidgetRegistry } from '../../base/widgetable-integration/widgetable-widgets';
 import { WorkBoundary } from '../../base/components';
+import { createImageMaskWidgetRegistry } from '../../base/widgetable-image-mask/widgetable-widgets';
 
 const log = sdpppSDK.logger.extend('customapi')
 
@@ -20,6 +18,8 @@ const { Password } = Input;
 export default function CustomAPIRenderer({ showingPreview }: { showingPreview: boolean }) {
     const { t } = useTranslation()
     const { apiKey, setApiKey, baseURL, setBaseURL, format, setFormat, selectedModel, setSelectedModel } = customapiStore();
+    // Only render models section when client is ready, avoiding transient states
+    const hasClient = customapiStore((state) => !!state.client);
     const [error, setError] = useState<string>('');
 
     return (
@@ -28,8 +28,8 @@ export default function CustomAPIRenderer({ showingPreview }: { showingPreview: 
                 {/* First line: Base URL */}
                 <Input
                     placeholder={t('google.baseurl_placeholder', 'Base URL')}
-                    value={baseURL}
-                    onChange={(e) => setBaseURL(e.target.value)}
+                    value={baseURL ?? ''}
+                    onChange={(e) => setBaseURL((e?.target?.value ?? '').toString())}
                 />
                 {/* Second line: Format + API Key */}
                 <Flex gap={8}>
@@ -44,8 +44,8 @@ export default function CustomAPIRenderer({ showingPreview }: { showingPreview: 
                     />
                     <Password
                         placeholder={format === 'google' ? t('google.apikey_placeholder', 'Enter Google API Key') : 'Enter OpenAI API Key'}
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
+                        value={apiKey ?? ''}
+                        onChange={(e) => setApiKey((e?.target?.value ?? '').toString())}
                     />
                 </Flex>
                 {/* Third line: Model name */}
@@ -70,7 +70,7 @@ export default function CustomAPIRenderer({ showingPreview }: { showingPreview: 
             )}
 
             <Flex gap={8} vertical>
-                {apiKey && <CustomAPIRendererModels />}
+                {hasClient && <CustomAPIRendererModels />}
             </Flex>
         </Flex>
     );
@@ -78,14 +78,16 @@ export default function CustomAPIRenderer({ showingPreview }: { showingPreview: 
 
 function CustomAPIRendererModels() {
     const client = customapiStore((state) => state.client);
+    const selectedModel = customapiStore((state) => state.selectedModel);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string>('');
+    const didInitLoadRef = useRef(false);
 
-    // Auto-load model on component mount or when selection changes
+    // Auto-load model only once on initial mount after client is ready
     useEffect(() => {
-        const { selectedModel } = customapiStore.getState();
-        if (client && !loading && !customapiStore.getState().currentNodes.length && selectedModel) {
-            log('Auto-loading model');
+        if (client && selectedModel && !didInitLoadRef.current) {
+            didInitLoadRef.current = true;
+            log('Auto-loading model (initial mount)', { selectedModel });
             setLoading(true);
             changeSelectedModel(selectedModel)
                 .catch((error: any) => {
@@ -95,7 +97,7 @@ function CustomAPIRendererModels() {
                     setLoading(false);
                 });
         }
-    }, [client]);
+    }, [client, selectedModel]);
 
     if (!client) {
         return null;
@@ -104,18 +106,19 @@ function CustomAPIRendererModels() {
     const { t } = useTranslation();
 
     return (
-        <WidgetableProvider
+        <UploadPassProvider
             uploader={async (uploadInput, signal) => {
                 // return await client.uploadImage(uploadInput.type, uploadInput.tokenOrBuffer, 'png', signal);
-                return uploadInput.tokenOrBuffer;
+                return uploadInput.tokenOrBuffer as string;
             }}
-            widgetRegistry={createBaseWidgetRegistry()}
         >
+        <WidgetableProvider widgetRegistry={createImageMaskWidgetRegistry()}>
             {/* No help icon or model title header for Custom API */}
             {!loading && !loadError && <CustomAPIRendererForm />}
-            {loading && <Alert message={t('google.loading', 'Loading...')} type="info" showIcon />}
+            {loading && <Alert message={t('google.loading')} type="info" showIcon />}
             {loadError && <Alert message={loadError} type="error" showIcon />}
         </WidgetableProvider>
+        </UploadPassProvider>
     )
 }
 
@@ -127,6 +130,21 @@ function CustomAPIRendererForm() {
     const setCurrentValues = customapiStore((state) => state.setCurrentValues);
     const runningTasks = customapiStore((state) => state.runningTasks);
     const model = selectedModel;
+
+    // Adjust maxCount for OpenAI gpt-image-1 to 1 (move hook to top-level to follow Rules of Hooks)
+    const adjustedNodes = useMemo(() => {
+        if (format === 'openai' && (model || '').toLowerCase() === 'gpt-image-1') {
+            return currentNodes.map((node) => ({
+                ...node,
+                widgets: node.widgets.map((w) => (
+                    w.outputType === 'images'
+                        ? { ...w, options: { ...(w.options || {}), maxCount: 1 } }
+                        : w
+                ))
+            }));
+        }
+        return currentNodes;
+    }, [format, model, currentNodes]);
 
     const { runError, progressMessage, handleRun, handleCancel, isRunning, canCancel } = useTaskExecutor({
         selectedModel: model,
@@ -177,34 +195,16 @@ function CustomAPIRendererForm() {
             )}
             {runError && <Alert message={runError} type="error" showIcon />}
             {/* Adjust maxCount for OpenAI gpt-image-1 to 1 */}
-            {(() => {
-                const adjustedNodes = useMemo(() => {
-                    if (format === 'openai' && (model || '').toLowerCase() === 'gpt-image-1') {
-                        return currentNodes.map((node) => ({
-                            ...node,
-                            widgets: node.widgets.map((w) => (
-                                w.outputType === 'images'
-                                    ? { ...w, options: { ...(w.options || {}), maxCount: 1 } }
-                                    : w
-                            ))
-                        }));
-                    }
-                    return currentNodes;
-                }, [format, model, currentNodes]);
-
-                return (
-                    <WorkflowEditApiFormat
+            <WorkflowEditApiFormat
                 modelName={model}
                 nodes={adjustedNodes}
                 values={currentValues}
                 errors={{}}
                 onWidgetChange={(_widgetIndex: number, value: any, fieldInfo: WidgetableNode) => {
-                    currentValues[fieldInfo.id] = value;
-                    setCurrentValues(currentValues);
+                const live = customapiStore.getState().currentValues;
+                setCurrentValues({ ...live, [fieldInfo.id]: value });
                 }}
-                    />
-                );
-            })()}
+            />
         </>
     )
 }

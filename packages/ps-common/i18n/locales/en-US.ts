@@ -9,7 +9,7 @@ export const enUS = {
   'provider.google.description': 'OpenAI/Google format API',
   'task.waiting_upload': 'Waiting for image upload...',
   'task.creating_task': 'Creating task...',
-  'task.running_duration': 'Running for {{duration}} seconds, {{message}}',
+  'task.running_duration': 'Running for {{duration}} secs, {{message}}',
   'task.cancelled': 'Task cancelled',
   'task.cancel_failed': 'Task cancel failed: {{error}}',
   'comfy.connect': 'Connect',
@@ -176,18 +176,21 @@ export const enUS = {
   'image.upload.from_selection': 'Selection',
   'image.upload.from_harddisk': 'Disk',
   'image.upload.clear': 'Clear',
-  'image.upload.uploading': 'Uploading, if the image too large, may be stuck...',
+  'image.upload.uploading': 'Uploading, if the image too large, may be lag...',
   'image.upload.no_images': 'No images',
   // Tooltips for Photoshop fetch buttons
-  'image.upload.tooltip.more_options_hint': '+Shift for more options; Ctrl to fetch once.',
   'image.upload.tooltip.alt.crop': '+Alt crop by selection',
   'image.upload.tooltip.alt.reverse': '+Alt reversed mask',
-  'image.upload.tooltip.shift.once': '+Shift to fetch once',
   'image.upload.tooltip.image.canvas': 'Get image from Canvas',
   'image.upload.tooltip.image.curlayer': 'Get image from Current Layer',
   'image.upload.tooltip.mask.canvas': 'Get mask from Canvas',
   'image.upload.tooltip.mask.curlayer': 'Get mask from Current Layer',
   'image.upload.tooltip.mask.selection': 'Get mask from Selection',
+  'image.upload.tooltip.autosync.on': 'Auto Sync: on',
+  'image.upload.tooltip.autosync.off': 'Auto Sync: off',
+
+  'image.auto_send_enabled': 'Auto send enabled',
+  'image.auto_send_disabled': 'Auto send disabled',
 
   // Source render component related translations
   'source.source': 'Source',
