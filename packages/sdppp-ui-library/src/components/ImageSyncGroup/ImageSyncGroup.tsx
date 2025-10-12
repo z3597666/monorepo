@@ -1,5 +1,5 @@
 import { Image } from 'antd';
-import { type FC, useEffect, useRef, useState } from 'react';
+import { type FC, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ExclusiveSyncGroup,
   type ExclusiveSyncGroupProps,
@@ -38,7 +38,15 @@ export const ImageSyncGroup: FC<ImageSyncGroupProps> = ({
       if (!el) return;
       const ro = new ResizeObserver(entries => {
         const rect = entries[0]?.contentRect;
-        if (rect) setContainerSize({ width: rect.width, height: rect.height });
+        if (rect) {
+          setContainerSize(prev => {
+            // Only update if the size has actually changed to prevent infinite loops
+            if (prev.width !== rect.width || prev.height !== rect.height) {
+              return { width: rect.width, height: rect.height };
+            }
+            return prev;
+          });
+        }
       });
       ro.observe(el);
       return () => ro.disconnect();
@@ -133,11 +141,14 @@ export const ImageSyncGroup: FC<ImageSyncGroupProps> = ({
 
           {/* Antd preview modal */}
           <Image.PreviewGroup
-            preview={{
-              visible: previewVisible,
-              onVisibleChange: (v) => setPreviewVisible(v),
-            }}
-            items={imageUrl ? [{ src: imageUrl }] : []}
+            preview={useMemo(
+              () => ({
+                visible: previewVisible,
+                onVisibleChange: (v: boolean) => setPreviewVisible(v),
+              }),
+              [previewVisible],
+            )}
+            items={useMemo(() => (imageUrl ? [{ src: imageUrl }] : []), [imageUrl])}
           />
         </div>
       </div>

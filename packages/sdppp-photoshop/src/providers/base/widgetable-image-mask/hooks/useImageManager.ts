@@ -33,17 +33,20 @@ export interface UseImageManagerReturn {
   showAddRemove: boolean;
 }
 
-function useButtonConfigs(isMask: boolean): ButtonConfig[] {
-  const { t } = useTranslation();
+// Hook to track Alt key state globally
+function useAltKeyState(): boolean {
   const [altActive, setAltActive] = React.useState(false);
 
-  // Maintain Alt key active state locally
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey || e.getModifierState?.('Alt')) setAltActive(true);
+      if (e.altKey || e.getModifierState?.('Alt')) {
+        setAltActive(true);
+      }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Alt' || !e.altKey) setAltActive(false);
+      if (e.key === 'Alt' || !e.altKey) {
+        setAltActive(false);
+      }
     };
     const handleBlur = () => setAltActive(false);
 
@@ -57,32 +60,72 @@ function useButtonConfigs(isMask: boolean): ButtonConfig[] {
     };
   }, []);
 
-  const canvasSyncTooltip = t('image.upload.tooltip.image.canvas') + '\n' + t('image.upload.tooltip.alt.crop');
-  const curlayerSyncTooltip = isMask
-    ? t('image.upload.tooltip.mask.curlayer') + '\n' + t('image.upload.tooltip.alt.reverse')
-    : t('image.upload.tooltip.image.curlayer') + '\n' + t('image.upload.tooltip.alt.crop');
-  const selectionSyncTooltip = t('image.upload.tooltip.mask.selection') + '\n' + t('image.upload.tooltip.alt.reverse');
+  return altActive;
+}
 
-  const altDescMask = altActive ? '(reversed)' : undefined;
-  const altDescImage = altActive ? '(selection)' : undefined;
+function useButtonConfigs(isMask: boolean, altActive: boolean): ButtonConfig[] {
+  const { t } = useTranslation();
 
-  if (isMask) {
+  return useMemo(() => {
+    const canvasSyncTooltip = t('image.upload.tooltip.image.canvas') + '\n' + t('image.upload.tooltip.alt.crop');
+    const curlayerSyncTooltip = isMask
+      ? t('image.upload.tooltip.mask.curlayer') + '\n' + t('image.upload.tooltip.alt.reverse')
+      : t('image.upload.tooltip.image.curlayer') + '\n' + t('image.upload.tooltip.alt.crop');
+    const selectionSyncTooltip = t('image.upload.tooltip.mask.selection') + '\n' + t('image.upload.tooltip.alt.reverse');
+
+    const altDescMask = altActive ? '(reversed)' : undefined;
+    const altDescImage = altActive ? '(selection)' : undefined;
+
+    if (isMask) {
+      return [
+        {
+          id: 'selection',
+          text: t('image.upload.from_selection', { defaultMessage: 'Selection' }),
+          descText: altDescMask,
+          supportsAutoSync: true,
+          syncButtonTooltip: selectionSyncTooltip,
+          autoSyncButtonTooltips: {
+            enabled: t('image.upload.tooltip.autosync.on') + '\n' + selectionSyncTooltip,
+            disabled: t('image.upload.tooltip.autosync.off') + '\n' + selectionSyncTooltip,
+          },
+        },
+        {
+          id: 'curlayer',
+          text: t('image.upload.from_curlayer', { defaultMessage: 'Current Layer' }),
+          descText: altDescMask,
+          supportsAutoSync: true,
+          syncButtonTooltip: curlayerSyncTooltip,
+          autoSyncButtonTooltips: {
+            enabled: t('image.upload.tooltip.autosync.on') + '\n' + curlayerSyncTooltip,
+            disabled: t('image.upload.tooltip.autosync.off') + '\n' + curlayerSyncTooltip,
+          },
+        },
+        {
+          id: 'canvas',
+          text: t('image.upload.from_canvas', { defaultMessage: 'Canvas' }),
+          descText: altDescMask,
+          supportsAutoSync: false,
+          syncButtonTooltip: t('image.upload.tooltip.mask.canvas'),
+        },
+      ];
+    }
+
     return [
       {
-        id: 'selection',
-        text: t('image.upload.from_selection', { defaultMessage: 'Selection' }),
-        descText: altDescMask,
+        id: 'canvas',
+        text: t('image.upload.from_canvas', { defaultMessage: 'Canvas' }),
+        descText: altDescImage,
         supportsAutoSync: true,
-        syncButtonTooltip: selectionSyncTooltip,
+        syncButtonTooltip: canvasSyncTooltip,
         autoSyncButtonTooltips: {
-          enabled: t('image.upload.tooltip.autosync.on') + '\n' + selectionSyncTooltip,
-          disabled: t('image.upload.tooltip.autosync.off') + '\n' + selectionSyncTooltip,
+          enabled: t('image.upload.tooltip.autosync.on') + '\n' + canvasSyncTooltip,
+          disabled: t('image.upload.tooltip.autosync.off') + '\n' + canvasSyncTooltip,
         },
       },
       {
         id: 'curlayer',
         text: t('image.upload.from_curlayer', { defaultMessage: 'Current Layer' }),
-        descText: altDescMask,
+        descText: altDescImage,
         supportsAutoSync: true,
         syncButtonTooltip: curlayerSyncTooltip,
         autoSyncButtonTooltips: {
@@ -91,45 +134,13 @@ function useButtonConfigs(isMask: boolean): ButtonConfig[] {
         },
       },
       {
-        id: 'canvas',
-        text: t('image.upload.from_canvas', { defaultMessage: 'Canvas' }),
-        descText: altDescMask,
+        id: 'disk',
+        text: t('image.upload.from_harddisk'),
         supportsAutoSync: false,
-        syncButtonTooltip: t('image.upload.tooltip.mask.canvas'),
+        syncButtonTooltip: '',
       },
     ];
-  }
-
-  return [
-    {
-      id: 'canvas',
-      text: t('image.upload.from_canvas', { defaultMessage: 'Canvas' }),
-      descText: altDescImage,
-      supportsAutoSync: true,
-      syncButtonTooltip: canvasSyncTooltip,
-      autoSyncButtonTooltips: {
-        enabled: t('image.upload.tooltip.autosync.on') + '\n' + canvasSyncTooltip,
-        disabled: t('image.upload.tooltip.autosync.off') + '\n' + canvasSyncTooltip,
-      },
-    },
-    {
-      id: 'curlayer',
-      text: t('image.upload.from_curlayer', { defaultMessage: 'Current Layer' }),
-      descText: altDescImage,
-      supportsAutoSync: true,
-      syncButtonTooltip: curlayerSyncTooltip,
-      autoSyncButtonTooltips: {
-        enabled: t('image.upload.tooltip.autosync.on') + '\n' + curlayerSyncTooltip,
-        disabled: t('image.upload.tooltip.autosync.off') + '\n' + curlayerSyncTooltip,
-      },
-    },
-    {
-      id: 'disk',
-      text: t('image.upload.from_harddisk'),
-      supportsAutoSync: false,
-      syncButtonTooltip: '',
-    },
-  ];
+  }, [isMask, altActive, t]);
 }
 
 export function useImageManager({
@@ -139,7 +150,8 @@ export function useImageManager({
   urls,
   onValueChange,
 }: UseImageManagerOptions): UseImageManagerReturn {
-  const buttons = useButtonConfigs(isMask);
+  const altActive = useAltKeyState();
+  const buttons = useButtonConfigs(isMask, altActive);
 
   // Register component in store
   useEffect(() => {
