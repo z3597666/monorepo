@@ -159,5 +159,5 @@ function updateBannerData() {
 }
 
 // Temporarily disabled to check if this causes re-rendering
-// setTimeout(updateBannerData, 3000)
-// setInterval(updateBannerData, 60000)
+setTimeout(updateBannerData, 3000)
+setInterval(updateBannerData, 60000)
