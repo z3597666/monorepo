@@ -1,5 +1,5 @@
 import { Image } from 'antd';
-import { type FC, useEffect, useMemo, useRef, useState } from 'react';
+import { type FC, useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import {
   ExclusiveSyncGroup,
   type ExclusiveSyncGroupProps,
@@ -16,7 +16,7 @@ export interface ImageSyncGroupProps extends ExclusiveSyncGroupProps {
   previewClassName?: string;
 }
 
-export const ImageSyncGroup: FC<ImageSyncGroupProps> = ({
+const ImageSyncGroupComponent: FC<ImageSyncGroupProps> = ({
   imageUrl,
   buttonWidth,
   buttons,
@@ -31,6 +31,14 @@ export const ImageSyncGroup: FC<ImageSyncGroupProps> = ({
     const containerRef = useRef<HTMLDivElement | null>(null);
     const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
+    
+    // Use ref to store stable callback function
+    const handlePreviewVisibleChangeRef = useRef((v: boolean) => {
+      setPreviewVisible(v);
+    });
+    const handlePreviewVisibleChange = handlePreviewVisibleChangeRef.current;
+
+    
     useEffect(() => {
       // Guard for test environments without ResizeObserver (e.g., jsdom)
       if (typeof ResizeObserver === 'undefined') return;
@@ -141,16 +149,23 @@ export const ImageSyncGroup: FC<ImageSyncGroupProps> = ({
 
           {/* Antd preview modal */}
           <Image.PreviewGroup
-            preview={useMemo(
-              () => ({
-                visible: previewVisible,
-                onVisibleChange: (v: boolean) => setPreviewVisible(v),
-              }),
-              [previewVisible],
-            )}
-            items={useMemo(() => (imageUrl ? [{ src: imageUrl }] : []), [imageUrl])}
+            preview={{
+              visible: previewVisible,
+              onVisibleChange: handlePreviewVisibleChange,
+            }}
+            items={imageUrl ? [{ src: imageUrl }] : []}
           />
         </div>
       </div>
     );
-};
+  };
+
+export const ImageSyncGroup = memo(ImageSyncGroupComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.imageUrl === nextProps.imageUrl &&
+    prevProps.buttonWidth === nextProps.buttonWidth &&
+    prevProps.background === nextProps.background &&
+    prevProps['data-testid'] === nextProps['data-testid'] &&
+    JSON.stringify(prevProps.buttons) === JSON.stringify(nextProps.buttons)
+  );
+});

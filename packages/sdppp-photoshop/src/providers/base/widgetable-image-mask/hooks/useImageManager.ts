@@ -166,9 +166,15 @@ export function useImageManager({
     };
   }, [componentId, maxCount, isMask]);
 
-  // Update URLs when they change
+  // Update URLs when they change - with infinite loop prevention
   useEffect(() => {
-    GlobalImageStore.getState().updateUrls(componentId, urls);
+    const store = GlobalImageStore.getState();
+    const currentComponent = store.components[componentId];
+
+    // Only update if URLs actually changed to prevent infinite loops
+    if (currentComponent && JSON.stringify(currentComponent.urls) !== JSON.stringify(urls)) {
+      GlobalImageStore.getState().updateUrls(componentId, urls);
+    }
   }, [componentId, urls]);
 
   // Get component state and real-time thumbnails
