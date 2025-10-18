@@ -306,12 +306,12 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
             <div className="workflow-edit-controls-main-top">
               <div className="workflow-edit-controls-left">
                 <BackButton onBack={() => setCurrentWorkflow('')} />
-                <SaveButton currentWorkflow={currentWorkflow} />
+                {/* <SaveButton currentWorkflow={currentWorkflow} /> */}
                 <RefreshButton currentWorkflow={currentWorkflow} />
               </div>
               <div className="workflow-edit-controls-right">
                 <StopAndCancelButton />
-                <AutoRunButton currentWorkflow={currentWorkflow} setUploading={setUploading} />
+                {/* <AutoRunButton currentWorkflow={currentWorkflow} setUploading={setUploading} /> */}
               </div>
             </div>
             <div className="workflow-edit-controls-main-bottom">
@@ -321,9 +321,9 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
           <div className="workflow-edit-controls-center">
             <RunButton currentWorkflow={currentWorkflow} setUploading={setUploading} />
           </div>
-          <div className="workflow-edit-multibuttons-vertical">
+          {/* <div className="workflow-edit-multibuttons-vertical">
             <RunMultiButtons currentWorkflow={currentWorkflow} setUploading={setUploading} />
-          </div>
+          </div> */}
           </div>
           <WorkBoundary />
         </div>
