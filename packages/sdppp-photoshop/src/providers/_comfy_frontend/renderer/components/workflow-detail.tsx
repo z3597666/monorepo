@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Button, Tooltip, Divider, Progress, Space, Typography, Alert } from 'antd';
+import { Button, Tooltip, Progress, Typography, Alert, Input } from 'antd';
 import {
   SaveOutlined,
   ReloadOutlined,
@@ -8,7 +8,7 @@ import {
   PlayCircleFilled,
   ForwardOutlined,
   StopOutlined,
-  ThunderboltFilled
+  DownOutlined
 } from '@ant-design/icons';
 import { sdpppSDK } from '@sdppp/common';
 import { useStore } from 'zustand';
@@ -21,11 +21,12 @@ import { debug } from 'debug';
 import { useTranslation } from '@sdppp/common';
 import { ComfyTask } from '../../ComfyTask';
 import { WorkBoundary } from '../../../base/components';
+import { WorkflowSelectModal } from './workflow-select-modal';
 
 const log = debug('comfy-frontend:workflow-detail')
 const { Text } = Typography; 
 
-const WorkflowStatus: React.FC<{ currentWorkflow: string, uploading: boolean }> = ({ currentWorkflow, uploading }) => {
+const WorkflowStatus: React.FC<{ currentWorkflow: string, uploading: boolean, onSelectWorkflow: () => void }> = ({ currentWorkflow, uploading, onSelectWorkflow }) => {
   const { t } = useTranslation()
   // Avoid subscribing to the whole store to prevent re-render on every state change
   const lastError = useStore(sdpppSDK.stores.ComfyStore, (s) => s.lastError)
@@ -54,7 +55,29 @@ const WorkflowStatus: React.FC<{ currentWorkflow: string, uploading: boolean }> 
     return <Text type="secondary" className="workflow-run-status">auto run workflow after change..</Text>;
   }
   if (currentWorkflow) {
-    return <Text type="secondary" className="workflow-run-status">{currentWorkflow}</Text>;
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === ' ') {
+        event.preventDefault();
+        onSelectWorkflow();
+      }
+    };
+
+    return (
+      <div className="workflow-run-status">
+        <Input
+          readOnly
+          value={currentWorkflow}
+          suffix={<DownOutlined />}
+          onClick={onSelectWorkflow}
+          onPressEnter={(event) => {
+            event.preventDefault();
+            onSelectWorkflow();
+          }}
+          onKeyDown={handleKeyDown}
+          rootClassName="workflow-select-input"
+        />
+      </div>
+    );
   }
   return null;
 };
@@ -244,10 +267,12 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
   const widgetableValues = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableValues)
   const widgetableStructure = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableStructure)
   const widgetableErrors = useStore(sdpppSDK.stores.ComfyStore, (state) => state.widgetableErrors)
+  const { t } = useTranslation();
 
   // Removed debug render logging per request
   const [hasRecoverHistory, setHasRecoverHistory] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [selectModalOpen, setSelectModalOpen] = useState<boolean>(false);
   useEffect(() => {
     if (currentWorkflow === widgetableStructure.widgetablePath.replace(/^workflows\//, '') && !hasRecoverHistory) {
       const historyValues = comfyWorkflowStore.getState().historyValues[currentWorkflow]
@@ -297,6 +322,34 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
     }
   }, [widgetableValues, currentWorkflow])
 
+  const handleOpenSelectModal = useCallback(() => {
+    setSelectModalOpen(true);
+  }, []);
+
+  const handleCloseSelectModal = useCallback(() => {
+    setSelectModalOpen(false);
+  }, []);
+
+  const handleWorkflowSelect = useCallback(async (workflowPath: string) => {
+    if (!workflowPath) {
+      setSelectModalOpen(false);
+      return;
+    }
+    try {
+      if (workflowPath && workflowPath !== currentWorkflow) {
+        setCurrentWorkflow(workflowPath);
+      }
+      await sdpppSDK.plugins.ComfyCaller.openWorkflow({
+        workflow_path: workflowPath,
+        reset: false
+      });
+    } catch (error) {
+      log('[Error] Failed to switch workflow from modal:', error);
+    } finally {
+      setSelectModalOpen(false);
+    }
+  }, [currentWorkflow, setCurrentWorkflow]);
+
   return (
     <div className="workflow-edit-wrap">
       <div className="workflow-edit-top">
@@ -315,7 +368,7 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
               </div>
             </div>
             <div className="workflow-edit-controls-main-bottom">
-              <WorkflowStatus currentWorkflow={currentWorkflow} uploading={uploading} />
+              <WorkflowStatus currentWorkflow={currentWorkflow} uploading={uploading} onSelectWorkflow={handleOpenSelectModal} />
             </div>
           </div>
           <div className="workflow-edit-controls-center">
@@ -328,6 +381,13 @@ export function WorkflowDetail({ currentWorkflow, setCurrentWorkflow }: { curren
           <WorkBoundary />
         </div>
       </div>
+      <WorkflowSelectModal
+        open={selectModalOpen}
+        currentWorkflow={currentWorkflow}
+        onSelect={handleWorkflowSelect}
+        onCancel={handleCloseSelectModal}
+        title={t('comfy.select_workflow', { defaultMessage: 'Select workflow' })}
+      />
       <WorkflowEdit
         widgetableStructure={widgetableStructure}
         widgetableValues={widgetableValues}

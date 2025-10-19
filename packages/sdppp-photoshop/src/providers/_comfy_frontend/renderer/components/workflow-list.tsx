@@ -1,23 +1,28 @@
-import React, { useEffect, useState } from "react";
+import React, { CSSProperties, useCallback, useEffect, useState } from "react";
 import { Tree, Alert, Typography, Button, Flex } from "antd";
 import { ReloadOutlined, FileOutlined, FolderOutlined } from "@ant-design/icons";
-import { useWorkflowListContext, TreeNodeData } from "../comfy_frontend";
-import { useTranslation } from '@sdppp/common';
-import { sdpppSDK } from '@sdppp/common';
+import { useWorkflowListContext } from "../comfy_frontend";
+import { useTranslation, sdpppSDK } from '@sdppp/common';
 import './workflow-item.less';
 
 const { DirectoryTree } = Tree;
 
 const log = sdpppSDK.logger.extend('workflow-list');
 
-interface WorkflowListProps {
-  setCurrentWorkflow: (workflow: string) => void;
+export interface WorkflowListProps {
   currentWorkflow: string;
-  hidden: boolean;
+  onWorkflowChange?: (workflow: string) => void | Promise<void>;
+  autoRefetch?: boolean;
+  className?: string;
+  style?: CSSProperties;
 }
 
-const WorkflowList: React.FC<WorkflowListProps> = ({
-  setCurrentWorkflow, currentWorkflow, hidden
+export const WorkflowList: React.FC<WorkflowListProps> = ({
+  currentWorkflow,
+  onWorkflowChange,
+  autoRefetch = true,
+  className,
+  style
 }) => {
   const { t } = useTranslation()
   const {
@@ -32,13 +37,23 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
   useEffect(() => {
-    refetch();
-  }, []);
+    if (autoRefetch) {
+      refetch();
+    }
+  }, [autoRefetch, refetch]);
+
+  useEffect(() => {
+    if (!currentWorkflow) {
+      setSelectedKeys([]);
+    } else {
+      setSelectedKeys([currentWorkflow]);
+    }
+  }, [currentWorkflow]);
 
   // Show error if workflows failed to load
   if (workflowsError) {
     return (
-      <div className="workflow-list">
+      <div className={['workflow-list', className].filter(Boolean).join(' ')} style={style}>
         <Alert
           message={t('common.error')}
           description={workflowsError}
@@ -49,17 +64,13 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
     );
   }
 
-  const handleSelect = async (selectedKeys: string[], e: { selected: boolean; selectedNodes: any; node: any; event: any }) => {
+  const handleSelect = async (keys: string[], e: { selected: boolean; selectedNodes: any; node: any; event: any }) => {
     if (e.selected && e.node.isLeaf && e.node.workflow) {
+      setSelectedKeys([e.node.key]);
       try {
-        setCurrentWorkflow(e.node.key);
-        await sdpppSDK.plugins.ComfyCaller.openWorkflow({
-          workflow_path: e.node.key,
-          reset: false
-        });
+        await onWorkflowChange?.(e.node.key);
       } catch (error: any) {
-        log('[Error] Failed to open workflow:', error);
-        // 可以选择显示错误提示
+        log('[Error] onWorkflowChange failed:', error);
       }
     }
   };
@@ -72,7 +83,7 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
   };
 
   return (
-    <div className="workflow-list" style={{ display: hidden ? 'none' : 'block' }}>
+    <div className={['workflow-list', className].filter(Boolean).join(' ')} style={style}>
       <Flex align="center" gap={8} style={{ margin: '8px 0' }}>
         <Typography.Title level={5} style={{ margin: 0 }}>
           {t('comfy.your_workflows')}
@@ -102,4 +113,36 @@ const WorkflowList: React.FC<WorkflowListProps> = ({
   );
 };
 
-export default WorkflowList;
+interface WorkflowListPanelProps {
+  setCurrentWorkflow: (workflow: string) => void;
+  currentWorkflow: string;
+  hidden: boolean;
+}
+
+const WorkflowListPanel: React.FC<WorkflowListPanelProps> = ({
+  setCurrentWorkflow,
+  currentWorkflow,
+  hidden
+}) => {
+  const handleWorkflowChange = useCallback(async (workflowPath: string) => {
+    setCurrentWorkflow(workflowPath);
+    try {
+      await sdpppSDK.plugins.ComfyCaller.openWorkflow({
+        workflow_path: workflowPath,
+        reset: false
+      });
+    } catch (error: any) {
+      log('[Error] Failed to open workflow:', error);
+    }
+  }, [setCurrentWorkflow]);
+
+  return (
+    <WorkflowList
+      currentWorkflow={currentWorkflow}
+      onWorkflowChange={handleWorkflowChange}
+      style={hidden ? { display: 'none' } : undefined}
+    />
+  );
+};
+
+export default WorkflowListPanel;

@@ -1,5 +1,5 @@
 import React, { Component, useEffect, useState, useMemo } from "react";
-import WorkflowList from "./workflow-list";
+import WorkflowListPanel from "./workflow-list";
 import { WorkflowDetail } from "./workflow-detail";
 import { useStore } from "zustand";
 import { sdpppSDK } from '@sdppp/common';
@@ -33,7 +33,7 @@ export function ComfyFrontendRendererContent() {
 
     return (
         <SDPPPErrorBoundary>
-            <WorkflowList hidden={view === 'detail'} currentWorkflow={currentWorkflow} setCurrentWorkflow={setCurrentWorkflow} />
+            <WorkflowListPanel hidden={view === 'detail'} currentWorkflow={currentWorkflow} setCurrentWorkflow={setCurrentWorkflow} />
             {view === "detail" && <WorkflowDetail currentWorkflow={currentWorkflow} setCurrentWorkflow={setCurrentWorkflow} />}
         </SDPPPErrorBoundary>
     );

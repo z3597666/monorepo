@@ -30,6 +30,7 @@ export const enUS = {
   'comfy.run': 'Run',
   'comfy.back': 'Back',
   'comfy.uploading': 'Uploading...',
+  'comfy.select_workflow': 'Select workflow',
   'comfy.help_tooltip': 'Tutorial',
   'boundary.title': 'Input Setting',
   'boundary.tooltip': 'Area AI reads from; controls max image size',

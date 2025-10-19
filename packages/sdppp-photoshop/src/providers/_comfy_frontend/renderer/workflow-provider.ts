@@ -138,6 +138,11 @@ function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource
         setExpandedKeys(newExpandedKeys);
     }, []);
 
+    const refetch = useCallback(() => {
+        if (comfyWebviewConnectStatus !== "connected") return;
+        doFetchWorkflowList();
+    }, [comfyWebviewConnectStatus, doFetchWorkflowList]);
+
     return {
         // Tree data for DirectoryTree
         treeData,
@@ -146,11 +151,7 @@ function useWorkflowList(dataSource: WorkflowDataSource = defaultComfyDataSource
 
         loading,
         error,
-        refetch: () => {
-            // Avoid fetching when not connected
-            if (comfyWebviewConnectStatus !== "connected") return;
-            doFetchWorkflowList();
-        },
+        refetch,
 
         // 全量数据
         allWorkflowList: allWorkflowList,

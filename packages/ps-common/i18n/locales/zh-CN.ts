@@ -30,6 +30,7 @@ export const zhCN = {
   'comfy.run': '运行',
   'comfy.back': '返回',
   'comfy.uploading': '正在上传...',
+  'comfy.select_workflow': '选择工作流',
   'comfy.help_tooltip': '使用教程',
   'boundary.title': '输入设置',
   'boundary.tooltip': 'AI使用的区域与最大尺寸控制',
