@@ -1,4 +1,4 @@
-import React, { CSSProperties, useCallback, useEffect, useState } from "react";
+import React, { CSSProperties, useCallback, useEffect } from "react";
 import { Tree, Alert, Typography, Button, Flex } from "antd";
 import { ReloadOutlined, FileOutlined, FolderOutlined } from "@ant-design/icons";
 import { useWorkflowListContext } from "../comfy_frontend";
@@ -18,7 +18,6 @@ export interface WorkflowListProps {
 }
 
 export const WorkflowList: React.FC<WorkflowListProps> = ({
-  currentWorkflow,
   onWorkflowChange,
   autoRefetch = true,
   className,
@@ -34,21 +33,11 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
     refetch
   } = useWorkflowListContext();
 
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-
   useEffect(() => {
     if (autoRefetch) {
       refetch();
     }
   }, [autoRefetch, refetch]);
-
-  useEffect(() => {
-    if (!currentWorkflow) {
-      setSelectedKeys([]);
-    } else {
-      setSelectedKeys([currentWorkflow]);
-    }
-  }, [currentWorkflow]);
 
   // Show error if workflows failed to load
   if (workflowsError) {
@@ -64,11 +53,10 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
     );
   }
 
-  const handleSelect = async (keys: string[], e: { selected: boolean; selectedNodes: any; node: any; event: any }) => {
-    if (e.selected && e.node.isLeaf && e.node.workflow) {
-      setSelectedKeys([e.node.key]);
+  const handleNodeClick = async (_event: any, node: any) => {
+    if (node.isLeaf && node.workflow) {
       try {
-        await onWorkflowChange?.(e.node.key);
+        await onWorkflowChange?.(node.key);
       } catch (error: any) {
         log('[Error] onWorkflowChange failed:', error);
       }
@@ -102,9 +90,9 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
         className="workflow-list__main"
         treeData={treeData}
         expandedKeys={expandedKeys}
-        selectedKeys={selectedKeys}
         onExpand={onExpand}
-        onSelect={handleSelect}
+        onClick={handleNodeClick}
+        selectable={false}
         showIcon
         icon={renderTreeIcon}
         expandAction="click"

@@ -22,9 +22,29 @@ import { useTranslation } from '@sdppp/common';
 import { ComfyTask } from '../../ComfyTask';
 import { WorkBoundary } from '../../../base/components';
 import { WorkflowSelectModal } from './workflow-select-modal';
+import { GlobalImageStore } from '../../../base/widgetable-image-mask/stores/global-image-store';
+import type { BoundaryRect } from '../../../base/widgetable-image-mask/utils/image-operations';
 
 const log = debug('comfy-frontend:workflow-detail')
 const { Text } = Typography; 
+
+const resolveFirstImageBoundary = (): BoundaryRect | undefined => {
+  try {
+    const components = GlobalImageStore.getState().components;
+    for (const comp of Object.values(components)) {
+      if (!comp || comp.isMask) continue;
+      const urls = comp.urls || [];
+      if (!urls.length || !urls[0]) continue;
+      const boundary = comp.slots?.[0]?.boundary;
+      if (boundary) {
+        return boundary as BoundaryRect;
+      }
+    }
+  } catch (error) {
+    console.warn('resolveFirstImageBoundary failed', error);
+  }
+  return undefined;
+};
 
 const WorkflowStatus: React.FC<{ currentWorkflow: string, uploading: boolean, onSelectWorkflow: () => void }> = ({ currentWorkflow, uploading, onSelectWorkflow }) => {
   const { t } = useTranslation()
@@ -177,7 +197,10 @@ const AutoRunButton = ({ currentWorkflow, setUploading }: { currentWorkflow: str
 async function runAndWaitResult(multi: number, currentWorkflow: string): Promise<ComfyTask> {
   // 获取当前文档ID和边界信息
   const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
-  const boundary = sdpppSDK.stores.WebviewStore.getState().workBoundaries[activeDocumentID];
+  const imageBoundary = resolveFirstImageBoundary();
+  const boundary =
+    imageBoundary ??
+    sdpppSDK.stores.WebviewStore.getState().workBoundaries[activeDocumentID];
 
   const task = new ComfyTask({ size: multi }, currentWorkflow, activeDocumentID, boundary);
 

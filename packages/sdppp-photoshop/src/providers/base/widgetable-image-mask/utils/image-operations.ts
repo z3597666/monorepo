@@ -1,77 +1,86 @@
 import { sdpppSDK } from '@sdppp/common';
 
+export interface BoundaryRect {
+  leftDistance: number;
+  topDistance: number;
+  rightDistance: number;
+  bottomDistance: number;
+  width: number;
+  height: number;
+}
+
+export interface GetPhotoshopImageOptions {
+  reverse?: boolean;
+  boundary?: 'canvas' | 'curlayer' | 'selection' | BoundaryRect;
+  cropBySelection?: 'no' | 'negative' | 'positive';
+}
+
 /**
  * Get images from Photoshop with proper boundary handling
  */
 export const getPhotoshopImage = async (
   isMask = false,
   source: 'canvas' | 'curlayer' | 'selection',
-  reverse?: boolean
+  options: GetPhotoshopImageOptions = {}
 ) => {
+  const {
+    reverse = false,
+    boundary,
+    cropBySelection,
+  } = options;
+
   let thumbnail_url: string, file_token: string, imageSource: string, result: any;
 
-  if (isMask) {
+  const resolveBoundary = () => {
+    if (boundary && boundary !== 'canvas' && boundary !== 'curlayer' && boundary !== 'selection') {
+      return boundary;
+    }
+
+    if (boundary === 'canvas' || boundary === 'curlayer' || boundary === 'selection') {
+      return boundary;
+    }
+
     const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
     const webviewState: any = sdpppSDK.stores.WebviewStore.getState();
     const workBoundaries = webviewState.workBoundaries;
-    const workBoundaryMaxSizes = (webviewState as any).workBoundaryMaxSizes || {};
-    const boundary = workBoundaries[activeDocumentID];
+    const workBoundary = workBoundaries?.[activeDocumentID];
 
-    let boundaryParam: 'canvas' | 'curlayer' | 'selection' | {
-      leftDistance: number;
-      topDistance: number;
-      rightDistance: number;
-      bottomDistance: number;
-      width: number;
-      height: number;
-    };
-    if (!boundary || (boundary.width >= 999999 && boundary.height >= 999999)) {
-      boundaryParam = 'canvas';
-    } else {
-      boundaryParam = boundary;
+    if (!workBoundary || (workBoundary.width >= 999999 && workBoundary.height >= 999999)) {
+      return 'canvas';
     }
 
+    return workBoundary;
+  };
+
+  const resolveImageSize = () => {
+    const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
+    const webviewState: any = sdpppSDK.stores.WebviewStore.getState();
+    const workBoundaryMaxSizes = (webviewState as any).workBoundaryMaxSizes || {};
+    return (
+      workBoundaryMaxSizes[activeDocumentID] ||
+      sdpppSDK.stores.PhotoshopStore.getState().sdpppX['settings.imaging.defaultImagesSizeLimit']
+    );
+  };
+
+  const boundaryParam = resolveBoundary();
+
+  if (isMask) {
     const maskParams: any = {
       content: source,
       reverse: !!reverse,
-      imageSize:
-        workBoundaryMaxSizes[activeDocumentID] ||
-        sdpppSDK.stores.PhotoshopStore.getState().sdpppX['settings.imaging.defaultImagesSizeLimit'],
+      imageSize: resolveImageSize(),
       boundary: boundaryParam as any,
     };
-
     result = await sdpppSDK.plugins.photoshop.getMask(maskParams as any);
     thumbnail_url = result.thumbnail_url;
     file_token = result.file_token;
     imageSource = result.source;
   } else {
-    const activeDocumentID = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
-    const webviewState: any = sdpppSDK.stores.WebviewStore.getState();
-    const workBoundaries = webviewState.workBoundaries;
-    const workBoundaryMaxSizes = (webviewState as any).workBoundaryMaxSizes || {};
-    const boundary = workBoundaries[activeDocumentID];
-
-    let boundaryParam: 'canvas' | 'curlayer' | 'selection' | {
-      leftDistance: number;
-      topDistance: number;
-      rightDistance: number;
-      bottomDistance: number;
-      width: number;
-      height: number;
-    };
-    if (!boundary || (boundary.width >= 999999 && boundary.height >= 999999)) {
-      boundaryParam = 'canvas';
-    } else {
-      boundaryParam = boundary;
-    }
-
     const getImageParams = {
       content: source,
       boundary: boundaryParam,
-      imageSize:
-        workBoundaryMaxSizes[activeDocumentID] ||
-        sdpppSDK.stores.PhotoshopStore.getState().sdpppX['settings.imaging.defaultImagesSizeLimit'],
-      cropBySelection: reverse ? 'negative' : 'no',
+      imageSize: resolveImageSize(),
+      cropBySelection: cropBySelection ?? (reverse ? 'negative' : 'no'),
     } as const;
 
     result = await sdpppSDK.plugins.photoshop.getImage(getImageParams);

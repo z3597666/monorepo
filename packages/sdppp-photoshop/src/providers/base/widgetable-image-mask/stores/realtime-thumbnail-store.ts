@@ -11,7 +11,13 @@ interface DocThumbs {
   mask?: Partial<Record<ThumbKey, string>>;
 }
 
-interface TrackingEntry { type: TrackType; content: ContentType; alt?: boolean }
+interface TrackingEntry {
+  type: TrackType;
+  content: ContentType;
+  alt?: boolean;
+  boundary?: ContentType;
+  cropBySelection?: 'no' | 'negative' | 'positive';
+}
 interface TrackingState {
   trackingByDoc: Record<number, TrackingEntry[]>;
   thumbsByDoc: Record<number, DocThumbs>;
@@ -27,9 +33,13 @@ export const RealtimeThumbnailStore = create<TrackingState>((set, get) => ({
   addTracking: (docId, config) => {
     set(state => {
       const list = state.trackingByDoc[docId] || [];
-      const next = list
-        // ensure uniqueness by type+content; replace different alt variant
-        .filter(e => !(e.type === config.type && e.content === config.content));
+      const next = list.filter(e => !(
+        e.type === config.type &&
+        e.content === config.content &&
+        (!!e.alt) === (!!config.alt) &&
+        (e.boundary || '') === (config.boundary || '') &&
+        (e.cropBySelection || '') === (config.cropBySelection || '')
+      ));
       next.push(config);
       return { trackingByDoc: { ...state.trackingByDoc, [docId]: next } };
     });
@@ -39,7 +49,14 @@ export const RealtimeThumbnailStore = create<TrackingState>((set, get) => ({
     set(state => {
       if (!config) return { trackingByDoc: { ...state.trackingByDoc, [docId]: [] } };
       const list = state.trackingByDoc[docId] || [];
-      const next = list.filter(e => !(e.type === config.type && e.content === config.content));
+      const next = list.filter(e => {
+        if (e.type !== config.type) return true;
+        if (e.content !== config.content) return true;
+        if (config.boundary !== undefined && (e.boundary || '') !== (config.boundary || '')) return true;
+        if (config.cropBySelection !== undefined && (e.cropBySelection || '') !== (config.cropBySelection || '')) return true;
+        if (config.alt !== undefined && (!!e.alt) !== (!!config.alt)) return true;
+        return false;
+      });
       return { trackingByDoc: { ...state.trackingByDoc, [docId]: next } };
     });
   },
@@ -85,21 +102,23 @@ async function runFetch() {
     const webviewState: any = sdpppSDK.stores.WebviewStore.getState();
     const boundaryMap = webviewState.workBoundaries || {};
     const boundaryRect = boundaryMap[docId];
-    let boundaryParam: any;
-    if (!boundaryRect || (boundaryRect.width >= 999999 && boundaryRect.height >= 999999)) {
-      boundaryParam = 'canvas';
-    } else {
-      boundaryParam = boundaryRect;
-    }
+    const defaultBoundaryParam = (!boundaryRect || (boundaryRect.width >= 999999 && boundaryRect.height >= 999999))
+      ? 'canvas'
+      : boundaryRect;
 
     for (const tracking of trackList) {
+      let boundaryParam: any = defaultBoundaryParam;
+      if (tracking.boundary) {
+        boundaryParam = tracking.boundary;
+      }
+
       if (tracking.type === 'image') {
         const res = await sdpppSDK.plugins.photoshop.getImage({
           boundary: boundaryParam,
           content: tracking.content,
           imageSize: 192,
           imageQuality: 1,
-          cropBySelection: tracking.alt ? 'negative' : 'no',
+          cropBySelection: tracking.cropBySelection || (tracking.alt ? 'negative' : 'no'),
           SkipNonNormalLayer: true,
         });
         const thumb = res.thumbnail_url || '';
@@ -178,20 +197,39 @@ async function runFetch() {
   });
 })();
 
-export function startAutoThumbnail(type: TrackType, content: ContentType, alt?: boolean) {
-  const docId = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
-  if (!docId) return;
-  RealtimeThumbnailStore.getState().addTracking(docId, { type, content, alt: !!alt });
+export interface AutoThumbnailOptions {
+  alt?: boolean;
+  boundary?: ContentType;
+  cropBySelection?: 'no' | 'negative' | 'positive';
 }
 
-export function stopAutoThumbnail(type?: TrackType, content?: ContentType) {
+export function startAutoThumbnail(type: TrackType, content: ContentType, options?: AutoThumbnailOptions) {
   const docId = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
   if (!docId) return;
-  if (type && content) {
-    RealtimeThumbnailStore.getState().removeTracking(docId, { type, content });
-  } else {
+  RealtimeThumbnailStore.getState().addTracking(docId, {
+    type,
+    content,
+    alt: !!options?.alt,
+    boundary: options?.boundary,
+    cropBySelection: options?.cropBySelection,
+  });
+}
+
+export function stopAutoThumbnail(config?: TrackingEntry | { type: TrackType; content: ContentType; alt?: boolean; boundary?: ContentType; cropBySelection?: 'no' | 'negative' | 'positive' }) {
+  const docId = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
+  if (!docId) return;
+  if (!config) {
     RealtimeThumbnailStore.getState().clearTracking(docId);
+    return;
   }
+
+  RealtimeThumbnailStore.getState().removeTracking(docId, {
+    type: config.type,
+    content: config.content,
+    alt: config.alt,
+    boundary: config.boundary,
+    cropBySelection: config.cropBySelection,
+  });
 }
 
 export function useRealtimeThumbnail(type: TrackType, content: ContentType) {

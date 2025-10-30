@@ -9,6 +9,11 @@ export interface AutoSyncEvent {
   shiftKey: boolean;
 }
 
+export interface AutoSyncOverrides {
+  boundary?: 'canvas' | 'curlayer' | 'selection';
+  cropBySelection?: 'no' | 'negative' | 'positive';
+}
+
 export interface UseImageAutoSyncOptions {
   componentId: string;
   urls: string[];
@@ -26,7 +31,7 @@ export function useImageAutoSync({ componentId, urls, isMask, onValueChange }: U
   }, [urls]);
 
   const onAutoSyncChange = useCallback(
-    (index: number, activeId: string | null, event: AutoSyncEvent) => {
+    (index: number, activeId: string | null, event: AutoSyncEvent, overrides?: AutoSyncOverrides) => {
       const type = isMask ? 'mask' : 'image';
       const altUsed = !!event?.altKey;
 
@@ -38,6 +43,8 @@ export function useImageAutoSync({ componentId, urls, isMask, onValueChange }: U
           type,
           content: activeId as any,
           alt: altUsed,
+          boundary: overrides?.boundary,
+          cropBySelection: overrides?.cropBySelection,
         };
         GlobalImageStore.getState().setSlotAuto(componentId, index, autoConfig);
       }
@@ -67,7 +74,11 @@ export function useImageAutoSync({ componentId, urls, isMask, onValueChange }: U
           } catch {}
 
           // Propagate Alt semantics (reverse/crop) like once-sync Alt behavior
-          const { file_token, result } = await getPhotoshopImage(isMask, activeId as any, altUsed);
+          const { file_token, result } = await getPhotoshopImage(isMask, activeId as any, {
+            reverse: altUsed,
+            boundary: overrides?.boundary,
+            cropBySelection: overrides?.cropBySelection,
+          });
 
           if (result?.error) {
             throw new Error(result.error);

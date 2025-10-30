@@ -1,6 +1,7 @@
 import { sdpppSDK } from '@sdppp/common';
 import { create } from 'zustand';
 import { RealtimeThumbnailStore, startAutoThumbnail, stopAutoThumbnail } from './realtime-thumbnail-store';
+import type { BoundaryRect } from '../utils/image-operations';
 
 type ContentType = 'canvas' | 'curlayer' | 'selection';
 type TrackType = 'image' | 'mask';
@@ -9,6 +10,8 @@ export interface AutoSyncConfig {
   type: TrackType;
   content: ContentType;
   alt?: boolean;
+  boundary?: 'canvas' | 'curlayer' | 'selection';
+  cropBySelection?: 'no' | 'negative' | 'positive';
 }
 
 export interface SlotState {
@@ -16,6 +19,7 @@ export interface SlotState {
   thumbnail?: string;
   uploading?: boolean;
   uploadId?: string | null;
+  boundary?: BoundaryRect;
 }
 
 export interface ImageComponentState {
@@ -39,6 +43,7 @@ export interface GlobalImageStoreState {
   setSlotAuto: (id: string, index: number, auto: AutoSyncConfig | null) => void;
   setSlotThumbnail: (id: string, index: number, url: string | undefined) => void;
   setSlotUploading: (id: string, index: number, uploading: boolean, uploadId?: string | null) => void;
+  setSlotBoundary: (id: string, index: number, boundary: BoundaryRect | undefined) => void;
   clearSlot: (id: string, index: number) => void;
 
   // Utility methods
@@ -116,11 +121,13 @@ export const GlobalImageStore = create<GlobalImageStoreState>((set, get) => ({
   },
 
   setSlotAuto: (id, index, auto) => {
+    let previousAuto: AutoSyncConfig | null = null;
     set(state => {
       const comp = state.components[id];
       if (!comp) return state;
 
       const prev = comp.slots[index] || {};
+      previousAuto = prev.auto || null;
       const nextSlot: SlotState = { ...prev, auto };
 
       return {
@@ -139,15 +146,25 @@ export const GlobalImageStore = create<GlobalImageStoreState>((set, get) => ({
     const type: TrackType = auto?.type || (comp?.isMask ? 'mask' : 'image');
 
     if (auto) {
-      startAutoThumbnail(type, auto.content, !!auto.alt);
+      startAutoThumbnail(type, auto.content, {
+        alt: auto.alt,
+        boundary: auto.boundary,
+        cropBySelection: auto.cropBySelection,
+      });
+    } else if (previousAuto) {
+      const prevType: TrackType = previousAuto.type || (comp?.isMask ? 'mask' : 'image');
+      stopAutoThumbnail({
+        type: prevType,
+        content: previousAuto.content,
+        alt: previousAuto.alt,
+        boundary: previousAuto.boundary,
+        cropBySelection: previousAuto.cropBySelection,
+      });
     } else {
-      // Stop all types for safety
-      stopAutoThumbnail('image', 'canvas');
-      stopAutoThumbnail('image', 'curlayer');
-      stopAutoThumbnail('image', 'selection');
-      stopAutoThumbnail('mask', 'canvas');
-      stopAutoThumbnail('mask', 'curlayer');
-      stopAutoThumbnail('mask', 'selection');
+      // Fallback: clear all tracking for component type
+      stopAutoThumbnail({ type, content: 'canvas' });
+      stopAutoThumbnail({ type, content: 'curlayer' });
+      stopAutoThumbnail({ type, content: 'selection' });
     }
   },
 
@@ -178,6 +195,26 @@ export const GlobalImageStore = create<GlobalImageStoreState>((set, get) => ({
 
       const prev = comp.slots[index] || {};
       const nextSlot: SlotState = { ...prev, uploading, uploadId };
+
+      return {
+        components: {
+          ...state.components,
+          [id]: {
+            ...comp,
+            slots: { ...comp.slots, [index]: nextSlot },
+          },
+        },
+      };
+    });
+  },
+
+  setSlotBoundary: (id, index, boundary) => {
+    set(state => {
+      const comp = state.components[id];
+      if (!comp) return state;
+
+      const prev = comp.slots[index] || {};
+      const nextSlot: SlotState = { ...prev, boundary };
 
       return {
         components: {

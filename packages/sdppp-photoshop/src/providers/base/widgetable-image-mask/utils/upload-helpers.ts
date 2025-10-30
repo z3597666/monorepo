@@ -22,7 +22,7 @@ export const fileToArrayBuffer = async (file: File): Promise<ArrayBuffer> => {
  */
 export const createFileUploadPass = (
   file: File,
-  onUploaded: (url: string) => void,
+  onUploaded: (url: string) => void | Promise<void>,
   onError: (error: any) => void
 ): UploadPass => ({
   getUploadFile: async (signal?: AbortSignal) => {
@@ -37,7 +37,7 @@ export const createFileUploadPass = (
     };
   },
   onUploaded: async (finalUrl: string) => {
-    onUploaded(finalUrl);
+    await onUploaded(finalUrl);
   },
   onUploadError: (error: any) => {
     if (!(error instanceof DOMException && error.name === 'AbortError')) {
@@ -52,7 +52,7 @@ export const createFileUploadPass = (
 export const createTokenUploadPass = (
   token: string,
   fileName: string,
-  onUploaded: (url: string) => void,
+  onUploaded: (url: string) => void | Promise<void>,
   onError: (error: any) => void
 ): UploadPass => ({
   getUploadFile: async (signal?: AbortSignal) => {
@@ -66,7 +66,7 @@ export const createTokenUploadPass = (
     };
   },
   onUploaded: async (finalUrl: string) => {
-    onUploaded(finalUrl);
+    await onUploaded(finalUrl);
   },
   onUploadError: (error: any) => {
     if (!(error instanceof DOMException && error.name === 'AbortError')) {

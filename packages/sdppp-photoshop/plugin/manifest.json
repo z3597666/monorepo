@@ -1,8 +1,8 @@
 {
   "id": "sd-ppp2",
-  "name": "SD-PPP2.0",
+  "name": "xia37",
   "version": "1.9.11",
-  "main": "sdppp/photoshop.html", 
+  "main": "sdppp/photoshop.html",
   "manifestVersion": 5,
   "host": {
     "app": "PS",
@@ -38,7 +38,7 @@
       "type": "panel",
       "id": "sd-ppp",
       "label": {
-        "default": "SD-PPP 2.0-prerelease.1"
+        "default": "夏三七的二摄轮椅comfyui版beta1"
       },
       "minimumSize": {
         "width": 330,

@@ -419,6 +419,10 @@ export declare const sdpppSDK: {
 				success: boolean;
 				error?: string | undefined;
 			}>;
+			onTaskFinished: (data: {
+				source: string;
+				imageResults: string[];
+			}, signal?: AbortSignal) => Promise<{}>;
 			register: (data: {
 				passwordPayload: {
 					username: string;

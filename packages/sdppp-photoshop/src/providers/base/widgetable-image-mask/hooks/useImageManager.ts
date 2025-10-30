@@ -4,8 +4,8 @@ import type { ImageSyncGroupData, ButtonConfig } from '@sdppp/ui-library';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { GlobalImageStore, useComponent, useImageSlotState } from '../stores/global-image-store';
 import { RealtimeThumbnailStore } from '../stores/realtime-thumbnail-store';
-import { useImageSync, type SyncEvent } from './useImageSync';
-import { useImageAutoSync, type AutoSyncEvent } from './useImageAutoSync';
+import { useImageSync, type SyncEvent, type SyncOverrides } from './useImageSync';
+import { useImageAutoSync, type AutoSyncEvent, type AutoSyncOverrides } from './useImageAutoSync';
 import { removeUrlAtIndex } from '../utils/upload-helpers';
 
 export interface UseImageManagerOptions {
@@ -22,8 +22,8 @@ export interface UseImageManagerReturn {
   buttons: ButtonConfig[];
 
   // Actions
-  onSync: (index: number, syncType: string, event: SyncEvent) => Promise<void>;
-  onAutoSync: (index: number, autoSyncId: string | null, event: AutoSyncEvent) => void;
+  onSync: (index: number, syncType: string, event: SyncEvent, overrides?: SyncOverrides) => Promise<void>;
+  onAutoSync: (index: number, autoSyncId: string | null, event: AutoSyncEvent, overrides?: AutoSyncOverrides) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
 

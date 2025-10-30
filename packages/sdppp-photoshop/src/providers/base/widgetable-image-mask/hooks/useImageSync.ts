@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { sdpppSDK } from '@sdppp/common';
 import { useUploadPasses } from '../../upload-pass-context';
 import { GlobalImageStore } from '../stores/global-image-store';
 import {
@@ -19,6 +20,11 @@ export interface SyncEvent {
   shiftKey: boolean;
 }
 
+export interface SyncOverrides {
+  boundary?: 'canvas' | 'curlayer' | 'selection';
+  cropBySelection?: 'no' | 'negative' | 'positive';
+}
+
 export interface UseImageSyncOptions {
   componentId: string;
   urls: string[];
@@ -31,15 +37,63 @@ export function useImageSync({ componentId, urls, isMask, onValueChange }: UseIm
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string>('');
   const urlsRef = useRef<string[]>(urls || []);
+  const syncTypeRef = useRef<string>('');
+  const syncOverridesRef = useRef<SyncOverrides | undefined>(undefined);
 
   React.useEffect(() => {
     urlsRef.current = urls || [];
   }, [urls]);
 
+  const updateSlotBoundary = useCallback(
+    async (index: number, syncType: string, overrides?: SyncOverrides) => {
+      try {
+        if (!componentId) return;
+        GlobalImageStore.getState().setSlotBoundary(componentId, index, undefined);
+
+        const overrideBoundary = overrides?.boundary;
+        if (overrideBoundary && typeof overrideBoundary === 'object') {
+          GlobalImageStore.getState().setSlotBoundary(componentId, index, overrideBoundary as any);
+          return;
+        }
+
+        let boundaryType: 'curlayer' | 'selection' | undefined;
+        if (overrideBoundary === 'curlayer' || overrideBoundary === 'selection') {
+          boundaryType = overrideBoundary;
+        } else if (syncType === 'curlayer' || syncType === 'selection') {
+          boundaryType = syncType as 'curlayer' | 'selection';
+        }
+
+        if (boundaryType) {
+          try {
+            const res = await sdpppSDK.plugins.photoshop.getBoundary({ type: boundaryType });
+            if (res?.boundary) {
+              GlobalImageStore.getState().setSlotBoundary(componentId, index, res.boundary as any);
+              return;
+            }
+          } catch (error) {
+            console.warn('sdk.getBoundary failed', { boundaryType, error });
+          }
+        }
+
+        const docId = sdpppSDK.stores.PhotoshopStore.getState().activeDocumentID;
+        const workBoundaries = sdpppSDK.stores.WebviewStore.getState().workBoundaries || {};
+        const fallback = docId ? workBoundaries?.[docId] : undefined;
+        if (fallback) {
+          GlobalImageStore.getState().setSlotBoundary(componentId, index, fallback as any);
+        }
+      } catch (error) {
+        console.warn('Failed to resolve boundary for slot', { componentId, index, syncType, error });
+      }
+    },
+    [componentId]
+  );
+
   const onSync = useCallback(
-    async (index: number, syncType: string, event: SyncEvent) => {
+    async (index: number, syncType: string, event: SyncEvent, overrides?: SyncOverrides) => {
       try {
         setUploadError('');
+        syncTypeRef.current = syncType;
+        syncOverridesRef.current = overrides;
 
         if (syncType === 'disk') {
           createFileInput((file) => {
@@ -52,10 +106,11 @@ export function useImageSync({ componentId, urls, isMask, onValueChange }: UseIm
             const blobUrl = createBlobUrl(file);
             GlobalImageStore.getState().setSlotThumbnail(componentId, index, blobUrl);
             GlobalImageStore.getState().registerBlob(blobUrl);
+            GlobalImageStore.getState().setSlotBoundary(componentId, index, undefined);
 
             const uploadPass = createFileUploadPass(
               file,
-              (finalUrl: string) => {
+              async (finalUrl: string) => {
                 const next = updateUrlsAtIndex(urlsRef.current, index, finalUrl);
                 onValueChange(next);
                 setUploading(false);
@@ -80,7 +135,11 @@ export function useImageSync({ componentId, urls, isMask, onValueChange }: UseIm
           const { thumbnail_url, file_token, result } = await getPhotoshopImage(
             isMask,
             syncType as any,
-            event.altKey
+            {
+              reverse: event.altKey,
+              boundary: overrides?.boundary,
+              cropBySelection: overrides?.cropBySelection,
+            }
           );
 
           if (result?.error) {
@@ -98,9 +157,10 @@ export function useImageSync({ componentId, urls, isMask, onValueChange }: UseIm
           const uploadPass = createTokenUploadPass(
             file_token,
             `${Date.now()}.png`,
-            (finalUrl: string) => {
+            async (finalUrl: string) => {
               const next = updateUrlsAtIndex(urlsRef.current, index, finalUrl);
               onValueChange(next);
+              await updateSlotBoundary(index, syncType, overrides);
               setUploading(false);
             },
             (error: any) => {
@@ -120,7 +180,7 @@ export function useImageSync({ componentId, urls, isMask, onValueChange }: UseIm
         setUploadError((e as any)?.message || String(e));
       }
     },
-    [componentId, isMask, onValueChange, runUploadPassOnce, urls]
+    [componentId, isMask, onValueChange, runUploadPassOnce, updateSlotBoundary, urls]
   );
 
   return { onSync, uploading, uploadError };

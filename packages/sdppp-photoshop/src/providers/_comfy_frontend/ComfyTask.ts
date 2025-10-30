@@ -1,7 +1,7 @@
-import { sdpppSDK,  } from '@sdppp/common';
-import { MainStore } from '../../tsx/App.store';
+import { sdpppSDK, } from '@sdppp/common';
 import { BoundaryRectSchema } from '@sdppp/common/schemas/schemas';
 import { z } from 'zod';
+import { MainStore } from '../../tsx/App.store';
 
 type BoundaryRect = z.infer<typeof BoundaryRectSchema>;
 
@@ -71,6 +71,10 @@ export class ComfyTask {
 
                 if (item.images) {
                     images.push(...item.images);
+                    sdpppSDK.plugins.photoshop.onTaskFinished({
+                        source: workflowName,
+                        imageResults: item.images.map((image: any) => (image.url))
+                    })
                     // 处理图片结果（保持现有逻辑）
                     item.images.forEach((image: any) => {
                         MainStore.getState().downloadAndAppendImage({
